@@ -47,7 +47,7 @@ def make(src_dir, out_dir):
             continue
         im = Image.open(p).convert('RGB')
         W, H = im.size
-        k = W / 2000.0 if W >= 1500 else W / 1100.0
+        k = W / 2000.0 if W / H > 1.6 else W / 1100.0   # ảnh ngang (dàn hàng) / ảnh vuông
         top = int(78 * k)
         bot = int(118 * k)
         sheet = Image.new('RGB', (W, H + top + bot), BG)
