@@ -62,8 +62,13 @@ namespace PawFit.App
             Services.Register(care);
             Services.Register(brain);
 
+            // Biểu cảm (Phase 1.3): đói / bẩn / buồn ngủ / ngủ thể hiện bằng hình, vẫn là C# thuần
+            var exprCfg = new ExpressionConfig();
+            Services.Register(exprCfg);
+            Services.Register(new PetExpressionService(_pets, brain, exprCfg, new SeededRandom(rng.NextUInt())));
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            gameObject.AddComponent<DevHotkeys>();
+            gameObject.AddComponent<DebugOverlay>();   // công cụ test, không có trong bản phát hành
 #endif
             SceneFlow.EnterGarden(Services);
         }

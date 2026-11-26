@@ -462,6 +462,17 @@ def _centroid(P, w, thr):
     return acc / max(tot, 1)
 
 
+def _wcentroid(P, w, power=4.0):
+    """Tâm có trọng số w^power: luôn xác định (khác _centroid có thể không có đỉnh nào vượt ngưỡng)."""
+    acc = Vector((0.0, 0.0, 0.0))
+    tot = 0.0
+    for p, wi in zip(P, w):
+        k = wi ** power
+        acc += p * k
+        tot += k
+    return acc / tot if tot > 1e-9 else acc
+
+
 def _mean_dist(P, w, thr, c):
     ds = [(p - c).length for p, wi in zip(P, w) if wi >= thr]
     return sum(ds) / max(len(ds), 1)
@@ -481,17 +492,20 @@ def _add_lbs_key(ob, name, E0, E1, W, co):
     kb.value = 0.0
 
 
-_BASE = {}
+_BASES = {}
+LOD0_VOXEL = 0.0095   # ~38k đỉnh: render / máy mạnh
+LOD1_VOXEL = 0.016    # ~13k đỉnh: điện thoại
 
 
 def reset_cache():
-    _BASE.clear()
+    _BASES.clear()
 
 
-def ensure_base():
-    """Dựng base mesh Baby + blendshape (chỉ làm 1 lần mỗi lần chạy)."""
-    if _BASE:
-        return _BASE
+def ensure_base(voxel=LOD0_VOXEL):
+    """Dựng base mesh Baby + blendshape ở 1 mức chi tiết (chỉ làm 1 lần mỗi mức)."""
+    ck = round(voxel, 5)          # khóa cache (không dùng tên 'key': vòng lặp blendshape bên dưới dùng rồi)
+    if ck in _BASES:
+        return _BASES[ck]
     E = elems_baby()
     mb = bpy.data.metaballs.new("PF_BodyMeta")
     mb.resolution = 0.014
@@ -505,10 +519,10 @@ def ensure_base():
     for o in list(bpy.context.scene.objects):      # dọn metaball còn sót lại
         if o.type == 'META':
             bpy.data.objects.remove(o, do_unlink=True)
-    body.name = "PF_BaseBody"
+    body.name = "PF_BaseBody_%d" % int(voxel * 10000)
     rm = body.modifiers.new("rm", 'REMESH')
     rm.mode = 'VOXEL'
-    rm.voxel_size = 0.0095
+    rm.voxel_size = voxel
     apply_mod(body, rm)
     sm = body.modifiers.new("sm", 'SMOOTH')
     sm.factor = 0.6
@@ -549,10 +563,10 @@ def ensure_base():
     bpy.context.scene.collection.objects.unlink(body)
     hc = _centroid(co, bone_w['head'], 0.95)
     hr = _mean_dist(co, bone_w['head'], 0.95, hc)
-    _BASE.update(mesh=me, co=co, nrm=nrm, polys=polys, W=W, bone_w=bone_w,
-                 elems=E, head_r=hr, nverts=n)
-    print("PF_BASE verts=%d head_r=%.3f" % (n, hr))
-    return _BASE
+    _BASES[ck] = dict(mesh=me, co=co, nrm=nrm, polys=polys, W=W, bone_w=bone_w,
+                      elems=E, head_r=hr, nverts=n, voxel=voxel)
+    print("PF_BASE voxel=%.4f verts=%d head_r=%.3f" % (voxel, n, hr))
+    return _BASES[ck]
 
 
 # ============================================================================
@@ -967,17 +981,39 @@ def eye_outline(P, hw, seg=48):
     return out
 
 
-def eye_lens_geom(P, hw, R_head, side, rings=9, seg=48):
-    """Mắt dạng 'thấu kính' ôm theo độ cong của đầu (cùng số đỉnh cho mọi dạng mắt)."""
+def eye_close_xy(P, hw, X, Y, side, gap=0.06):
+    """Mắt NHẮM: ép 1 điểm (X, Y) của mắt mở vào đường khép mí cong ◡ (giữa võng xuống).
+    Dùng cho mọi đỉnh của thấu kính + viền mắt => cùng số đỉnh, làm blendshape 'closed_<dạng>'."""
+    ta = math.radians(P['tilt'])
+    x = X * side
+    xr = (x * math.cos(ta) + Y * math.sin(ta)) / hw          # bỏ độ nghiêng của mắt
+    yr = (-x * math.sin(ta) + Y * math.cos(ta)) / hw
+    c = max(-1.0, min(1.0, xr / P['w']))
+    yl = -0.30 * P['hb'] - 0.12 * (1.0 - c * c)              # đường khép mí
+    yr = yl + (yr - yl) * gap
+    x2 = (xr * math.cos(ta) - yr * math.sin(ta)) * hw        # nghiêng lại như cũ
+    y2 = (xr * math.sin(ta) + yr * math.cos(ta)) * hw
+    return x2 * side, y2
+
+
+def eye_lens_geom(P, hw, R_head, side, rings=9, seg=48, closed=False):
+    """Mắt dạng 'thấu kính' ôm theo độ cong của đầu (cùng số đỉnh cho mọi dạng mắt).
+    closed=True: mắt nhắm (thấu kính ép dẹt nằm sau viền mắt). UV giữ như mắt mở."""
     out = eye_outline(P, hw, seg)
-    verts = [Vector((0.0, 0.0, 0.28 * hw))]
+    dome = 0.04 if closed else 0.28
+
+    def vert(X, Y, rho):
+        if closed:
+            X, Y = eye_close_xy(P, hw, X, Y, side)
+        return Vector((X, Y, dome * hw * (1.0 - rho * rho) ** 0.7 - (X * X + Y * Y) / (2.0 * R_head)))
+
+    verts = [vert(0.0, 0.0, 0.0)]
     uvs = [(0.0, 0.0)]
     for j in range(1, rings + 1):
         rho = j / rings
         for (x, y) in out:
             X, Y = x * rho * side, y * rho
-            z = 0.28 * hw * (1.0 - rho * rho) ** 0.7 - (X * X + Y * Y) / (2.0 * R_head)
-            verts.append(Vector((X, Y, z)))
+            verts.append(vert(X, Y, rho))
             uvs.append((X / hw, Y / hw))
     faces = []
     for k in range(seg):
@@ -992,16 +1028,27 @@ def eye_lens_geom(P, hw, R_head, side, rings=9, seg=48):
     return verts, faces, uvs
 
 
-def eye_liner_geom(P, hw, R_head, side, seg=48):
-    """Viền mắt tối (mí trên dày hơn, nhất là đuôi mắt) -> mắt 'sắc'."""
+def eye_liner_geom(P, hw, R_head, side, seg=48, closed=False):
+    """Viền mắt tối (mí trên dày hơn, nhất là đuôi mắt) -> mắt 'sắc'. closed=True: 2 mí khép thành 1 nét."""
     out = eye_outline(P, hw, seg)
     pts, rad = [], []
     for k, (x, y) in enumerate(out):
         a = 2.0 * math.pi * k / seg
         X, Y = x * 1.04 * side, y * 1.04
+        if closed:
+            X, Y = eye_close_xy(P, hw, X, Y, side)
         pts.append(Vector((X, Y, -(X * X + Y * Y) / (2.0 * R_head) + 0.006 * hw)))
         rad.append(hw * (0.045 + 0.08 * max(0.0, math.sin(a)) * (0.7 + 0.3 * math.cos(a))))
     return tube_mesh(pts, rad, ring=8, closed=True, cap_end=False, up=Vector((0.0, 0.0, 1.0)))
+
+
+def eye_frame(bvh, hc, fw, u, r, s, side, yaw, pitch):
+    """Khung đặt mắt (gốc = tâm mắt trên mặt da, z = hướng ra ngoài, y = lên)."""
+    d = (r * (side * math.sin(yaw)) + fw * math.cos(yaw)).normalized()
+    d = (d + u * math.sin(pitch)).normalized()
+    hit, nrm = surface_from_center(bvh, hc, d)
+    x, y, z = make_frame((nrm * 0.75 + d * 0.25), u)
+    return frame_matrix(hit - z * (0.004 * s), x, y, z), hit
 
 
 def make_eyes(name, dna, bvh, hc, fw, u, r, s):
@@ -1014,11 +1061,7 @@ def make_eyes(name, dna, bvh, hc, fw, u, r, s):
     liner_mat = simple_material(name + '_LinerMat', dna.get('liner', '#1C1416'), rough=0.45)
     obs, feats = [], []
     for side in (1, -1):
-        d = (r * (side * math.sin(yaw)) + fw * math.cos(yaw)).normalized()
-        d = (d + u * math.sin(pitch)).normalized()
-        hit, nrm = surface_from_center(bvh, hc, d)
-        x, y, z = make_frame((nrm * 0.75 + d * 0.25), u)
-        M = frame_matrix(hit - z * (0.004 * s), x, y, z)
+        M, hit = eye_frame(bvh, hc, fw, u, r, s, side, yaw, pitch)
         tag = 'R' if side > 0 else 'L'
         v, fc, uv = eye_lens_geom(P, hw, Rh, side)
         lens = new_mesh_object(name + '_Eye' + tag, v, fc, uv)
@@ -1124,9 +1167,8 @@ def ear_geom(kind, scale, sweep_sign=1.0):
     return verts, faces, uvs
 
 
-def make_ear(name, dna, side, bvh, hc, fw, u, r, s, Q, ember):
-    kind = dna.get('ear', 'nhon')
-    sc = s * dna.get('ear_scale', 1.0)
+def ear_frame(kind, side, bvh, hc, fw, u, r, sc):
+    """Khung đặt tai (gốc = chân tai, z = chiều dài tai, -y = mặt trong). Trả (ma trận, chiều vuốt)."""
     if kind == 'vay':
         d = (r * (0.72 * side) + u * 0.60 + fw * 0.02).normalized()
     else:
@@ -1140,20 +1182,30 @@ def make_ear(name, dna, side, bvh, hc, fw, u, r, s, Q, ember):
         inner = (fw + r * (0.38 * side)).normalized()
     x, y, z = make_frame(zax, -inner)
     sweep = 1.0 if x.dot(-fw) > 0 else -1.0
+    return frame_matrix(hit - nrm * (0.022 * sc), x, y, z), sweep
+
+
+def make_ear_mesh(name, kind, side, bvh, hc, fw, u, r, sc):
+    """Tai (đã có độ dày) đặt đúng chỗ trên đầu, chưa có vật liệu / lông."""
+    M, sweep = ear_frame(kind, side, bvh, hc, fw, u, r, sc)
     verts, faces, uvs = ear_geom(kind, sc, sweep)
-    ob = new_mesh_object(name + ('_EarR' if side > 0 else '_EarL'), verts, faces, uvs)
-    ob.matrix_world = frame_matrix(hit - nrm * (0.022 * sc), x, y, z)
+    ob = new_mesh_object(name, verts, faces, uvs)
+    ob.matrix_world = M
     sol = ob.modifiers.new('sol', 'SOLIDIFY')
     sol.thickness = 0.016 * sc
     sol.offset = 0.0
     sol.use_even_offset = True
     apply_mod(ob, sol)
+    return ob
+
+
+def ear_masks(ob, tip_amt):
+    """Vùng màu tai theo góc mặt: R = mặt trong (hồng), G = chóp tai. Trả (màu theo góc, độ 'trong' theo đỉnh)."""
     me = ob.data
     uvl = me.uv_layers.active.data
     loop_rgb = [None] * len(me.loops)
     acc = [0.0] * len(me.vertices)
     cnt = [0] * len(me.vertices)
-    tip_amt = dna.get('ear_tip', 0.0)
     for poly in me.polygons:
         inner_side = 1.0 if poly.normal.y < -0.25 else 0.0
         for li in poly.loop_indices:
@@ -1165,8 +1217,21 @@ def make_ear(name, dna, side, bvh, hc, fw, u, r, s, Q, ember):
             vi = me.loops[li].vertex_index
             acc[vi] += inn
             cnt[vi] += 1
+    return loop_rgb, [acc[i] / max(cnt[i], 1) for i in range(len(me.vertices))]
+
+
+def make_ear(name, dna, side, bvh, hc, fw, u, r, s, Q, ember):
+    kind = dna.get('ear', 'nhon')
+    sc = s * dna.get('ear_scale', 1.0)
+    ob = make_ear_mesh(name + ('_EarR' if side > 0 else '_EarL'), kind, side, bvh, hc, fw, u, r, sc)
+    loop_rgb, inn_v = ear_masks(ob, dna.get('ear_tip', 0.0))
     set_masks_loops(ob, loop_rgb)
-    inn_v = [acc[i] / max(cnt[i], 1) for i in range(len(me.vertices))]
+    return _make_ear_body(name, dna, side, bvh, hc, fw, u, r, s, Q, ember, ob, inn_v)
+
+
+def _make_ear_body(name, dna, side, bvh, hc, fw, u, r, s, Q, ember, ob, inn_v):
+    me = ob.data
+    sc = s * dna.get('ear_scale', 1.0)
     cols = dict(fur=dna['fur'], light=dna.get('ear_fluff', dna['belly']),
                 tip=dna.get('ear_tip_color', dna.get('points', dna['fur'])),
                 tip_light=dna.get('tip_light', 0.15))
@@ -1202,31 +1267,44 @@ def horn_geom(kind, length, radius):
     return tube_mesh(pts, rad, ring=12, cap_end=True, cap_start=True, up=Vector((1.0, 0.0, 0.0)))
 
 
+HORN_SLOTS = {   # khe gắn sừng: (bên, hệ số kích thước, kiểu hướng)
+    'C': (0, 1.0, 'center'), 'PR': (1, 1.0, 'pair'), 'PL': (-1, 1.0, 'pair'),
+    'WR': (1, 0.75, 'wide'), 'WL': (-1, 0.75, 'wide'),
+}
+HORN_LAYOUT = {1: ['C'], 2: ['PR', 'PL'], 3: ['C', 'WR', 'WL']}   # số sừng -> các khe dùng
+
+
+def horn_frame(slot, bvh, hc, fw, u, r, s):
+    """Khung gắn 1 sừng (gốc = chân sừng, z = hướng mọc, y = phía sau để sừng cong về sau)."""
+    side, k, kind = HORN_SLOTS[slot]
+    if kind == 'center':
+        d = (fw * 0.40 + u * 0.92).normalized()
+    elif kind == 'wide':
+        d = (r * (0.46 * side) + fw * 0.16 + u * 0.87).normalized()
+    else:
+        d = (r * (0.36 * side) + fw * 0.26 + u * 0.90).normalized()
+    hit, nrm = surface_from_center(bvh, hc, d)
+    x, y, z = make_frame(nrm * 0.45 + u * 0.88 + r * (0.20 * side), -fw)
+    return frame_matrix(hit - z * (0.006 * s), x, y, z), hit, k
+
+
 def make_horns(name, dna, bvh, hc, fw, u, r, s):
     n = int(dna.get('horns', 0))
     feats = []
     if n <= 0 or dna.get('horn_len', 0.0) <= 0.001:
         return [], feats
-    layout = {1: [(0, 1.0)], 2: [(1, 1.0), (-1, 1.0)],
-              3: [(0, 1.0), (1, 0.75), (-1, 0.75)]}[min(n, 3)]
+    layout = HORN_LAYOUT[min(n, 3)]
     mat = horn_material(name + '_HornMat', dna.get('horn_color', '#EFE6D6'),
                         dna.get('horn_tip', '#FFFFFF'), dna.get('horn_glow', 0.0),
                         dna.get('horn_tip', '#FFFFFF'), dna.get('horn_metal', 0.0))
     obs = []
-    for side, k in layout:
-        if side == 0:
-            d = (fw * 0.40 + u * 0.92).normalized()
-        elif n == 3:
-            d = (r * (0.46 * side) + fw * 0.16 + u * 0.87).normalized()
-        else:
-            d = (r * (0.36 * side) + fw * 0.26 + u * 0.90).normalized()
-        hit, nrm = surface_from_center(bvh, hc, d)
-        x, y, z = make_frame(nrm * 0.45 + u * 0.88 + r * (0.20 * side), -fw)
+    for slot in layout:
+        M, hit, k = horn_frame(slot, bvh, hc, fw, u, r, s)
         L = dna['horn_len'] * s * k
         Rr = (0.026 + 0.08 * dna['horn_len']) * s * k
         verts, faces, uvs = horn_geom(dna.get('horn_shape', 'thang'), L, Rr)
         ob = new_mesh_object(name + '_Horn%d' % len(obs), verts, faces, uvs)
-        ob.matrix_world = frame_matrix(hit - z * (0.006 * s), x, y, z)
+        ob.matrix_world = M
         ob.data.materials.append(mat)
         obs.append(ob)
         feats.append((hit.copy(), Rr * 1.6))
@@ -1236,8 +1314,27 @@ def make_horns(name, dna, bvh, hc, fw, u, r, s):
 TAIL_N = 28
 
 
-def tail_geom(kind, s):
-    """5 dạng đuôi (DNA), cùng số đỉnh: cáo (xù), túa (lụ túa), bông (cục bông), vây (vây cá), xoăn."""
+TAIL_HAIR_LEN = {'cao': 0.12, 'tua': 0.12, 'bong': 0.095, 'vay': 0.03, 'xoan': 0.055}   # độ dài lông đuôi
+
+
+def tail_fluff(kind, t):
+    """Độ dày lông đuôi dọc theo đuôi (t = 0 gốc .. 1 chóp) — khớp với lông particle của bản render."""
+    if kind == 'tua':
+        leng = 0.22 + 0.78 * smoothstep(0.74, 0.9, t)
+    elif kind == 'vay':
+        leng = 0.7 * (1.0 - smoothstep(0.45, 0.58, t))
+    elif kind == 'cao':
+        leng = 0.55 + 0.45 * smoothstep(0.0, 0.35, t)
+    elif kind == 'bong':
+        leng = math.sin(math.pi * min(1.0, 0.08 + t * 0.92)) ** 0.5
+    else:
+        leng = 1.0
+    return TAIL_HAIR_LEN[kind] * leng * max(0.0, 1.0 - t ** 6) ** 0.5
+
+
+def tail_geom(kind, s, fluff=0.0):
+    """5 dạng đuôi (DNA), cùng số đỉnh: cáo (xù), túa (lụ túa), bông (cục bông), vây (vây cá), xoăn.
+    fluff > 0: cộng thêm độ dày lông vào bán kính (bản cho game, không có lông particle)."""
     if kind == 'cao':
         L = 0.80
         th = lambda t: 22 + 60 * t ** 1.2
@@ -1269,21 +1366,28 @@ def tail_geom(kind, s):
         if i > 0:
             a = math.radians(th(t))
             pts.append(pts[-1] + Vector((0.0, math.cos(a), math.sin(a))) * step)
-        rad.append(rf(t) * s)
+        rad.append((rf(t) + fluff * tail_fluff(kind, t)) * s)
         flat.append((0.6, 1.0 + 3.5 * smoothstep(0.5, 0.95, t)) if kind == 'vay' else (1.0, 1.0))
     return tube_mesh(pts, rad, ring=14, cap_end=True, cap_start=True, flatten=flat,
                      up=Vector((1.0, 0.0, 0.0)))
 
 
+def tail_origin(bvh, P, base, st=1.0):
+    """Gốc đuôi: điểm trên mông (bắn tia từ phía sau vào tâm hông), lùn vào trong 1 chút.
+    Tâm hông tính theo trọng số mềm — bản cũ dùng ngưỡng 0.85 nên không có đỉnh nào đạt,
+    tâm rơi về (0,0,0) và đuôi bị gắn sát đất."""
+    hp = _wcentroid(P, base['bone_w']['hips'])
+    d = Vector((0.0, 1.0, 0.22)).normalized()
+    hit, nrm = surface_from_center(bvh, hp, d)
+    return hit - d * (0.04 * st)
+
+
 def make_tail(name, dna, bvh, P, base, Q, ember):
     kind = dna.get('tail', 'cao')
     st = dna.get('tail_scale', 1.0)
-    hp = _centroid(P, base['bone_w']['hips'], 0.85)
-    d = Vector((0.0, 1.0, 0.22)).normalized()
-    hit, nrm = surface_from_center(bvh, hp, d)
     verts, faces, uvs = tail_geom(kind, st)
     ob = new_mesh_object(name + '_Tail', verts, faces, uvs)
-    ob.matrix_world = Matrix.Translation(hit - d * (0.04 * st))
+    ob.matrix_world = Matrix.Translation(tail_origin(bvh, P, base, st))
     n = len(ob.data.vertices)
     tv = [uvs[i][1] for i in range(n)]
     striped = dna.get('pattern') == 'stripes'
@@ -1304,7 +1408,7 @@ def make_tail(name, dna, bvh, P, base, Q, ember):
     me = ob.data
     me.materials.append(skin_material(ob.name + '_Skin', cols))
     me.materials.append(hair_material(ob.name + '_Fur', cols, ember, ember_from='G'))
-    hair_len = {'cao': 0.12, 'tua': 0.12, 'bong': 0.095, 'vay': 0.03, 'xoan': 0.055}[kind] * st
+    hair_len = TAIL_HAIR_LEN[kind] * st
     count = {'cao': 2600, 'tua': 900, 'bong': 1300, 'vay': 700, 'xoan': 1100}[kind]
     normals = [v.normal.copy() for v in me.vertices]
     add_hair(ob, 'Fur', count * Q['count'], hair_len, 30 * Q['children'], 2,

@@ -13,6 +13,12 @@ namespace PawFit.Garden.View
     /// </summary>
     public sealed class GardenInputRouter : MonoBehaviour
     {
+        /// <summary>
+        /// Công cụ test (Debug overlay) đặt hàm này: chạm lên vùng overlay thì vườn bỏ qua.
+        /// Nhận tọa độ màn hình của Input (gốc ở góc dưới trái).
+        /// </summary>
+        public static Func<Vector2, bool> PointerBlocker { get; set; }
+
         private Camera _cam;
         private IPointerInput _input;
         private PointerGestureClassifier _gestures;
@@ -41,6 +47,7 @@ namespace PawFit.Garden.View
             switch (s.Phase)
             {
                 case PointerPhase.Began:
+                    if (PointerBlocker != null && PointerBlocker(s.Position)) break;   // chạm lên Debug overlay
                     _gestures.Down(s.Position.ToNumerics(), s.Time, Pick(s.Position));
                     break;
                 case PointerPhase.Moved:

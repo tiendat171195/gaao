@@ -15,6 +15,7 @@ namespace UnityEngine
         public static void DontDestroyOnLoad(Object target) { }
         public static T FindAnyObjectByType<T>() where T : Object => null;
         public static T[] FindObjectsByType<T>(FindObjectsSortMode sortMode) where T : Object => new T[0];
+        public static T Instantiate<T>(T original, Transform parent) where T : Object => original;
         public static implicit operator bool(Object o) => !ReferenceEquals(o, null);
     }
 
@@ -52,6 +53,17 @@ namespace UnityEngine
 
     public class Transform : Component
     {
+        public Transform parent { get; set; }
+        public int childCount => 0;
+        public Transform GetChild(int index) => null;
+        public Vector3 right => default;
+        public Vector3 up => default;
+        public Vector3 forward => default;
+        public Vector3 lossyScale => default;
+        public Vector3 InverseTransformPoint(Vector3 position) => position;
+        public Vector3 InverseTransformDirection(Vector3 direction) => direction;
+        public Vector3 TransformDirection(Vector3 direction) => direction;
+        public Vector3 TransformVector(Vector3 vector) => vector;
         public Vector3 position { get; set; }
         public Vector3 localPosition { get; set; }
         public Quaternion rotation { get; set; }
@@ -66,6 +78,7 @@ namespace UnityEngine
     {
         public float x, y;
         public Vector2(float x, float y) { this.x = x; this.y = y; }
+        public float magnitude => 0f;
         public static implicit operator Vector2(Vector3 v) => new Vector2(v.x, v.y);
         public static implicit operator Vector3(Vector2 v) => new Vector3(v.x, v.y, 0f);
     }
@@ -77,6 +90,9 @@ namespace UnityEngine
         public static Vector3 zero => default;
         public static Vector3 one => new Vector3(1, 1, 1);
         public static Vector3 up => new Vector3(0, 1, 0);
+        public static Vector3 right => new Vector3(1, 0, 0);
+        public static Vector3 forward => new Vector3(0, 0, 1);
+        public Vector3 normalized => this;
         public float magnitude => 0f;
         public float sqrMagnitude => 0f;
         public static Vector3 Lerp(Vector3 a, Vector3 b, float t) => a;
@@ -94,6 +110,8 @@ namespace UnityEngine
         public static Quaternion Euler(float x, float y, float z) => default;
         public static Quaternion LookRotation(Vector3 forward) => default;
         public static Quaternion Slerp(Quaternion a, Quaternion b, float t) => a;
+        public static Quaternion AngleAxis(float angle, Vector3 axis) => default;
+        public static Quaternion operator *(Quaternion a, Quaternion b) => a;
         public static Vector3 operator *(Quaternion rotation, Vector3 point) => point;
     }
 
@@ -106,6 +124,7 @@ namespace UnityEngine
         public static Color Lerp(Color a, Color b, float t) => a;
         public static Color HSVToRGB(float h, float s, float v) => default;
         public static implicit operator Color32(Color c) => default;
+        public static Color operator *(Color a, float b) => a;
     }
 
     public struct Color32 { public byte r, g, b, a; }
@@ -115,6 +134,14 @@ namespace UnityEngine
     public static class Mathf
     {
         public const float PI = 3.14159265f;
+        public const float Rad2Deg = 57.29578f;
+        public static float Sign(float f) => 1f;
+        public static float Atan2(float y, float x) => 0f;
+        public static float Floor(float f) => 0f;
+        public static float Min(float a, float b) => a;
+        public static float MoveTowards(float current, float target, float maxDelta) => target;
+        public static int CeilToInt(float f) => 0;
+        public static int Clamp(int v, int min, int max) => v;
         public static float Sin(float f) => 0f;
         public static float Cos(float f) => 0f;
         public static float Abs(float f) => 0f;
@@ -133,13 +160,111 @@ namespace UnityEngine
         public Color color { get; set; }
         public bool HasProperty(string name) => true;
         public void SetFloat(string name, float value) { }
+        public void SetColor(string name, Color value) { }
     }
 
-    public sealed class Shader : Object { public static Shader Find(string name) => null; }
+    public sealed class Shader : Object { public static Shader Find(string name) => null; public bool isSupported => true; }
 
-    public class Renderer : Component { public Material sharedMaterial { get; set; } }
+    public class Renderer : Component
+    {
+        public Material sharedMaterial { get; set; }
+        public Rendering.ShadowCastingMode shadowCastingMode { get; set; }
+    }
+
+    public sealed class Mesh : Object
+    {
+        public int blendShapeCount => 0;
+        public int vertexCount => 0;
+        public string GetBlendShapeName(int shapeIndex) => "";
+    }
+
+    public sealed class SkinnedMeshRenderer : Renderer
+    {
+        public Mesh sharedMesh { get; set; }
+        public Bounds localBounds { get; set; }
+        public void SetBlendShapeWeight(int index, float value) { }
+    }
 
     public static class Resources { public static T Load<T>(string path) where T : Object => null; }
+
+    public sealed class TextAsset : Object { public string text => ""; }
+
+    public static class JsonUtility { public static T FromJson<T>(string json) => default; }
+
+    public static class Random
+    {
+        public static float value => 0f;
+        public static int Range(int minInclusive, int maxExclusive) => minInclusive;
+        public static float Range(float minInclusive, float maxInclusive) => minInclusive;
+    }
+
+    public sealed class AudioClip : Object
+    {
+        public static AudioClip Create(string name, int lengthSamples, int channels, int frequency, bool stream) => new AudioClip();
+        public bool SetData(float[] data, int offsetSamples) => true;
+    }
+
+    public sealed class AudioSource : Behaviour
+    {
+        public bool playOnAwake { get; set; }
+        public float spatialBlend { get; set; }
+        public float volume { get; set; }
+        public float pitch { get; set; }
+        public void PlayOneShot(AudioClip clip) { }
+    }
+
+    public sealed class AudioListener : Behaviour { }
+
+    public sealed class Animator : Behaviour { }
+
+    public struct Rect
+    {
+        public float x, y, width, height;
+        public Rect(float x, float y, float width, float height) { this.x = x; this.y = y; this.width = width; this.height = height; }
+        public bool Contains(Vector2 point) => false;
+    }
+
+    public struct Matrix4x4 { public static Matrix4x4 Scale(Vector3 vector) => default; }
+
+    public enum FontStyle { Normal, Bold, Italic, BoldAndItalic }
+
+    public sealed class GUIStyle
+    {
+        public GUIStyle() { }
+        public GUIStyle(GUIStyle other) { }
+        public int fontSize { get; set; }
+        public bool wordWrap { get; set; }
+        public FontStyle fontStyle { get; set; }
+        public float fixedHeight { get; set; }
+    }
+
+    public sealed class GUISkin : Object { public GUIStyle label => null; public GUIStyle button => null; }
+
+    public sealed class GUIContent { public static GUIContent none => null; }
+
+    public sealed class GUILayoutOption { }
+
+    public static class GUI
+    {
+        public static Matrix4x4 matrix { get; set; }
+        public static GUISkin skin => null;
+        public static bool Button(Rect position, string text, GUIStyle style) => false;
+        public static void Box(Rect position, GUIContent content) { }
+    }
+
+    public static class GUILayout
+    {
+        public static void BeginArea(Rect screenRect) { }
+        public static void EndArea() { }
+        public static Vector2 BeginScrollView(Vector2 scrollPosition, params GUILayoutOption[] options) => scrollPosition;
+        public static void EndScrollView() { }
+        public static void BeginHorizontal(params GUILayoutOption[] options) { }
+        public static void EndHorizontal() { }
+        public static void Space(float pixels) { }
+        public static void Label(string text, GUIStyle style, params GUILayoutOption[] options) { }
+        public static bool Button(string text, GUIStyle style, params GUILayoutOption[] options) => false;
+        public static GUILayoutOption Width(float width) => null;
+    }
 
     public static class Debug
     {
@@ -160,7 +285,7 @@ namespace UnityEngine
 
     public struct Touch { public Vector2 position { get; set; } public TouchPhase phase { get; set; } }
 
-    public enum KeyCode { None, Alpha1, Alpha2, Alpha3, N }
+    public enum KeyCode { None, Alpha1, Alpha2, Alpha3, N, F1 }
 
     public static class Input
     {
@@ -176,7 +301,13 @@ namespace UnityEngine
 
     public enum ScreenOrientation { Portrait, PortraitUpsideDown, LandscapeLeft, LandscapeRight, AutoRotation }
 
-    public static class Screen { public static float dpi => 0f; public static ScreenOrientation orientation { get; set; } }
+    public static class Screen
+    {
+        public static float dpi => 0f;
+        public static int width => 1080;
+        public static int height => 1920;
+        public static ScreenOrientation orientation { get; set; }
+    }
 
     public static class Application { public static string persistentDataPath => ""; public static bool isMobilePlatform => false; }
 
@@ -205,7 +336,11 @@ namespace UnityEngine
 
     public static class Physics { public static bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance) { hitInfo = default; return false; } }
 
-    public struct Bounds { public Bounds(Vector3 center, Vector3 size) { } }
+    public struct Bounds
+    {
+        public Bounds(Vector3 center, Vector3 size) { }
+        public void Expand(float amount) { }
+    }
 
     public class Collider : Component { }
 
@@ -323,6 +458,8 @@ namespace UnityEngine.Rendering
 {
     public enum AmbientMode { Skybox, Trilight, Flat, Custom }
 
+    public enum ShadowCastingMode { Off, On, TwoSided, ShadowsOnly }
+
     public class RenderPipelineAsset : ScriptableObject { }
 
     public static class GraphicsSettings { public static RenderPipelineAsset defaultRenderPipeline { get; set; } }
@@ -420,6 +557,43 @@ namespace UnityEditor
     }
 
     public sealed class EditorBuildSettingsScene { public EditorBuildSettingsScene(string path, bool enabled) { } }
+
+    public class AssetImporter : Object { }
+
+    public class AssetPostprocessor
+    {
+        public string assetPath => "";
+        public AssetImporter assetImporter => null;
+        public virtual uint GetVersion() => 0;
+    }
+
+    public enum ModelImporterMeshCompression { Off, Low, Medium, High }
+    public enum ModelImporterNormals { Import, Calculate, None }
+    public enum ModelImporterTangents { Import, CalculateLegacy, CalculateLegacyWithSplitTangents, None, CalculateMikk }
+    public enum ModelImporterMaterialImportMode { None, ImportStandard, ImportViaMaterialDescription }
+    public enum ModelImporterAnimationType { None, Legacy, Generic, Human }
+
+    public sealed class ModelImporter : AssetImporter
+    {
+        public float globalScale { get; set; }
+        public bool useFileScale { get; set; }
+        public bool importBlendShapes { get; set; }
+        public bool importVisibility { get; set; }
+        public bool importCameras { get; set; }
+        public bool importLights { get; set; }
+        public bool isReadable { get; set; }
+        public ModelImporterMeshCompression meshCompression { get; set; }
+        public ModelImporterNormals importNormals { get; set; }
+        public float normalSmoothingAngle { get; set; }
+        public ModelImporterNormals importBlendShapeNormals { get; set; }
+        public ModelImporterTangents importTangents { get; set; }
+        public bool weldVertices { get; set; }
+        public bool generateSecondaryUV { get; set; }
+        public ModelImporterMaterialImportMode materialImportMode { get; set; }
+        public ModelImporterAnimationType animationType { get; set; }
+        public bool importAnimation { get; set; }
+        public bool optimizeGameObjects { get; set; }
+    }
 
     public static class EditorBuildSettings { public static EditorBuildSettingsScene[] scenes { get; set; } }
 }

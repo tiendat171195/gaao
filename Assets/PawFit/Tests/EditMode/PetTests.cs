@@ -235,6 +235,22 @@ namespace PawFit.Tests
         }
 
         [Test]
+        public void SetNeedForDebug_SetsAnyValue_Clamped_AndNotifies()
+        {
+            PetService pets = NewService();
+            pets.LoadOrCreate("Kem");
+            int changed = 0;
+            _bus.Subscribe<PetNeedsChanged>(e => changed++);
+            pets.SetNeedForDebug(NeedType.Hygiene, 7f);
+            Assert.AreEqual(7f, pets.Current.Needs.Hygiene);
+            pets.SetNeedForDebug(NeedType.Energy, -50f);
+            Assert.AreEqual(0f, pets.Current.Needs.Energy);
+            pets.SetNeedForDebug(NeedType.Mood, 250f);
+            Assert.AreEqual(PetNeeds.Max, pets.Current.Needs.Mood);
+            Assert.AreEqual(3, changed);
+        }
+
+        [Test]
         public void Sleeping_RestoresEnergy_OverTime()
         {
             PetService pets = NewService();

@@ -43,7 +43,7 @@ namespace PawFit.Garden.View
 
             NVec2 spawn = pets.Current.IsSleeping ? layout.Get(ZoneType.Bed).UsePoint : layout.PetSpawn;
             Pet = PetController.Spawn(spawn.ToWorld(), pets.Current.Dna, s.Get<PetBrain>(), s.Get<CareActionService>(),
-                                      cfg, s.Get<EventBus>(), transform);
+                                      s.Get<PetExpressionService>(), layout, cfg, s.Get<EventBus>(), transform);
             GardenCamera camCtl = cam.GetComponent<GardenCamera>();
             if (camCtl == null) camCtl = cam.gameObject.AddComponent<GardenCamera>();
             camCtl.Init(cam, Pet.transform, layout);
@@ -94,6 +94,7 @@ namespace PawFit.Garden.View
             cam.farClipPlane = 120f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.78f, 0.88f, 0.94f);
+            if (FindAnyObjectByType<AudioListener>() == null) cam.gameObject.AddComponent<AudioListener>();   // nghe tiếng thú kêu
             return cam;
         }
 

@@ -25,16 +25,40 @@
   - Editor Setup thêm: material gốc `Resources/PawFit/LitBase`, bật Input cũ, cho xoay dọc / ngang, gán dữ liệu hậu kỳ
   - Test: 50/50 pass. Thêm `Tools/UnityCompileCheck` compile thử code Unity bằng stub: pass
 
+- **Phase 1.3** — Thú Gen 1 trong Unity + biểu cảm bằng hình + animation code + Debug overlay:
+  - Model: FBX bản 2 `Assets/PawFit/Resources/Pets/Gen1/PawFit_Gen1_PetKit.fbx` + `PawFit_Gen1_Anchors.json`. Ảnh kiểm tra: `Docs/art/06_gen1_fbx_v2_kiem_tra.jpg`
+    - **Sửa lỗi đuôi rơi xuống đất** (tâm hông tính sai), bỏ các mẫu `Kit_*` nằm dưới đất
+    - Thân LOD0 38k đỉnh (PC) + **LOD1 13,6k đỉnh (điện thoại)**
+    - Đủ 6 dạng mắt + mắt nhắm, 4 kiểu tai, 5 khe sừng × 3 dạng, 5 kiểu đuôi
+  - Blender: `export_kit.py` viết lại, thêm `check_kit.py` (tự kiểm tra + ảnh xem trước), `pawfit_kit.py` tách hàm đặt mắt / tai / sừng / đuôi
+  - Logic (C# thuần, có test): `PetExpressionService`
+    - Đói: nhìn chòi ăn + kêu theo nhịp
+    - Bẩn: lông lấm lem + 2 / 4 ruồi
+    - Buồn ngủ: mắt díp + ngáp
+    - Ngủ: nhắm mắt
+    - Thêm `PetService.SetNeedForDebug` cho công cụ test
+  - View (Unity):
+    - `Gen1PetAvatar`: DNA → blendshape / màu / bộ phận, bộ phận gắn xương. Chuyển động bằng code: bước chân, thở, vẫy đuôi, quay đầu nhìn, chớp mắt, ăn, kêu, ngáp, nằm ngủ
+    - `PetMoodFx`: ruồi, bong bóng quả táo, chữ Z, tiếng kêu / ngáp tạo bằng code
+    - `IPetAvatar` thêm `SetLook / LookAt / PlayCry / PlayYawn / HeadTop`
+    - `PetController` tự chọn Gen 1 hoặc thú tạm, dựng lại khi có thú mới
+  - Shader URP: `PawFit/Gen1Fur` (màu theo vertex color, viền giả lông tơ, độ bẩn), `PawFit/Gen1Eye` (mống mắt + đồng tử + đốm sáng)
+  - Editor: `Gen1ModelPostprocessor` tự đặt thông số import FBX
+  - App: `DebugOverlay` (nút DEV, chỉ Editor / bản dev) thay `DevHotkeys`
+  - Test: 58/58 pass · compile check: pass
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
 - Model thú: **Gen 1** (dựng bằng script, dùng để build gameplay). **Gen 2** làm sau bằng tool đẹp hơn, thay qua `IPetAvatar` mà không sửa gameplay.
 - Input: dùng Input Manager cũ (touch + chuột), bọc interface ở Phase 1.2.
+- Thú trong game Phase 1.3: thân mượt kiểu thú bông (vertex color + viền sáng), chưa có lông. Lông shell làm ở Phase 6.
+- Điện thoại dùng LOD1, PC / Editor dùng LOD0 (đổi được trong bảng DEV).
 - Giả định GDD G1–G11: tạm dùng, bạn sửa khi cần.
 
 ## Tiếp theo
 
-- **Phase 1.3** — Thay thú tạm bằng model Gen 1 (FBX) qua `IPetAvatar` + bản LOD nhẹ cho mobile, trạng thái bằng hình (đói nhìn chòi ăn + kêu, bẩn có ruồi, buồn ngủ mắt díp), animation bằng code, Debug overlay.
+- **Phase 2.1** — Bệnh / chết vĩnh viễn / tưởng niệm / trứng mới (thừa hưởng 1 trait).
 
 ## Ghi chú cho session sau
 
@@ -45,5 +69,7 @@
 - Môi trường cloud riêng `gaao` có setup script cài sẵn Blender + .NET + restore NuGet (chưa kiểm chứng ở session mới).
 - `ProjectVersion.txt` đặt `6000.3.0f1`. Mở bằng bản 6.3 khác thì Unity tự cập nhật file này.
 - Bản Blender của Ubuntu không có OpenImageDenoise, nên script đã tắt denoise.
-- Thân base mesh 38k đỉnh. Phase 1.3 cần xuất thêm bản LOD nhẹ cho mobile.
-- Lỗi nhỏ đã biết (ảnh render): da dưới lông đậm hơn lông nên quanh mắt hơi cam. Trong Unity sẽ dùng shader riêng.
+- Xuất lại FBX: `blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Resources/Pets/Gen1`, rồi kiểm tra bằng `blender -b --factory-startup --python Tools/Blender/check_kit.py` (phải ra `CHECK_RESULT PASS`). Mỗi lần xuất, repo nặng thêm khoảng 9 MB, nên chỉ xuất khi đổi model.
+- Shader `Gen1Fur` / `Gen1Eye` viết tay cho URP 17 (Unity 6.3) và chưa chạy thử trong Unity thật (container không có Unity). Lỗi thì bảng DEV có nút chuyển sang URP Lit.
+- Phase 2.2: blendshape `to_adult_*` làm đầu dời xa nhưng xương chưa dời theo. Cần dời xương theo dạng tiến hóa để xoay đầu đúng tâm (bộ phận đã dời theo nhờ file mốc neo).
+- Lỗi nhỏ đã biết (ảnh render): da dưới lông đậm hơn lông nên quanh mắt hơi cam. Trong Unity đã dùng shader riêng nên không bị.

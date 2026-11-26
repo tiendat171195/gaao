@@ -160,6 +160,15 @@ namespace PawFit.Pet
             _bus.Publish(new PetNeedsChanged(Current));
         }
 
+        /// <summary>CHỈ dùng cho công cụ test (Debug overlay): đặt thẳng 1 nhu cầu về giá trị bất kỳ 0..100.</summary>
+        public void SetNeedForDebug(NeedType need, float value)
+        {
+            RequirePet();
+            Tick();
+            Current.Needs.Set(need, value);
+            _bus.Publish(new PetNeedsChanged(Current));
+        }
+
         public void Save()
         {
             if (_game != null) _save.Save(SaveKey, _game);

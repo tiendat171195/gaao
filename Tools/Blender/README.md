@@ -26,10 +26,16 @@ Gắn tiêu đề + chú thích tiếng Việt (đọc `final_*.png`, xuất `.j
 python3 Tools/Blender/make_sheet.py out Docs/art
 ```
 
-Xuất bộ model cho Unity:
+Xuất bộ model cho Unity (tạo `PawFit_Gen1_PetKit.fbx` + `PawFit_Gen1_Anchors.json`, khoảng 10 giây):
 
 ```bash
-blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Art/Pets/Gen1/PawFit_Gen1_PetKit.fbx
+blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Resources/Pets/Gen1
+```
+
+Kiểm tra file FBX vừa xuất: nạp lại, in khung bao từng bộ phận, kiểm tra đuôi gắn sau mông, render ảnh xem trước 5 con kiểu "trong game" (không lông) ra `out/check_kit.jpg`. Dòng `CHECK_RESULT PASS` là đạt:
+
+```bash
+blender -b --factory-startup --python Tools/Blender/check_kit.py
 ```
 
 ## Các file
@@ -38,7 +44,8 @@ blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawF
 |---|---|
 | `pawfit_kit.py` | Bộ dựng: thân (metaball → mesh → blendshape), vùng màu, tai, đuôi, sừng, mắt, mũi, miệng, lông, vật liệu |
 | `render_demo.py` | DNA mẫu (Kem Cam, Xám Sọc, Trắng Đốm, Đêm Tím, đích Adult Lửa) + dựng cảnh, đèn, camera |
-| `export_kit.py` | Xuất FBX: thân + xương + bộ phận + bộ kiểu dáng |
+| `export_kit.py` | Xuất FBX cho Unity: xương + thân LOD0 / LOD1 + mọi kiểu bộ phận + file mốc neo JSON |
+| `check_kit.py` | Kiểm tra FBX đã xuất (khung bao, đuôi, ảnh xem trước) |
 | `make_sheet.py` | Gắn chữ lên ảnh demo |
 
 Muốn thêm 1 con mới: copy 1 dict DNA trong `render_demo.py` rồi đổi gene (màu `fur`, `eye_shape`, `ear`, `tail`, `horns`…).
@@ -56,17 +63,35 @@ Muốn thêm 1 con mới: copy 1 dict DNA trong `render_demo.py` rồi đổi ge
 | Dạng đuôi (5) | `cao`, `tua`, `bong`, `vay`, `xoan` |
 | Tỉ lệ | `head_big`, `body_chubby`, `legs_long` (0..1 = giá trị blendshape) |
 
-## Bên trong file FBX (`Assets/PawFit/Art/Pets/Gen1/PawFit_Gen1_PetKit.fbx`)
+## Bên trong file FBX (`Assets/PawFit/Resources/Pets/Gen1/PawFit_Gen1_PetKit.fbx`, bản 2)
+
+Trong Unity, mặt thú nhìn +Z, chân chạm y = 0, đơn vị mét. Hậu tố `_R` = phía +X của Blender = phía −X trong Unity.
 
 | Object | Nội dung |
 |---|---|
 | `PF_Rig` | 10 xương: hips, spine, chest, neck, head, legFR/FL/BR/BL, tail |
-| `PF_Body` | Thân Baby, blendshape tiến hóa `to_adult_fire` / `to_adult_water` / `to_adult_light` / `to_adult_steel` / `to_adult_shadow` + tỉ lệ `head_big`, `body_chubby`, `legs_long`. Vertex color: R = vùng sáng, G = vùng chân, B = sọc mặc định, A = vùng lưng. UV2 `FurMap`: x = độ dài lông, y = mật độ lông |
-| `PF_Eye*`, `PF_Liner*`, `PF_Nose`, `PF_Mouth`, `PF_Ear*`, `PF_Tail` | Bộ phận của con mẫu, đã gắn vào xương `head` / `tail` |
-| `Kit_Ear` / `Kit_Tail` / `Kit_Horn` / `Kit_Eye` | Bộ kiểu dáng: mỗi kiểu là 1 blendshape, nên morph mượt giữa các kiểu được |
+| `PF_Body` | Thân Baby chi tiết (LOD0, 38k đỉnh) cho PC / Editor |
+| `PF_Body_LOD1` | Thân Baby nhẹ (LOD1, 13,6k đỉnh) cho điện thoại |
+| (cả 2 thân) | Blendshape `to_adult_fire / water / light / steel / shadow`, `head_big`, `body_chubby`, `legs_long`. Vertex color: R = vùng sáng, G = bàn chân, B = sọc, A = đốm. UV0 `FurMap` = (độ dài lông, mật độ lông), UV1 `Extra` = (vùng lưng, vết bẩn) |
+| `PF_Eye_R/L`, `PF_Liner_R/L` | Mắt + viền mắt. Blendshape 5 dạng mắt (gốc = `tron`) + `closed_<dạng>` (nhắm: ngủ, chớp, mắt díp) |
+| `PF_Nose`, `PF_Mouth` | Mũi, miệng |
+| `PF_Ear_<kiểu>_R/L` | 4 kiểu tai `nhon / tron / cup / vay`. Unity giữ đúng 1 cặp theo DNA. Vertex color R = mặt trong, G = chóp tai |
+| `PF_Horn_C/PR/PL/WR/WL` | 5 khe sừng (1 sừng: C · 2 sừng: PR + PL · 3 sừng: C + WR + WL). Blendshape `dai`, `cong` (gốc = `thang`) |
+| `PF_Tail` | Đuôi, gốc nằm sau mông. Blendshape `tua`, `bong`, `vay`, `xoan` (gốc = `cao`). Bản game dày thêm cho giống có lông |
 
-## Giới hạn hiện tại (xử lý ở Phase 1.3)
+Bộ phận là khối cứng, pivot ở chân bộ phận. Lúc chạy, Unity (`Gen1PetAvatar`) gắn chúng vào xương `head` / `hips`.
 
-- Thân 38k đỉnh, quá nặng cho mobile khi phủ lông shell. Cần thêm bản LOD khoảng 8–12k đỉnh (dựng lại base ở voxel thô hơn).
-- Lông trong ảnh là lông sợi của Blender. Trong game, lông sẽ làm bằng shader shell nên đơn giản hơn một chút.
-- Chưa có animation. Phase 1.3 làm animation bằng code (IK chân, nhún thân, vẫy đuôi).
+`PawFit_Gen1_Anchors.json` lưu tâm đầu, gốc đuôi, vị trí miệng, và độ dời của chúng khi mỗi blendshape thân = 100%. Unity dùng file này để dời mắt / tai / sừng / đuôi theo khi đầu to ra hoặc chân dài ra.
+
+## Lịch sử
+
+- **Bản 2 (Phase 1.3):**
+  - Sửa đuôi bị gắn sát đất. Lỗi do tâm hông tính bằng ngưỡng trọng số 0.85 mà không đỉnh nào đạt, nên tâm rơi về (0,0,0). Giờ tính theo trọng số mềm.
+  - Bỏ các mẫu `Kit_*` nằm dưới đất.
+  - Thêm LOD1, mắt nhắm, file mốc neo.
+  - Vertex color xuất dạng LINEAR.
+
+## Giới hạn hiện tại
+
+- Lông thật chỉ có trong ảnh render (lông sợi của Blender). Trong game Phase 1.3 thân mượt kiểu thú bông, có viền sáng giả lông tơ. Lông shell làm ở Phase 6.
+- Blendshape tiến hóa `to_adult_*` làm đầu dời xa, nhưng xương chưa dời theo. Phase 2.2 cần dời cả xương (hoặc xuất xương theo từng dạng) để xoay đầu đúng tâm.

@@ -25,6 +25,11 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
 ## 2. Số liệu & giả định (G1–G11)
 
 - **G1 · Nhu cầu ẩn:** No bụng, Sạch, Năng lượng, Vui (0–100). Đang cài đặt ở `NeedsConfig`: no −4/h, sạch −3/h, năng lượng −4/h khi thức và +15/h khi ngủ, vui −3.5/h, lúc nở = 80.
+- **G1b · Biểu cảm (Phase 1.3, `ExpressionConfig`):**
+  - Đói khi no < 35: cứ khoảng 9 giây (±30%) nhìn chòi ăn 2,2 giây, kêu ở giây 0,8.
+  - Bẩn khi sạch < 40: 2 ruồi, sạch < 15 thì 4 ruồi. Lông lấm lem từ 30% đến 100%.
+  - Buồn ngủ khi năng lượng < 30: mắt mở 72% → 42%, ngáp khoảng 11 giây một lần.
+  - Đang ngủ: mắt nhắm hẳn.
 - **G2 · Bỏ bê:** đồng hồ bỏ bê chỉ reset khi **chăm đủ**, tức cả 4 nhu cầu ≥ 60 cùng lúc.
 - **G3 · Bệnh:**
   - Khỏe: 0–24h.

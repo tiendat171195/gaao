@@ -6,6 +6,21 @@ namespace PawFit.Pet.View
     /// <summary>Tư thế lặp lại của thú.</summary>
     public enum AvatarPose { Idle, Walk, Run, Sleep }
 
+    /// <summary>Biểu cảm theo nhu cầu (Phase 1.3) — View tự vẽ, gameplay chỉ đưa số.</summary>
+    public struct AvatarLook
+    {
+        /// <summary>1 = mắt mở to, 0 = nhắm.</summary>
+        public float EyeOpen;
+
+        /// <summary>0 = sạch, 1 = rất bẩn.</summary>
+        public float Dirt;
+
+        /// <summary>0 = tai / đuôi bình thường, 1 = cụp hẳn.</summary>
+        public float Droop;
+
+        public static AvatarLook Normal => new AvatarLook { EyeOpen = 1f };
+    }
+
     /// <summary>
     /// Phần HÌNH của thú. Gameplay chỉ gọi interface này nên đổi model (thú tạm → Gen 1 → Gen 2)
     /// chỉ cần viết 1 lớp mới implement IPetAvatar, không sửa gameplay.
@@ -20,8 +35,22 @@ namespace PawFit.Pet.View
         void PlayBathe();
         void PlayRefuse();
 
+        /// <summary>Kêu (đòi ăn): ngẩng đầu, há miệng.</summary>
+        void PlayCry();
+
+        /// <summary>Ngáp (buồn ngủ).</summary>
+        void PlayYawn();
+
+        void SetLook(AvatarLook look);
+
+        /// <summary>Quay đầu nhìn 1 điểm trong thế giới; null = nhìn thẳng.</summary>
+        void LookAt(Vector3? worldPoint);
+
         /// <summary>Vị trí miệng (đồ ăn bay vào đây).</summary>
         Vector3 MouthPosition { get; }
+
+        /// <summary>Đỉnh đầu (chỗ hiện bong bóng / Zzz).</summary>
+        Vector3 HeadTop { get; }
     }
 
     /// <summary>Màu thú suy ra từ DNA — dùng chung cho thú tạm và model Gen 1.</summary>
@@ -43,6 +72,22 @@ namespace PawFit.Pet.View
             Color.Lerp(Fur(d), new Color(0.12f, 0.08f, 0.07f), 0.3f + d.PawsDark / 3f * 0.5f);
 
         public static Color Eye(PetDna d) => Prim.Hex(EyeHex[d.EyeColor % EyeHex.Length]);
+
+        /// <summary>Màu hoa văn (sọc / đốm): sẫm hơn lông, lệch màu theo gene PatternHue.</summary>
+        public static Color Pattern(PetDna d)
+        {
+            float h = d.FurHue / 64f + (d.PatternHue - 3.5f) / 7f * 0.12f;
+            h -= Mathf.Floor(h);
+            float s = Mathf.Clamp01(0.25f + d.FurSat / 7f * 0.6f);
+            float v = 0.12f + d.FurVal / 7f * 0.3f;
+            return Color.HSVToRGB(h, s, v);
+        }
+
+        /// <summary>Chóp tai: lông pha màu chân theo gene EarTipDark.</summary>
+        public static Color EarTip(PetDna d) => Color.Lerp(Fur(d), Points(d), d.EarTipDark / 3f);
+
+        /// <summary>Mặt trong tai: hồng nhạt pha 1 chút màu lông.</summary>
+        public static Color EarInner(PetDna d) => Color.Lerp(Prim.Hex("#F2B3AC"), Fur(d), 0.18f);
     }
 
     /// <summary>
@@ -60,9 +105,13 @@ namespace PawFit.Pet.View
         private AvatarPose _pose;
         private float _speed;
         private float _phase;
-        private float _hopT = -1f, _eatT = -1f, _batheT = -1f, _refuseT = -1f;
+        private float _hopT = -1f, _eatT = -1f, _batheT = -1f, _refuseT = -1f, _cryT = -1f, _yawnT = -1f;
+        private AvatarLook _look = AvatarLook.Normal;
+        private Vector3? _lookAt;
+        private float _lookYaw;
 
         public Vector3 MouthPosition => _head != null ? _head.TransformPoint(new Vector3(0f, -0.15f, 0.45f)) : transform.position;
+        public Vector3 HeadTop => _head != null ? _head.position + Vector3.up * 0.45f : transform.position + Vector3.up * 1.2f;
 
         public void Build(PetDna dna)
         {
@@ -175,12 +224,21 @@ namespace PawFit.Pet.View
             }
         }
 
+        private void OnDestroy()
+        {
+            if (_visual != null) Destroy(_visual.gameObject);
+        }
+
         public void SetPose(AvatarPose pose) => _pose = pose;
         public void SetMoveSpeed(float metersPerSecond) => _speed = metersPerSecond;
         public void PlayHop() => _hopT = 0f;
         public void PlayEat() => _eatT = 0f;
         public void PlayBathe() => _batheT = 0f;
         public void PlayRefuse() => _refuseT = 0f;
+        public void PlayCry() => _cryT = 0f;
+        public void PlayYawn() => _yawnT = 0f;
+        public void SetLook(AvatarLook look) => _look = look;
+        public void LookAt(Vector3? worldPoint) => _lookAt = worldPoint;
 
         private void Update()
         {
@@ -228,13 +286,34 @@ namespace PawFit.Pet.View
                 headYaw = Mathf.Sin(_refuseT * Mathf.PI * 6f) * 28f * (1f - _refuseT);
                 if (_refuseT >= 1f) _refuseT = -1f;
             }
+            if (_cryT >= 0f)    // kêu: ngẩng đầu
+            {
+                _cryT += dt / 0.8f;
+                headPitch -= Mathf.Sin(Mathf.Clamp01(_cryT) * Mathf.PI) * 25f;
+                if (_cryT >= 1f) _cryT = -1f;
+            }
+            if (_yawnT >= 0f)   // ngáp: ngửa đầu chậm
+            {
+                _yawnT += dt / 1.3f;
+                headPitch -= Mathf.Sin(Mathf.Clamp01(_yawnT) * Mathf.PI) * 18f;
+                if (_yawnT >= 1f) _yawnT = -1f;
+            }
+            float targetYaw = 0f;   // quay đầu nhìn theo điểm (vd. chòi ăn khi đói)
+            if (_lookAt.HasValue)
+            {
+                Vector3 local = transform.InverseTransformPoint(_lookAt.Value);
+                targetYaw = Mathf.Clamp(Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg, -60f, 60f);
+            }
+            _lookYaw = Mathf.Lerp(_lookYaw, targetYaw, 1f - Mathf.Exp(-dt * 6f));
+            headYaw += _lookYaw;
 
             float breathe = sleep ? Mathf.Sin(Time.time * 2f) * 0.02f : 0f;
             _visual.localPosition = new Vector3(0f, bob + hop + (sleep ? -0.1f : 0f), 0f);
             _visual.localScale = Vector3.Scale(squash, sleep ? new Vector3(1.08f, 0.8f + breathe, 1.05f) : Vector3.one);
             _visual.localRotation = Quaternion.Euler(0f, wiggle, 0f);
             _head.localRotation = Quaternion.Euler(headPitch + (sleep ? 20f : 0f), headYaw, 0f);
-            Vector3 eye = sleep ? new Vector3(_eyeScale.x, _eyeScale.y * 0.15f, _eyeScale.z) : _eyeScale;   // ngủ: nhắm mắt
+            float open = sleep ? 0f : Mathf.Clamp01(_look.EyeOpen);
+            Vector3 eye = new Vector3(_eyeScale.x, _eyeScale.y * Mathf.Lerp(0.15f, 1f, open), _eyeScale.z);   // ngủ: nhắm mắt
             foreach (Transform e in _eyes) e.localScale = eye;
         }
     }
