@@ -27,7 +27,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 1.2 | Vườn dựng bằng code + camera + điều khiển thú (chạm / kéo) | ✅ |
 | 1.3 | Thú Gen 1 trong Unity qua `IPetAvatar` + trạng thái bằng hình + animation code + Debug overlay | ✅ |
 | 2.1 | Bệnh / chết vĩnh viễn / tưởng niệm / trứng mới (thừa hưởng 1 trait) | ✅ |
-| 2.2 | Tiến hóa (CareScore, TrainingVector, seed + tính cách) + chỉ số + lực chiến | ⏳ |
+| 2.2 | Tiến hóa (CareScore, TrainingVector, seed + tính cách) + chỉ số + lực chiến | ✅ |
 | 3.1 | SwipeRecognizer + BattleSimulation + Bot (logic thuần) | ⏳ |
 | 3.2 | Màn đấu ngang + Mode Huấn luyện (bóng mờ, slow-mo, 10 lần = thuộc chiêu) | ⏳ |
 | 4.1 | Firebase Auth + Firestore + giờ server | ⏳ |
@@ -45,7 +45,7 @@ gaao/                            ← gốc repo = gốc project Unity
 ├── Assets/PawFit/
 │   ├── Scripts/
 │   │   ├── Core/   [PawFit.Core, C# thuần]   ServiceLocator, EventBus, Time, Random, Save, Config
-│   │   ├── Pet/    [PawFit.Pet,  C# thuần]   Dna/, Needs/, Health/, Lifecycle/, PetService
+│   │   ├── Pet/    [PawFit.Pet,  C# thuần]   Dna/, Needs/, Health/, Lifecycle/, Evolution/, PetService
 │   │   │   └── View/ [Unity]                 IPetAvatar, Gen1PetAvatar, PlaceholderPetAvatar (thú tạm), PetMoodFx, DnaVisuals
 │   │   ├── Core/Unity/ [Unity]               MaterialFactory, Prim, VecExt (dùng chung cho View)
 │   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, PetExpressionService, CareActionService, PointerGestures

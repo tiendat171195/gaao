@@ -74,6 +74,7 @@ namespace UnityEngine
         public Vector3 lossyScale => default;
         public Vector3 InverseTransformPoint(Vector3 position) => position;
         public Vector3 InverseTransformDirection(Vector3 direction) => direction;
+        public Vector3 InverseTransformVector(Vector3 vector) => vector;
         public Vector3 TransformDirection(Vector3 direction) => direction;
         public Vector3 TransformVector(Vector3 vector) => vector;
         public void Rotate(float xAngle, float yAngle, float zAngle) { }
@@ -163,6 +164,7 @@ namespace UnityEngine
         public static float Cos(float f) => 0f;
         public static float Abs(float f) => 0f;
         public static float Exp(float f) => 0f;
+        public static float Pow(float f, float p) => 0f;
         public static float Max(float a, float b) => a;
         public static float Clamp(float v, float min, float max) => v;
         public static float Clamp01(float v) => v;

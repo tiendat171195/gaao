@@ -20,7 +20,7 @@ namespace PawFit.Pet.View
         public static Vector3 V(float[] a) => a != null && a.Length >= 3 ? new Vector3(a[0], a[1], a[2]) : Vector3.zero;
     }
 
-    /// <summary>Tâm đầu / gốc đuôi dời bao nhiêu khi 1 blendshape thân = 100%.</summary>
+    /// <summary>Tâm đầu / gốc đuôi / đầu mỗi xương dời bao nhiêu khi 1 blendshape thân = 100%.</summary>
     [Serializable]
     public sealed class Gen1AnchorKey
     {
@@ -28,6 +28,14 @@ namespace PawFit.Pet.View
         public float[] head;
         public float headScale = 1f;
         public float[] tail;
+        public Gen1BoneDelta[] bones;
+    }
+
+    [Serializable]
+    public sealed class Gen1BoneDelta
+    {
+        public string name;
+        public float[] d;
     }
 
     /// <summary>
@@ -43,6 +51,9 @@ namespace PawFit.Pet.View
         public const string KitPath = "Pets/Gen1/PawFit_Gen1_PetKit";
         public const string AnchorsPath = "Pets/Gen1/PawFit_Gen1_Anchors";
         private const float ModelScale = 0.85f;
+        private const float UltimateScale = 1.08f;
+        private const float GrowthPerSecond = 0.35f;   // dáng đổi mượt khi lớn / tiến hóa
+        private static readonly string[] FormKeys = { "to_adult_fire", "to_adult_water", "to_adult_light", "to_adult_steel", "to_adult_shadow" };
 
         // thứ tự = thứ tự enum trong PetDna (EyeShape / EarType / HornShape / TailType); kiểu đầu tiên là hình gốc
         private static readonly string[] EyeKinds = { "tron", "hanh_nhan", "meo", "lim_dim", "cun", "sac_hep" };
@@ -98,8 +109,14 @@ namespace PawFit.Pet.View
         private readonly List<float> _earSide = new List<float>();
         private Transform _headAnchor, _mouth, _mouthOpen;
         private Vector3 _mouthOpenScale;
-        private Vector3 _headCenterModel;
+        private Vector3 _headCenterModel, _headCenterRest;
         private float _headRadius;
+        private RestMap _headMap;
+        private readonly Dictionary<string, float> _dnaWeights = new Dictionary<string, float>();
+        private readonly float[] _form = new float[5];
+        private GrowthLook _targetLook;
+        private bool _growthSet, _ultimate;
+        private float _trainT = -1f, _trainSeconds = 4f;
 
         // ---- trạng thái hoạt cảnh ----
         private AvatarPose _pose;
@@ -190,10 +207,11 @@ namespace PawFit.Pet.View
             Transform headBone = FindDeep(_model, "head"), hipsBone = FindDeep(_model, "hips");
 
             // tâm đầu: mọi bộ phận trên đầu gắn vào đây (là con của xương head)
-            _headCenterModel = Gen1Anchors.V(_anchors.headCenter);
+            _headCenterRest = _headCenterModel = Gen1Anchors.V(_anchors.headCenter);
             _headRadius = _anchors.headRadius > 0f ? _anchors.headRadius : 0.29f;
             _headAnchor = Prim.Group(headBone != null ? headBone : _model, "HeadParts");
             _headAnchor.SetPositionAndRotation(_model.TransformPoint(_headCenterModel), _model.rotation);
+            _headMap = new RestMap(_headAnchor, _model);
             foreach (string n in HeadParts) Attach(n, _headAnchor);
             _mouth = FindDeep(_headAnchor, "PF_Mouth");
 
@@ -244,10 +262,15 @@ namespace PawFit.Pet.View
                 tailGeo.SetParent(tailAnchor, true);
                 string tailKind = TailKinds[Index((int)dna.Tail, TailKinds.Length)];
                 if (tailKind != TailKinds[0]) SetShape(tailGeo.GetComponent<SkinnedMeshRenderer>(), tailKind, 100f);
-                _tail = new Joint(tailAnchor, _model);
+                _tail = new Joint(tailAnchor, _model);   // vẫy đuôi = xoay gốc đuôi quanh chính nó
             }
 
-            ApplyBodyShape(dna);
+            _dnaWeights.Clear();
+            _dnaWeights["head_big"] = dna.HeadSize / 15f;
+            _dnaWeights["body_chubby"] = dna.Chubby / 15f;
+            _dnaWeights["legs_long"] = dna.LegLength / 15f;
+            _growthSet = false;
+            ApplyShape();
             ApplyMaterials(dna);
 
             // mắt: dạng theo DNA
@@ -263,33 +286,94 @@ namespace PawFit.Pet.View
             BuildOpenMouth();
         }
 
-        /// <summary>DNA tỉ lệ -> blendshape thân + dời tâm đầu / gốc đuôi theo đúng lượng đó.</summary>
-        private void ApplyBodyShape(PetDna dna)
+        /// <summary>
+        /// Áp dáng thân: 3 blendshape tỉ lệ theo DNA + 5 blendshape tiến hóa theo giai đoạn. Dời tâm đầu / gốc đuôi
+        /// và tâm xoay của từng khớp xương theo đúng lượng đó (file mốc neo), nên thú đã lớn vẫn xoay đầu / chân đúng chỗ.
+        /// Tính bằng bản đồ chụp lúc nghỉ => gọi được cả khi xương đang xoay.
+        /// </summary>
+        private void ApplyShape()
         {
-            var weights = new Dictionary<string, float>
-            {
-                { "head_big", dna.HeadSize / 15f },
-                { "body_chubby", dna.Chubby / 15f },
-                { "legs_long", dna.LegLength / 15f },
-            };
-            foreach (KeyValuePair<string, float> kv in weights) SetShape(_body, kv.Key, kv.Value * 100f);
+            if (_body == null) return;
+            foreach (KeyValuePair<string, float> kv in _dnaWeights) SetShape(_body, kv.Key, kv.Value * 100f);
+            for (int i = 0; i < FormKeys.Length; i++) SetShape(_body, FormKeys[i], _form[i] * 100f);
             Vector3 dHead = Vector3.zero, dTail = Vector3.zero;
             float headScale = 1f;
+            var bones = new Dictionary<string, Vector3>();
             foreach (Gen1AnchorKey k in _anchors.keys)
             {
-                if (k == null || !weights.TryGetValue(k.name, out float w) || w == 0f) continue;
+                if (k == null) continue;
+                float w = Weight(k.name);
+                if (w == 0f) continue;
                 dHead += Gen1Anchors.V(k.head) * w;
                 dTail += Gen1Anchors.V(k.tail) * w;
                 headScale += (k.headScale - 1f) * w;
+                if (k.bones == null) continue;
+                foreach (Gen1BoneDelta b in k.bones)
+                {
+                    if (b == null || b.name == null) continue;
+                    bones.TryGetValue(b.name, out Vector3 acc);
+                    bones[b.name] = acc + Gen1Anchors.V(b.d) * w;
+                }
             }
-            _headCenterModel += dHead;
-            _headAnchor.position = _model.TransformPoint(_headCenterModel);
-            _headAnchor.localScale = Vector3.one * headScale;
-            if (_tail != null)
+            _headCenterModel = _headCenterRest + dHead;
+            if (_headMap != null)
             {
-                _tail.T.position = _model.TransformPoint(Gen1Anchors.V(_anchors.tailOrigin) + dTail);
-                _tail = new Joint(_tail.T, _model);
+                _headAnchor.localPosition = _headMap.At(dHead);
+                _headAnchor.localScale = Vector3.one * headScale;
             }
+            _tail?.MoveRest(dTail);
+            Pivot(_spine, "spine", bones);
+            Pivot(_neck, "neck", bones);
+            Pivot(_head, "head", bones);
+            if (_legs != null)
+            {
+                string[] names = { "legFR", "legFL", "legBR", "legBL" };
+                for (int i = 0; i < _legs.Length; i++) Pivot(_legs[i], names[i], bones);
+            }
+            _model.localScale = Vector3.one * (ModelScale * (_ultimate ? UltimateScale : 1f));
+        }
+
+        private float Weight(string key)
+        {
+            if (_dnaWeights.TryGetValue(key, out float w)) return w;
+            int i = Array.IndexOf(FormKeys, key);
+            return i >= 0 ? _form[i] : 0f;
+        }
+
+        private static void Pivot(Joint j, string bone, Dictionary<string, Vector3> deltas)
+        {
+            if (j == null) return;
+            j.MovePivot(deltas.TryGetValue(bone, out Vector3 d) ? d : Vector3.zero);
+        }
+
+        /// <summary>Hình dáng theo giai đoạn (gọi mỗi frame). Lần đầu sau khi dựng thì đặt ngay, sau đó đổi mượt.</summary>
+        public void SetGrowth(GrowthLook look)
+        {
+            _targetLook = look;
+            if (_growthSet) return;
+            _growthSet = true;
+            for (int i = 0; i < 5; i++) _form[i] = look.Get(EvolutionRules.Forms[i]);
+            _ultimate = look.Ultimate;
+            ApplyShape();
+        }
+
+        private void UpdateGrowth(float dt)
+        {
+            if (!_growthSet) return;
+            bool changed = false;
+            for (int i = 0; i < 5; i++)
+            {
+                float target = _targetLook.Get(EvolutionRules.Forms[i]);
+                if (Mathf.Abs(_form[i] - target) < 1e-4f) continue;
+                _form[i] = Mathf.MoveTowards(_form[i], target, GrowthPerSecond * dt);
+                changed = true;
+            }
+            if (_ultimate != _targetLook.Ultimate)
+            {
+                _ultimate = _targetLook.Ultimate;
+                changed = true;
+            }
+            if (changed) ApplyShape();
         }
 
         private void ApplyMaterials(PetDna dna)
@@ -416,6 +500,10 @@ namespace PawFit.Pet.View
             _earSide.Clear();
             _spine = _neck = _head = _tail = null;
             _legs = null;
+            _headMap = null;
+            _growthSet = false;
+            _ultimate = false;
+            Array.Clear(_form, 0, _form.Length);
         }
 
         private void OnDestroy() => ClearBuilt();
@@ -432,6 +520,12 @@ namespace PawFit.Pet.View
         public void PlayRefuse() => _refuseT = 0f;
         public void PlayCry() => _cryT = 0f;
         public void PlayYawn() => _yawnT = 0f;
+
+        public void PlayTrain(float seconds)
+        {
+            _trainSeconds = Mathf.Max(0.5f, seconds);
+            _trainT = 0f;
+        }
         public void SetLook(AvatarLook look) => _look = look;
         public void LookAt(Vector3? worldPoint) => _lookAt = worldPoint;
 
@@ -444,6 +538,13 @@ namespace PawFit.Pet.View
             if (_model == null) return;
             float dt = Time.deltaTime, time = Time.time;
             bool sleep = _pose == AvatarPose.Sleep;
+            UpdateGrowth(dt);
+            // tập ở sân tập: lao người tới đấm hình nộm liên tục
+            float punch = 0f;
+            if (Step(ref _trainT, _trainSeconds, out float tt))
+                punch = Mathf.Max(0f, Mathf.Sin(tt * _trainSeconds * Mathf.PI * 2.2f)) * (1f - Mathf.Pow(tt, 6f));
+            // thú đã lớn: xoay khớp nhỏ lại 1 chút cho tự nhiên
+            float grown = Mathf.Clamp01(_form[0] + _form[1] + _form[2] + _form[3] + _form[4]);
             _sleepBlend = Mathf.MoveTowards(_sleepBlend, sleep ? 1f : 0f, dt * 1.6f);
             float moving = sleep ? 0f : Mathf.Clamp01(_speed / 1.4f);
             _phase += dt * (3f + _speed * 4.2f);
@@ -460,13 +561,13 @@ namespace PawFit.Pet.View
             }
             float wiggle = Step(ref _batheT, 2.4f, out float tb) ? Mathf.Sin(tb * 45f) * 14f * (1f - tb) : 0f;
             float breathe = Mathf.Sin(time * Mathf.Lerp(2.2f, 1.3f, _sleepBlend)) * Mathf.Lerp(0.012f, 0.025f, _sleepBlend);
-            _visual.localPosition = new Vector3(0f, bob + hop - _sleepBlend * 0.11f, 0f);
+            _visual.localPosition = new Vector3(0f, bob + hop + punch * 0.04f - _sleepBlend * 0.11f, punch * 0.12f);
             _visual.localScale = Vector3.Scale(squash, new Vector3(1f + 0.04f * _sleepBlend, 1f + breathe - 0.06f * _sleepBlend, 1f));
             float shiver = _look.Sick >= 0.5f ? Mathf.Sin(time * 55f) * 2.2f * _look.Sick * (1f - 0.5f * _sleepBlend) : 0f;
             _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver);   // ốm: run lẩy bẩy
 
             // ---- chân: bước chéo (trước phải + sau trái cùng nhịp), gập lại khi ngủ ----
-            float swing = Mathf.Sin(_phase) * moving * 28f;
+            float swing = Mathf.Sin(_phase) * moving * Mathf.Lerp(28f, 20f, grown) + punch * 22f;
             float fold = _sleepBlend * 55f;
             if (_legs != null)
             {
@@ -498,7 +599,7 @@ namespace PawFit.Pet.View
             float refuse = Step(ref _refuseT, 0.7f, out float tr) ? Mathf.Sin(tr * Mathf.PI * 6f) * 28f * (1f - tr) : 0f;
             float cry = Step(ref _cryT, 0.8f, out float tc) ? Mathf.Sin(tc * Mathf.PI) : 0f;
             float yawn = Step(ref _yawnT, 1.4f, out float ty) ? Mathf.Sin(ty * Mathf.PI) : 0f;
-            float pitch = _lookPitch + eat * 26f - cry * 22f - yawn * 16f + _sleepBlend * 16f + _look.Droop * 5f;
+            float pitch = _lookPitch + eat * 26f - cry * 22f - yawn * 16f + _sleepBlend * 16f + _look.Droop * 5f + punch * 14f;
             float yaw = _lookYaw * (1f - _sleepBlend) + refuse;
             float roll = Mathf.Sin(time * 0.5f) * 3f * (1f - moving) * (1f - _sleepBlend);
             _neck?.Set(pitch * 0.4f, yaw * 0.35f);
@@ -657,6 +758,8 @@ namespace PawFit.Pet.View
             public readonly Transform T;
             private readonly Quaternion _rest;
             private readonly Vector3 _right, _up, _fwd;
+            private readonly RestMap _map;
+            private Vector3 _restPos, _pivot;
 
             public Joint(Transform t, Transform model)
             {
@@ -666,14 +769,47 @@ namespace PawFit.Pet.View
                 _right = p.InverseTransformDirection(model.right).normalized;
                 _up = p.InverseTransformDirection(model.up).normalized;
                 _fwd = p.InverseTransformDirection(model.forward).normalized;
+                _map = new RestMap(t, model);
+                _restPos = _pivot = t.localPosition;
+            }
+
+            /// <summary>Dời tâm xoay (đầu khớp) theo dáng thân, `modelDelta` tính trong hệ tọa độ gốc model.</summary>
+            public void MovePivot(Vector3 modelDelta) => _pivot = _map.At(modelDelta);
+
+            /// <summary>Dời cả vị trí nghỉ lẫn tâm xoay (vd gốc đuôi đi theo mông khi thân đổi dáng).</summary>
+            public void MoveRest(Vector3 modelDelta)
+            {
+                _restPos = _pivot = _map.At(modelDelta);
+                T.localPosition = _restPos;
             }
 
             /// <summary>pitch + = cúi xuống / vung ra sau · yaw + = quay sang phải · roll quanh trục dọc thân.</summary>
             public void Set(float pitch, float yaw, float roll = 0f)
             {
-                T.localRotation = Quaternion.AngleAxis(yaw, _up) * Quaternion.AngleAxis(pitch, _right) *
-                                  Quaternion.AngleAxis(roll, _fwd) * _rest;
+                Quaternion q = Quaternion.AngleAxis(yaw, _up) * Quaternion.AngleAxis(pitch, _right) * Quaternion.AngleAxis(roll, _fwd);
+                T.localRotation = q * _rest;
+                T.localPosition = _pivot + q * (_restPos - _pivot);   // xoay quanh tâm khớp (đã dời theo dáng thân)
             }
+        }
+
+        /// <summary>
+        /// Chụp lúc nghỉ: vị trí cục bộ + cách đổi 1 độ dời trong hệ gốc model sang hệ của cha.
+        /// Nhờ vậy dời được vị trí theo dáng thân kể cả khi cha đang xoay.
+        /// </summary>
+        private sealed class RestMap
+        {
+            private readonly Vector3 _rest, _x, _y, _z;
+
+            public RestMap(Transform t, Transform model)
+            {
+                _rest = t.localPosition;
+                Transform p = t.parent;
+                _x = p.InverseTransformVector(model.TransformVector(Vector3.right));
+                _y = p.InverseTransformVector(model.TransformVector(Vector3.up));
+                _z = p.InverseTransformVector(model.TransformVector(Vector3.forward));
+            }
+
+            public Vector3 At(Vector3 modelDelta) => _rest + _x * modelDelta.x + _y * modelDelta.y + _z * modelDelta.z;
         }
     }
 }

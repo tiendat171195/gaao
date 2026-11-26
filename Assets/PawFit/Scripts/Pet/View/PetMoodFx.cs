@@ -26,7 +26,7 @@ namespace PawFit.Pet.View
             public Vector3 Start;
         }
 
-        private static AudioClip _chirp, _yawn;
+        private static AudioClip _chirp, _yawn, _chime;
 
         private IPetAvatar _avatar;
         private Transform _root;
@@ -46,6 +46,14 @@ namespace PawFit.Pet.View
         private readonly List<Transform> _drops = new List<Transform>();
         private readonly List<Glyph> _pluses = new List<Glyph>();
         private float _plusTimer, _towelT = -1f;
+
+        // ---- tiến hóa (Phase 2.2) ----
+        private readonly List<Transform> _burst = new List<Transform>();
+        private readonly List<Vector3> _burstVel = new List<Vector3>();
+        private Transform _glow;
+        private float _evolveT = -1f;
+        private bool _aura;
+        private Transform[] _auraDots;
 
         public void Init(IPetAvatar avatar)
         {
@@ -106,6 +114,31 @@ namespace PawFit.Pet.View
 
         public void Yawn() => Play(ref _yawn, "pawfit_yawn", MakeYawn);
 
+        /// <summary>Tiến hóa: quầng sáng nở ra + tia lấp lánh bắn tung tóe + tiếng chuông.</summary>
+        public void Evolve(bool ultimate)
+        {
+            if (_root == null) return;
+            foreach (Transform t in _burst) Destroy(t.gameObject);
+            _burst.Clear();
+            _burstVel.Clear();
+            Color c = ultimate ? Prim.Hex("#FFD54A") : Prim.Hex("#FFF6C8");
+            for (int i = 0; i < 14; i++)
+            {
+                float a = i / 14f * Mathf.PI * 2f;
+                Transform s = Prim.Make(PrimitiveType.Sphere, _root, Vector3.zero, Vector3.one * 0.07f, c, smoothness: 0.9f).transform;
+                s.position = transform.position + Vector3.up * 0.6f;
+                _burst.Add(s);
+                _burstVel.Add(new Vector3(Mathf.Cos(a) * 1.6f, 1.2f + (i % 3) * 0.5f, Mathf.Sin(a) * 1.6f));
+            }
+            if (_glow == null)
+                _glow = Prim.Make(PrimitiveType.Sphere, _root, Vector3.zero, Vector3.zero, Prim.Hex("#FFFBEA"), smoothness: 0.95f).transform;
+            _evolveT = 0f;
+            Play(ref _chime, "pawfit_chime", MakeChime);
+        }
+
+        /// <summary>Ultimate: 3 đốm vàng bay chậm quanh thú.</summary>
+        public void SetAura(bool on) => _aura = on;
+
         private void Update()
         {
             if (_root == null || _avatar == null) return;
@@ -148,6 +181,7 @@ namespace PawFit.Pet.View
             }
 
             UpdateHealth(dt, time, head);
+            UpdateEvolve(dt, time);
 
             // Zzz khi ngủ
             if (_sleeping)
@@ -259,6 +293,48 @@ namespace PawFit.Pet.View
                 g.T.localScale = Vector3.one * (t < 0.2f ? t / 0.2f : t > 0.75f ? (1f - t) / 0.25f : 1f);
                 Billboard(g.T);
             }
+        }
+
+        private void UpdateEvolve(float dt, float time)
+        {
+            if (_evolveT >= 0f)
+            {
+                _evolveT += dt;
+                float t = _evolveT / 1.8f;
+                if (_glow != null)
+                {
+                    _glow.position = transform.position + Vector3.up * 0.6f;
+                    float s = t < 0.35f ? t / 0.35f * 1.9f : 1.9f * Mathf.Max(0f, 1f - (t - 0.35f) / 0.65f);
+                    _glow.localScale = Vector3.one * s;
+                }
+                for (int i = 0; i < _burst.Count; i++)
+                {
+                    _burstVel[i] += Vector3.up * (-2.5f * dt);
+                    _burst[i].position += _burstVel[i] * dt;
+                    _burst[i].localScale = Vector3.one * (0.07f * Mathf.Max(0f, 1f - t));
+                }
+                if (t >= 1f)
+                {
+                    foreach (Transform b in _burst) Destroy(b.gameObject);
+                    _burst.Clear();
+                    _burstVel.Clear();
+                    if (_glow != null) _glow.localScale = Vector3.zero;
+                    _evolveT = -1f;
+                }
+            }
+            if (_aura && _auraDots == null)
+            {
+                _auraDots = new Transform[3];
+                for (int i = 0; i < 3; i++)
+                    _auraDots[i] = Prim.Make(PrimitiveType.Sphere, _root, Vector3.zero, Vector3.one * 0.06f, Prim.Hex("#FFD54A"), smoothness: 0.9f).transform;
+            }
+            if (_auraDots != null)
+                for (int i = 0; i < _auraDots.Length; i++)
+                {
+                    _auraDots[i].gameObject.SetActive(_aura);
+                    float a = time * 0.9f + i * Mathf.PI * 2f / 3f;
+                    _auraDots[i].position = transform.position + new Vector3(Mathf.Cos(a) * 0.7f, 0.45f + Mathf.Sin(time * 1.3f + i) * 0.2f, Mathf.Sin(a) * 0.7f);
+                }
         }
 
         private Transform MakeIceBag()
@@ -390,6 +466,22 @@ namespace PawFit.Pet.View
                 float f = Mathf.Lerp(f0, f1, Mathf.Clamp01(note)) * (1f + 0.02f * Mathf.Sin(t * 70f));
                 float env = Mathf.Sin(Mathf.Clamp01(note) * Mathf.PI);
                 return env * 0.5f * (Mathf.Sin(Phase(f, t)) + 0.25f * Mathf.Sin(2f * Phase(f, t)));
+            });
+
+        /// <summary>Tiếng chuông tiến hóa: 4 nốt đi lên.</summary>
+        private static AudioClip MakeChime(string name) =>
+            Synth(name, 1.2f, t =>
+            {
+                float[] notes = { 523.25f, 659.25f, 783.99f, 1046.5f };
+                float v = 0f;
+                for (int i = 0; i < notes.Length; i++)
+                {
+                    float t0 = i * 0.12f;
+                    if (t < t0) continue;
+                    float u = t - t0;
+                    v += Mathf.Sin(Phase(notes[i], u)) * Mathf.Exp(-u * 3.2f) * 0.22f;
+                }
+                return v;
             });
 
         /// <summary>Tiếng ngáp: trầm dần, dài hơn.</summary>

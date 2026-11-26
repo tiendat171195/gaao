@@ -23,8 +23,12 @@ Tạo 2 file trong thư mục đích:
   Bộ phận là khối cứng, pivot ở chân bộ phận. Unity gắn vào xương head / hips lúc chạy.
   _R = phía +X của Blender = phía -X trong Unity.
 
-`PawFit_Gen1_Anchors.json`: tâm đầu, gốc đuôi + độ dời của chúng theo từng blendshape thân
-  (tọa độ Unity). Unity dùng để dời bộ phận theo khi đầu to ra / chân dài ra.
+`PawFit_Gen1_Anchors.json`: tâm đầu, gốc đuôi + độ dời của chúng theo từng blendshape thân, và độ dời đầu mỗi
+  xương (tọa độ Unity). Unity dùng để dời bộ phận theo khi đầu to ra / chân dài ra / tiến hóa, và để xoay
+  đầu / chân đúng tâm khớp khi thân đã đổi dáng (Phase 2.2).
+
+Chỉ xuất lại file mốc neo (giữ nguyên FBX, tránh repo nặng thêm 9 MB):
+    blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Resources/Pets/Gen1 --anchors-only
 
 Bản 1 có 2 lỗi đã sửa ở bản này:
   * đuôi gắn sát đất (tâm hông tính sai, xem pawfit_kit.tail_origin)
@@ -299,6 +303,39 @@ def make_tail(bvh, P, base):
 # Mốc neo theo blendshape thân
 # ---------------------------------------------------------------------------
 
+def key_elements(name, E0):
+    """Bộ khối metaball đích của 1 blendshape thân (giống ensure_base)."""
+    if name.startswith('to_adult_'):
+        return K.elems_adult(name[len('to_adult_'):])
+    if name == 'head_big':
+        return K.elems_head_big(E0)
+    if name == 'body_chubby':
+        return K.elems_chubby(E0)
+    if name == 'legs_long':
+        return K.elems_legs_long(E0)
+    return None
+
+
+def bone_deltas(E0, E1, tail_origin):
+    """Đầu mỗi xương dời bao nhiêu khi blendshape = 100%: đi theo đúng phép biến đổi của các khối quanh nó
+    (cùng cách tính như đỉnh thân)."""
+    T = [K.elem_matrix(E1[i]) @ K.elem_matrix(E0[i]).inverted() for i in range(len(E0))]
+    out = []
+    for name, h, t, parent in BONES:
+        p = tail_origin.copy() if name == 'tail' else Vector(h)
+        fs = [(i, K.elem_field(e, p)) for i, e in enumerate(E0)]
+        fs = [(i, f) for i, f in fs if f > 1e-6]
+        tot = sum(f for _, f in fs)
+        if tot <= 0.0:
+            j = min(range(len(E0)), key=lambda i: (p - K._center(E0[i])).length)
+            fs, tot = [(j, 1.0)], 1.0
+        acc = Vector((0.0, 0.0, 0.0))
+        for i, f in fs:
+            acc += (T[i] @ p) * (f / tot)
+        out.append(dict(name=name, d=to_unity(acc - p)))
+    return out
+
+
 def anchor_data(base, head_center, tail_origin, mouth_p):
     hwt = base['bone_w']['head']
     probe = K.link(bpy.data.objects.new('PF_Probe', base['mesh'].copy()))
@@ -315,8 +352,10 @@ def anchor_data(base, head_center, tail_origin, mouth_p):
         sc = K._mean_dist(P, hwt, 0.95, hc) / base['head_r']
         bvh = BVHTree.FromPolygons(P, base['polys'])
         to = K.tail_origin(bvh, P, base, 1.0)
+        E1 = key_elements(k.name, base['elems'])
+        bones = bone_deltas(base['elems'], E1, tail_origin) if E1 is not None else []
         keys.append(dict(name=k.name, head=to_unity(hc - head_center), headScale=round(sc, 5),
-                         tail=to_unity(to - tail_origin)))
+                         tail=to_unity(to - tail_origin), bones=bones))
     bpy.data.objects.remove(probe, do_unlink=True)
     return dict(version=2, headCenter=to_unity(head_center), headRadius=round(base['head_r'], 5),
                 tailOrigin=to_unity(tail_origin), mouth=to_unity(mouth_p), keys=keys)
@@ -324,7 +363,7 @@ def anchor_data(base, head_center, tail_origin, mouth_p):
 
 # ---------------------------------------------------------------------------
 
-def main(out_dir):
+def main(out_dir, anchors_only=False):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     K.reset_cache()
     base0 = K.ensure_base(K.LOD0_VOXEL)
@@ -351,16 +390,17 @@ def main(out_dir):
 
     os.makedirs(out_dir, exist_ok=True)
     fbx = os.path.join(out_dir, FBX_NAME)
-    for o in bpy.context.scene.objects:
-        o.select_set(o.type in ('MESH', 'ARMATURE'))
-    bpy.ops.export_scene.fbx(filepath=fbx, use_selection=True, object_types={'ARMATURE', 'MESH'},
-                             use_mesh_modifiers=False, add_leaf_bones=False, bake_anim=False,
-                             use_armature_deform_only=True, mesh_smooth_type='FACE',
-                             colors_type='LINEAR', apply_scale_options='FBX_SCALE_ALL',
-                             axis_forward='-Z', axis_up='Y')
+    if not anchors_only:
+        for o in bpy.context.scene.objects:
+            o.select_set(o.type in ('MESH', 'ARMATURE'))
+        bpy.ops.export_scene.fbx(filepath=fbx, use_selection=True, object_types={'ARMATURE', 'MESH'},
+                                 use_mesh_modifiers=False, add_leaf_bones=False, bake_anim=False,
+                                 use_armature_deform_only=True, mesh_smooth_type='FACE',
+                                 colors_type='LINEAR', apply_scale_options='FBX_SCALE_ALL',
+                                 axis_forward='-Z', axis_up='Y')
     with open(os.path.join(out_dir, ANCHORS_NAME), 'w', encoding='utf-8') as f:
         json.dump(anchors, f, indent=1)
-    print("EXPORT_OK %s" % fbx)
+    print("EXPORT_OK %s%s" % (fbx, " (chỉ file mốc neo)" if anchors_only else ""))
     print("  body LOD0=%d LOD1=%d verts | parts=%s" % (len(body0.data.vertices), len(body1.data.vertices),
                                                        [o.name for o in parts]))
     print("  tail origin (blender) = %s | head center = %s" % (tuple(round(c, 3) for c in tail_o),
@@ -369,4 +409,6 @@ def main(out_dir):
 
 if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    main(args[0] if args else os.path.join(HERE, '..', '..', 'Assets', 'PawFit', 'Resources', 'Pets', 'Gen1'))
+    only = '--anchors-only' in args
+    args = [a for a in args if a != '--anchors-only']
+    main(args[0] if args else os.path.join(HERE, '..', '..', 'Assets', 'PawFit', 'Resources', 'Pets', 'Gen1'), only)

@@ -73,6 +73,38 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
 - Trong ổ có 1 quả trứng mang đúng 1 trait của thú cũ, ví dụ dạng đuôi, màu lông hoặc dạng tai.
 - 24 giờ sau trứng lắc lư và lấp lánh. Chạm vào để trứng nở, rồi đặt tên cho thú mới.
 
+## Tiến hóa, chỉ số, lực chiến (Phase 2.2)
+
+**Giai đoạn theo tuổi:** Baby (ngày 0) → Child (ngày 3) → Teen (ngày 7) → Adult (ngày 14) → Ultimate (từ ngày 30, nếu đủ điều kiện). Dáng thân lớn dần, đổi mượt, không đổi đột ngột:
+- Child: lớn đều.
+- Teen: nghiêng dần về dạng sắp thành. Màu lông và tỉ lệ thân (DNA) cũng trượt dần, mỗi ngày 1 bước.
+- Adult: thành hẳn 1 trong 5 dạng, có quầng sáng + tiếng chuông lúc tiến hóa.
+
+**Điểm tập 4 hướng.** Mỗi hướng chủ động có giới hạn 30 điểm / ngày:
+
+| Hướng | Có được khi |
+|---|---|
+| Sức mạnh | Dắt thú thả vào **sân tập**: thú đấm hình nộm 4 giây, tốn năng lượng + no bụng. Ốm hoặc quá mệt thì thú lắc đầu |
+| Tốc độ | Dắt thú chạy theo ngón tay |
+| Chăm sóc | Cho ăn, tắm, vuốt ve, lau người, cho ngủ trong ổ |
+| Bóng tối | Tự tăng khi thú bị bỏ bê hoặc đang ốm |
+
+**Dạng Adult** (chốt lúc lên Adult; tính cách ẩn + seed cộng nhiễu 10–20%):
+
+| Điều kiện | Dạng |
+|---|---|
+| CareScore < 40 | Bóng Tối |
+| Tập cân bằng (không hướng nào trội) | Thép |
+| Sức mạnh trội | Lửa |
+| Tốc độ trội | Nước |
+| Chăm sóc trội + CareScore ≥ 70 | Ánh Sáng |
+| Chăm sóc trội nhưng CareScore < 70 | Dạng của hướng mạnh thứ 2 |
+| Bóng tối trội | Bóng Tối |
+
+- **CareScore** = trung bình mức chăm (trung bình 4 nhu cầu) của 7 ngày gần nhất; giờ đang ốm chỉ tính nửa.
+- **Ultimate** cần: CareScore ≥ 80, thuộc đủ 4 chiêu (Phase 3.2), 7 ngày không bệnh. Ultimate to hơn chút và có 3 đốm vàng bay quanh.
+- **Chỉ số + lực chiến** theo GDD G8, giảm khi mệt / ốm. Vườn không hiện số; chỉ xem được trong bảng DEV, sẽ dùng khi đấu từ Phase 3.
+
 ## Công cụ test (chỉ Editor / bản Development)
 
 - Nút **DEV** góc trên trái màn hình (hoặc phím `F1`) mở bảng test:
@@ -81,6 +113,7 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Đặt nhanh trạng thái: **Đói** / **Bẩn** / **Buồn ngủ** / **Khỏe hết** / **Cho ngủ**.
   - Sức khỏe: **Mệt** / **Ốm** / **Nguy kịch** / **Chết** / **Uống thuốc** / **Khỏi bệnh**. Xem số giờ bỏ bê, đã chăm kỹ mấy việc / 3, % hồi phục.
   - Khi thú đã mất: xem trứng còn bao lâu nở, thừa hưởng trait gì, nút **Trứng nở được ngay**.
+  - Tiến hóa: xem giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến. Nút **+1 ngày tuổi**, **Lên giai đoạn**, **Thuộc 1 chiêu**, **+10** từng hướng tập.
   - Tua giờ +1 / +6 / +24.
   - **Thú mới** (DNA ngẫu nhiên).
   - Đổi model Gen 1 ↔ thú tạm, LOD0 ↔ LOD1, shader riêng ↔ URP Lit.
@@ -108,7 +141,7 @@ dotnet build Tools/UnityCompileCheck
 |---|---|
 | `Assets/PawFit/Scripts/Core` | Service nền, C# thuần: ServiceLocator, EventBus, thời gian, random có seed, lưu JSON, config |
 | `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ |
-| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx` |
+| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx` |
 | `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn, camera, input, NavMesh, bia mộ, trứng, bảng đặt tên |
 | `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow, Debug overlay |
 | `Assets/PawFit/Resources/Pets/Gen1` | Model thú Gen 1 (FBX bản 2: thân LOD0 / LOD1 + blendshape + xương + mọi kiểu bộ phận) + file mốc neo JSON |

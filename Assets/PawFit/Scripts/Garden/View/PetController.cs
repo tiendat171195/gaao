@@ -25,13 +25,14 @@ namespace PawFit.Garden.View
         private PetBrain _brain;
         private CareActionService _care;
         private PetExpressionService _expr;
+        private EvolutionService _evo;
         private GardenConfig _cfg;
         private NavMeshAgent _agent;
         private IPetAvatar _avatar;
         private PetMoodFx _fx;
         private Camera _cam;
-        private Vector3 _foodPoint;
-        private IDisposable _careSub, _createdSub;
+        private Vector3 _foodPoint, _trainPoint;
+        private IDisposable _careSub, _createdSub, _evolvedSub, _dnaSub;
         private NVec2 _sentTarget = NoTarget;
         private PetActivity _lastActivity = (PetActivity)(-1);
         private bool _dead;
@@ -42,8 +43,8 @@ namespace PawFit.Garden.View
         public bool IsIll => _expr != null && (_expr.Current.Has(PetCondition.Sick) || _expr.Current.Has(PetCondition.Critical));
 
         public static PetController Spawn(Vector3 position, PetDna dna, PetBrain brain, CareActionService care,
-                                          PetExpressionService expr, GardenLayout layout, GardenConfig cfg, EventBus bus,
-                                          Transform parent)
+                                          PetExpressionService expr, EvolutionService evo, GardenLayout layout, GardenConfig cfg,
+                                          EventBus bus, Transform parent)
         {
             var go = new GameObject("Pet");
             go.transform.SetParent(parent, false);
@@ -64,12 +65,15 @@ namespace PawFit.Garden.View
             pc._brain = brain;
             pc._care = care;
             pc._expr = expr;
+            pc._evo = evo;
             pc._cfg = cfg;
             pc._agent = agent;
             pc._cam = Camera.main;
             GardenZone hut = layout.Get(ZoneType.FoodHut);
             // điểm nhìn khi đòi ăn = khay đồ ăn (cùng chỗ GardenBuilder đặt khay)
             pc._foodPoint = hut != null ? NVec2.Lerp(hut.UsePoint, hut.Center, 0.55f).ToWorld(0.5f) : position;
+            GardenZone train = layout.Get(ZoneType.TrainingGround);
+            pc._trainPoint = train != null ? train.Center.ToWorld(0.6f) : position;   // nhìn về phía hình nộm khi tập
             pc._fx = go.AddComponent<PetMoodFx>();
             pc.RebuildAvatar(dna);
             // bị từ chối (no rồi, chưa buồn ngủ, ốm không chịu tắm...) thì lắc đầu; lau người thì có khăn
@@ -81,6 +85,15 @@ namespace PawFit.Garden.View
             });
             // có thú mới khi con này còn sống (công cụ test "Thú mới") thì dựng lại hình
             pc._createdSub = bus.Subscribe<PetCreated>(e =>
+            {
+                if (!pc._dead) pc.RebuildAvatar(e.Pet.Dna);
+            });
+            // tiến hóa: quầng sáng + tiếng chuông (dáng tự đổi mượt theo SetGrowth); DNA trượt: dựng lại hình
+            pc._evolvedSub = bus.Subscribe<PetEvolved>(e =>
+            {
+                if (!pc._dead) pc._fx.Evolve(e.To == EvolutionStage.Ultimate);
+            });
+            pc._dnaSub = bus.Subscribe<PetDnaChanged>(e =>
             {
                 if (!pc._dead) pc.RebuildAvatar(e.Pet.Dna);
             });
@@ -113,6 +126,8 @@ namespace PawFit.Garden.View
         {
             _careSub?.Dispose();
             _createdSub?.Dispose();
+            _evolvedSub?.Dispose();
+            _dnaSub?.Dispose();
         }
 
         /// <summary>Thú đã mất: đứng lại, chạy cảnh chia tay rồi tự biến mất (gọi `done` khi xong).</summary>
@@ -156,11 +171,19 @@ namespace PawFit.Garden.View
             }
 
             if (_brain.Activity == PetActivity.Reacting) FaceTowards(_cam != null ? _cam.transform.position : transform.position);
+            if (_brain.Activity == PetActivity.Training) FaceTowards(_trainPoint);
             if (_brain.Activity != _lastActivity)
             {
                 if (_brain.Activity == PetActivity.Eating) _avatar.PlayEat();
                 else if (_brain.Activity == PetActivity.Bathing) _avatar.PlayBathe();
+                else if (_brain.Activity == PetActivity.Training) _avatar.PlayTrain(_cfg.WorkoutSeconds);
                 _lastActivity = _brain.Activity;
+            }
+            if (_evo != null)   // lớn lên: dáng theo giai đoạn tiến hóa
+            {
+                GrowthLook look = _evo.Look;
+                _avatar.SetGrowth(look);
+                _fx.SetAura(look.Ultimate);
             }
             float v = _agent.velocity.magnitude;
             _avatar.SetMoveSpeed(v);

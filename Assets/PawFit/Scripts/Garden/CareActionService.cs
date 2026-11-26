@@ -4,8 +4,8 @@ using PawFit.Pet;
 
 namespace PawFit.Garden
 {
-    /// <summary>Wipe = chạm vào thú đang ốm (lau người).</summary>
-    public enum CareKind { Feed, Bathe, Pet, Sleep, Wake, Wipe }
+    /// <summary>Wipe = chạm vào thú đang ốm (lau người). Workout = tập sức mạnh ở sân tập.</summary>
+    public enum CareKind { Feed, Bathe, Pet, Sleep, Wake, Wipe, Workout }
 
     public enum CareResult { Ok, Refused }
 
@@ -33,6 +33,7 @@ namespace PawFit.Garden
     {
         private readonly PetService _pets;
         private readonly HealthService _health;
+        private readonly EvolutionService _evo;
         private readonly GardenConfig _cfg;
         private readonly ITimeProvider _time;
         private readonly EventBus _bus;
@@ -40,11 +41,12 @@ namespace PawFit.Garden
         private DateTime _lastPetMoodUtc = DateTime.MinValue;
         private DateTime _lastWipeUtc = DateTime.MinValue;
 
-        public CareActionService(PetService pets, HealthService health, GardenConfig cfg, ITimeProvider time, EventBus bus,
-                                 ILog log = null)
+        public CareActionService(PetService pets, HealthService health, EvolutionService evo, GardenConfig cfg, ITimeProvider time,
+                                 EventBus bus, ILog log = null)
         {
             _pets = pets ?? throw new ArgumentNullException(nameof(pets));
             _health = health ?? throw new ArgumentNullException(nameof(health));
+            _evo = evo ?? throw new ArgumentNullException(nameof(evo));
             _cfg = cfg ?? throw new ArgumentNullException(nameof(cfg));
             _time = time ?? throw new ArgumentNullException(nameof(time));
             _bus = bus ?? throw new ArgumentNullException(nameof(bus));
@@ -70,6 +72,7 @@ namespace PawFit.Garden
             _pets.Care(NeedType.Satiety, _cfg.FeedSatiety);
             _pets.Care(NeedType.Mood, _cfg.FeedMood);
             if (ill) _health.MarkCarefulCare(CarefulCareKind.Porridge);
+            _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CareFeed);
             return Done(CareKind.Feed, CareResult.Ok, ill ? "cháo" : null);
         }
 
@@ -81,6 +84,7 @@ namespace PawFit.Garden
             if (_pets.Current.IsSleeping) _pets.SetSleeping(false);
             _pets.Care(NeedType.Hygiene, _cfg.BatheHygiene);
             _pets.Care(NeedType.Mood, _cfg.BatheMood);
+            _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CareBathe);
             return Done(CareKind.Bathe, CareResult.Ok, null);
         }
 
@@ -100,6 +104,7 @@ namespace PawFit.Garden
                     _pets.Care(NeedType.Hygiene, _cfg.WipeHygiene);
                     _pets.Care(NeedType.Mood, _cfg.WipeMood);
                     _health.MarkCarefulCare(CarefulCareKind.Wipe);
+                    _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CareWipe);
                 }
                 return Done(CareKind.Wipe, CareResult.Ok, null);
             }
@@ -107,6 +112,7 @@ namespace PawFit.Garden
             {
                 _lastPetMoodUtc = now;
                 _pets.Care(NeedType.Mood, _cfg.PetMood);
+                _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CarePet);
             }
             return Done(CareKind.Pet, CareResult.Ok, null);
         }
@@ -122,7 +128,29 @@ namespace PawFit.Garden
             if (!ill && Needs.Energy >= _cfg.NotSleepyAboveEnergy) return Done(CareKind.Sleep, CareResult.Refused, "chưa buồn ngủ");
             _pets.SetSleeping(true);
             if (ill) _health.MarkCarefulCare(CarefulCareKind.Blanket);
+            _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CareSleep);
             return Done(CareKind.Sleep, CareResult.Ok, ill ? "đắp chăn" : null);
+        }
+
+        /// <summary>Thả thú vào sân tập: đấm hình nộm (Sức mạnh). Ốm / quá mệt / hết lượt hôm nay thì từ chối.</summary>
+        public CareResult Workout()
+        {
+            WorkoutResult r = _evo.TryWorkout();
+            switch (r)
+            {
+                case WorkoutResult.Ok: return Done(CareKind.Workout, CareResult.Ok, null);
+                case WorkoutResult.Sick: return Done(CareKind.Workout, CareResult.Refused, "đang ốm, không tập được");
+                case WorkoutResult.TooTired: return Done(CareKind.Workout, CareResult.Refused, "mệt quá");
+                case WorkoutResult.DailyLimit: return Done(CareKind.Workout, CareResult.Refused, "hôm nay tập đủ rồi");
+                default: return Done(CareKind.Workout, CareResult.Refused, "không có thú");
+            }
+        }
+
+        /// <summary>Thú chạy theo ngón tay được `meters` mét: cộng điểm Tốc độ (không bắn sự kiện, gọi thường xuyên).</summary>
+        public void Run(float meters)
+        {
+            if (!_pets.HasPet || meters <= 0f || _health.IsIll) return;
+            _evo.AddTraining(TrainingAxis.Speed, meters * _pets.Config.Evolution.SpeedPerMeterLed);
         }
 
         public void Wake()

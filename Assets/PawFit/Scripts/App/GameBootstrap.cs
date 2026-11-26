@@ -57,7 +57,9 @@ namespace PawFit.App
             var layout = GardenLayout.CreateDefault();
             var health = new HealthService(_pets, time, cfg);
             Services.Register(health);
-            var care = new CareActionService(_pets, health, gardenCfg, time, bus, log);
+            var evo = new EvolutionService(_pets, health, time, bus, cfg);   // tự gắn vào PetService (chạy mỗi bước thời gian)
+            Services.Register(evo);
+            var care = new CareActionService(_pets, health, evo, gardenCfg, time, bus, log);
             var brain = new PetBrain(layout, gardenCfg, new SeededRandom(rng.NextUInt()), _pets, care);
             Services.Register(gardenCfg);
             Services.Register(layout);

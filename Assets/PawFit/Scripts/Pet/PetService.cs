@@ -22,6 +22,9 @@ namespace PawFit.Pet
         /// <summary>Sức khỏe: đồng hồ bỏ bê, giai đoạn bệnh, hồi phục (Phase 2.1).</summary>
         public PetHealth Health = new PetHealth();
 
+        /// <summary>Lớn lên: giai đoạn tiến hóa, dạng Adult, điểm tập, CareScore (Phase 2.2).</summary>
+        public PetGrowth Growth = new PetGrowth();
+
         public double AgeDays(DateTime nowUtc) => (nowUtc - BornAtUtc).TotalDays;
     }
 
@@ -81,6 +84,7 @@ namespace PawFit.Pet
         private readonly ILog _log;
         private GameSave _game;
         private bool _eggAnnounced;
+        private readonly List<IPetStepper> _steppers = new List<IPetStepper>();
 
         public PetService(ITimeProvider time, IRandom rng, ISaveService save, EventBus bus, GameConfig cfg, ILog log = null)
         {
@@ -90,6 +94,12 @@ namespace PawFit.Pet
             _bus = bus ?? throw new ArgumentNullException(nameof(bus));
             _cfg = cfg ?? throw new ArgumentNullException(nameof(cfg));
             _log = log ?? NullLog.Instance;
+        }
+
+        /// <summary>Gắn thêm 1 bước tính theo thời gian (vd tiến hóa) — chạy sau nhu cầu + sức khỏe ở mỗi bước.</summary>
+        public void AddStepper(IPetStepper stepper)
+        {
+            if (stepper != null && !_steppers.Contains(stepper)) _steppers.Add(stepper);
         }
 
         /// <summary>Thú đang sống (null nếu thú đã mất và trứng chưa nở).</summary>
@@ -210,6 +220,7 @@ namespace PawFit.Pet
                     return;
                 }
                 if (change != HealthChange.None) PublishHealth(pet, before, change);
+                foreach (IPetStepper s in _steppers) s.Step(pet, dt, end);
             }
             pet.LastSimulatedUtc = now;
             _bus.Publish(new PetNeedsChanged(pet));
@@ -229,6 +240,8 @@ namespace PawFit.Pet
                 DnaCode = DnaCodec.Encode(pet.Dna),
                 BornAtUtc = pet.BornAtUtc,
                 DiedAtUtc = died,
+                Stage = pet.Growth?.Stage ?? EvolutionStage.Baby,
+                Form = pet.Growth?.Form ?? AdultForm.None,
             };
             _game.Memorials.Add(memorial);
             _game.Egg = EggFactory.Lay(pet, died, _cfg.Health.EggAfterDeathHours, _rng);
@@ -253,6 +266,17 @@ namespace PawFit.Pet
             HealthChange change = HealthRules.AfterCare(pet.Health, pet.Needs, _time.UtcNow, _cfg);
             if (change != HealthChange.None) PublishHealth(pet, before, change);
             _bus.Publish(new PetNeedsChanged(pet));
+        }
+
+        /// <summary>Tiêu hao nhu cầu (vd tập luyện tốn năng lượng + no bụng). amount >= 0.</summary>
+        public void Spend(NeedType need, float amount)
+        {
+            RequirePet();
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Tiêu hao phải >= 0");
+            Tick();
+            if (!HasPet) return;
+            Current.Needs.Add(need, -amount);
+            _bus.Publish(new PetNeedsChanged(Current));
         }
 
         /// <summary>Cho thú ngủ / thức. Khi ngủ, năng lượng hồi thay vì giảm.</summary>
@@ -315,6 +339,15 @@ namespace PawFit.Pet
             if (pet.Health.Stage != before) PublishHealth(pet, before, HealthChange.None);
         }
 
+        /// <summary>Cho thú già thêm `days` ngày (thử tiến hóa nhanh). Giai đoạn mới được xét ở lần tính tiếp theo.</summary>
+        public void AgeForDebug(double days)
+        {
+            RequirePet();
+            Tick();
+            if (!HasPet || days <= 0) return;
+            Current.BornAtUtc = Current.BornAtUtc.AddDays(-days);
+        }
+
         /// <summary>Cho trứng tới lúc nở ngay.</summary>
         public void MakeEggReadyForDebug()
         {
@@ -341,6 +374,7 @@ namespace PawFit.Pet
                 LastSimulatedUtc = now,
                 Needs = PetNeeds.Filled(_cfg.Needs.StartValue),
                 Health = new PetHealth(),
+                Growth = new PetGrowth(),
             };
         }
 
@@ -353,6 +387,10 @@ namespace PawFit.Pet
                 if (g.Pet.Health == null) g.Pet.Health = new PetHealth();
                 if (g.Pet.Health.Marks == null) g.Pet.Health.Marks = new CarefulCareMarks();
                 if (g.Pet.Needs == null) g.Pet.Needs = PetNeeds.Filled(PetNeeds.Max);
+                PetGrowth gr = g.Pet.Growth ?? (g.Pet.Growth = new PetGrowth());
+                if (gr.Training == null) gr.Training = new TrainingVector();
+                if (gr.TrainedToday == null) gr.TrainedToday = new TrainingVector();
+                if (gr.CareHours == null) gr.CareHours = new List<float>();
             }
             g.Version = GameSave.CurrentVersion;
         }

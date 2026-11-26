@@ -32,10 +32,22 @@ Xuất bộ model cho Unity (tạo `PawFit_Gen1_PetKit.fbx` + `PawFit_Gen1_Ancho
 blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Resources/Pets/Gen1
 ```
 
+Chỉ xuất lại file mốc neo, giữ nguyên FBX (repo không nặng thêm):
+
+```bash
+blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Resources/Pets/Gen1 --anchors-only
+```
+
 Kiểm tra file FBX vừa xuất: nạp lại, in khung bao từng bộ phận, kiểm tra đuôi gắn sau mông, render ảnh xem trước 5 con kiểu "trong game" (không lông) ra `out/check_kit.jpg`. Dòng `CHECK_RESULT PASS` là đạt:
 
 ```bash
 blender -b --factory-startup --python Tools/Blender/check_kit.py
+```
+
+Render dãy tiến hóa (Baby → Child → Teen → 5 dạng Adult) ra `out/check_kit_forms.jpg`, để xem bộ phận có bám theo dáng thân không:
+
+```bash
+blender -b --factory-startup --python Tools/Blender/check_kit.py -- --forms
 ```
 
 ## Các file
@@ -94,4 +106,4 @@ Bộ phận là khối cứng, pivot ở chân bộ phận. Lúc chạy, Unity (
 ## Giới hạn hiện tại
 
 - Lông thật chỉ có trong ảnh render (lông sợi của Blender). Trong game Phase 1.3 thân mượt kiểu thú bông, có viền sáng giả lông tơ. Lông shell làm ở Phase 6.
-- Blendshape tiến hóa `to_adult_*` làm đầu dời xa, nhưng xương chưa dời theo. Phase 2.2 cần dời cả xương (hoặc xuất xương theo từng dạng) để xoay đầu đúng tâm.
+- (Đã xử lý ở Phase 2.2) File mốc neo có thêm độ dời đầu mỗi xương theo từng blendshape, nên Unity xoay đầu / chân quanh đúng khớp kể cả khi thú đã lớn.

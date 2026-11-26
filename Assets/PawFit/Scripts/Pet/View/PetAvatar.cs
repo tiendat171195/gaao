@@ -44,6 +44,12 @@ namespace PawFit.Pet.View
         /// <summary>Ngáp (buồn ngủ).</summary>
         void PlayYawn();
 
+        /// <summary>Tập ở sân tập (đấm hình nộm) trong `seconds` giây.</summary>
+        void PlayTrain(float seconds);
+
+        /// <summary>Hình dáng theo giai đoạn tiến hóa (gọi mỗi frame; đổi mượt).</summary>
+        void SetGrowth(GrowthLook look);
+
         void SetLook(AvatarLook look);
 
         /// <summary>Quay đầu nhìn 1 điểm trong thế giới; null = nhìn thẳng.</summary>
@@ -112,6 +118,7 @@ namespace PawFit.Pet.View
         private AvatarLook _look = AvatarLook.Normal;
         private Vector3? _lookAt;
         private float _lookYaw;
+        private float _grow = 1f, _growTarget = 1f, _trainT = -1f, _trainSeconds = 4f;
 
         public Vector3 MouthPosition => _head != null ? _head.TransformPoint(new Vector3(0f, -0.15f, 0.45f)) : transform.position;
         public Vector3 HeadTop => _head != null ? _head.position + Vector3.up * 0.45f : transform.position + Vector3.up * 1.2f;
@@ -241,6 +248,15 @@ namespace PawFit.Pet.View
         public void PlayCry() => _cryT = 0f;
         public void PlayYawn() => _yawnT = 0f;
         public void SetLook(AvatarLook look) => _look = look;
+
+        public void PlayTrain(float seconds)
+        {
+            _trainSeconds = Mathf.Max(0.5f, seconds);
+            _trainT = 0f;
+        }
+
+        /// <summary>Thú tạm: lớn lên = to ra (Adult to hơn Baby ~40%), Ultimate to thêm chút.</summary>
+        public void SetGrowth(GrowthLook look) => _growTarget = (1f + 0.4f * Mathf.Clamp01(look.Total)) * (look.Ultimate ? 1.08f : 1f);
         public void LookAt(Vector3? worldPoint) => _lookAt = worldPoint;
 
         private void Update()
@@ -310,9 +326,18 @@ namespace PawFit.Pet.View
             _lookYaw = Mathf.Lerp(_lookYaw, targetYaw, 1f - Mathf.Exp(-dt * 6f));
             headYaw += _lookYaw;
 
+            float punch = 0f;   // tập: lao tới đấm
+            if (_trainT >= 0f)
+            {
+                _trainT += dt / _trainSeconds;
+                punch = Mathf.Max(0f, Mathf.Sin(_trainT * _trainSeconds * Mathf.PI * 2.2f));
+                headPitch += punch * 15f;
+                if (_trainT >= 1f) _trainT = -1f;
+            }
+            _grow = Mathf.MoveTowards(_grow, _growTarget, dt * 0.15f);
             float breathe = sleep ? Mathf.Sin(Time.time * 2f) * 0.02f : 0f;
-            _visual.localPosition = new Vector3(0f, bob + hop + (sleep ? -0.1f : 0f), 0f);
-            _visual.localScale = Vector3.Scale(squash, sleep ? new Vector3(1.08f, 0.8f + breathe, 1.05f) : Vector3.one);
+            _visual.localPosition = new Vector3(0f, bob + hop + (sleep ? -0.1f : 0f), punch * 0.12f);
+            _visual.localScale = Vector3.Scale(squash, sleep ? new Vector3(1.08f, 0.8f + breathe, 1.05f) : Vector3.one) * _grow;
             float shiver = _look.Sick >= 0.5f ? Mathf.Sin(Time.time * 55f) * 2.2f * _look.Sick : 0f;   // ốm: run lẩy bẩy
             _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver);
             _head.localRotation = Quaternion.Euler(headPitch + (sleep ? 20f : 0f), headYaw, 0f);

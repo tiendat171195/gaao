@@ -88,7 +88,8 @@ namespace PawFit.Garden.View
         private void SpawnPet(Vector3 at)
         {
             Pet = PetController.Spawn(at, _pets.Current.Dna, _s.Get<PetBrain>(), _s.Get<CareActionService>(),
-                                      _s.Get<PetExpressionService>(), _layout, _s.Get<GardenConfig>(), _s.Get<EventBus>(), transform);
+                                      _s.Get<PetExpressionService>(), _s.Get<EvolutionService>(), _layout, _s.Get<GardenConfig>(),
+                                      _s.Get<EventBus>(), transform);
         }
 
         /// <summary>Trứng nằm trong ổ ngủ (giữa vườn).</summary>

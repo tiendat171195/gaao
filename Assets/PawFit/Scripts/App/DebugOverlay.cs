@@ -14,6 +14,7 @@ namespace PawFit.App
     ///  * xem 4 nhu cầu, DNA, việc thú đang làm, biểu cảm, sức khỏe (bỏ bê bao lâu, hồi phục bao nhiêu)
     ///  * tua giờ, đặt nhanh trạng thái (đói / bẩn / buồn ngủ / khỏe / ngủ), chỉnh từng nhu cầu
     ///  * bệnh: Mệt / Ốm / Nguy kịch / Chết ngay, uống thuốc, trứng nở ngay
+    ///  * tiến hóa: giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến; thêm tuổi / điểm tập / chiêu
     ///  * thú mới DNA ngẫu nhiên, đổi model Gen 1 / thú tạm, LOD0 / LOD1, shader riêng / URP Lit
     /// Mở / đóng: nút "DEV" góc trên trái, hoặc phím F1. Phím tắt: 1 / 2 / 3 tua +1 / +6 / +24 giờ, N in nhu cầu.
     /// Chỉ GỌI service (logic nằm ở PetService / DebugTimeProvider), không tự sửa luật game.
@@ -85,6 +86,7 @@ namespace PawFit.App
                 DrawNeeds();
                 DrawQuickStates();
                 DrawHealth();
+                DrawEvolution();
             }
             else DrawEgg();
             DrawTime();
@@ -156,6 +158,37 @@ namespace PawFit.App
             if (GUILayout.Button("Chết", _button)) pets.SetNeglectForDebug(c.DeathAfterHours + 1);
             if (GUILayout.Button("Uống thuốc", _button)) health.GiveMedicine();
             if (GUILayout.Button("Khỏi bệnh", _button)) pets.SetNeglectForDebug(0);
+            GUILayout.EndHorizontal();
+        }
+
+        private void DrawEvolution()
+        {
+            var pets = S.Get<PetService>();
+            var evo = S.Get<EvolutionService>();
+            var time = S.Get<ITimeProvider>();
+            EvolutionConfig c = pets.Config.Evolution;
+            double age = pets.Current.AgeDays(time.UtcNow);
+            GUILayout.Space(4f);
+            string form = evo.Form != AdultForm.None ? "dạng " + evo.Form : "đang nghiêng " + evo.LeaningForm;
+            GUILayout.Label($"Tiến hóa: {evo.Stage} · {age:0.0} ngày · {form} · CareScore {evo.CareScore:0} · chiêu {evo.LearnedSkills}/4" +
+                            (evo.CanUltimate ? " · đủ điều kiện Ultimate" : ""), _label);
+            GUILayout.Label("Điểm tập: " + evo.Training, _small);
+            GUILayout.Label(evo.Stats.ToString(), _small);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("+1 ngày tuổi", _button)) pets.AgeForDebug(1);
+            if (GUILayout.Button("Lên giai đoạn", _button))
+            {
+                double next = evo.Stage == EvolutionStage.Baby ? c.ChildAtDays : evo.Stage == EvolutionStage.Child ? c.TeenAtDays
+                            : evo.Stage == EvolutionStage.Teen ? c.AdultAtDays : c.UltimateAtDays;
+                if (next > age) pets.AgeForDebug(next - age + 0.01);
+            }
+            if (GUILayout.Button("Thuộc 1 chiêu", _button)) evo.LearnSkill();
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("+10 Sức", _button)) evo.Training.Add(TrainingAxis.Strength, 10f);
+            if (GUILayout.Button("+10 Tốc", _button)) evo.Training.Add(TrainingAxis.Speed, 10f);
+            if (GUILayout.Button("+10 Chăm", _button)) evo.Training.Add(TrainingAxis.Care, 10f);
+            if (GUILayout.Button("+10 Tối", _button)) evo.Training.Add(TrainingAxis.Shadow, 10f);
             GUILayout.EndHorizontal();
         }
 

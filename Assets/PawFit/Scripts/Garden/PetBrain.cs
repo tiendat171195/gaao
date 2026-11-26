@@ -6,7 +6,7 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Thú đang làm gì trong vườn.</summary>
-    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping }
+    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping, Training }
 
     /// <summary>
     /// "Bộ não" của thú trong vườn (C# thuần): nhận lệnh người chơi + tự quyết khi rảnh
@@ -24,6 +24,9 @@ namespace PawFit.Garden
         private float _playerHold;
         private float _moveTimeout;
         private ZoneType _zoneGoal;
+        private Vector2 _lastLedPos;
+        private bool _hasLedPos;
+        private float _ledMeters;
 
         public PetBrain(GardenLayout layout, GardenConfig cfg, IRandom rng, PetService pets, CareActionService care)
         {
@@ -95,6 +98,7 @@ namespace PawFit.Garden
         public void BeginLead(Vector2 point)
         {
             WakeIfSleeping();
+            _hasLedPos = false;
             Activity = PetActivity.Led;
             Target = _layout.Clamp(point, 0.6f);
             Run = true;
@@ -106,12 +110,13 @@ namespace PawFit.Garden
             if (Activity == PetActivity.Led) Target = _layout.Clamp(point, 0.6f);
         }
 
-        /// <summary>Thả tay khi đang kéo: thả vào hồ = đi tắm, vào ổ = đi ngủ, chỗ khác = đứng đó.</summary>
+        /// <summary>Thả tay khi đang kéo: thả vào hồ = đi tắm, vào ổ = đi ngủ, vào sân tập = tập, chỗ khác = đứng đó.</summary>
         public void EndLead(Vector2 dropPoint, Vector2 petPos)
         {
             if (Activity != PetActivity.Led) return;
+            FlushRun();
             ZoneType zone = _layout.ZoneAt(dropPoint);
-            if (zone == ZoneType.Pond || zone == ZoneType.Bed) GoUse(zone, petPos);
+            if (zone == ZoneType.Pond || zone == ZoneType.Bed || zone == ZoneType.TrainingGround) GoUse(zone, petPos);
             else StartMove(PetActivity.MoveTo, _layout.Clamp(dropPoint, 0.6f), false, petPos);
             _playerHold = _cfg.PlayerHoldSeconds;
         }
@@ -182,6 +187,7 @@ namespace PawFit.Garden
                 case PetActivity.Eating:
                 case PetActivity.Bathing:
                 case PetActivity.Reacting:
+                case PetActivity.Training:
                     _timer -= dt;
                     if (_timer <= 0f) SetIdle(RandomIdle());
                     break;
@@ -197,8 +203,12 @@ namespace PawFit.Garden
                     if (Arrived(petPos) || _moveTimeout <= 0f) UseZone(_zoneGoal);
                     break;
 
-                case PetActivity.Led:
-                    break;   // View cập nhật Target theo ngón tay
+                case PetActivity.Led:   // View cập nhật Target theo ngón tay; chạy theo tay = tập Tốc độ
+                    if (_hasLedPos) _ledMeters += Vector2.Distance(petPos, _lastLedPos);
+                    _lastLedPos = petPos;
+                    _hasLedPos = true;
+                    if (_ledMeters >= 1f) FlushRun();
+                    break;
 
                 default:     // Idle
                     _timer -= dt;
@@ -253,6 +263,14 @@ namespace PawFit.Garden
                     if (_care.Sleep() == CareResult.Ok) Activity = PetActivity.Sleeping;
                     else SetIdle(RandomIdle());
                     break;
+                case ZoneType.TrainingGround:   // đấm hình nộm: Sức mạnh
+                    if (_care.Workout() == CareResult.Ok)
+                    {
+                        Activity = PetActivity.Training;
+                        _timer = _cfg.WorkoutSeconds;
+                    }
+                    else SetIdle(RandomIdle());
+                    break;
                 default:
                     SetIdle(RandomIdle());
                     break;
@@ -286,6 +304,12 @@ namespace PawFit.Garden
             Activity = PetActivity.Idle;
             _timer = seconds;
             Run = false;
+        }
+
+        private void FlushRun()
+        {
+            if (_ledMeters > 0f) _care.Run(_ledMeters);
+            _ledMeters = 0f;
         }
 
         private void WakeIfSleeping()

@@ -42,6 +42,10 @@ namespace PawFit.Pet
         /// <summary>Rank cao nhất từng đạt — có từ Phase 4.3 (Ranking). Chưa có thì null.</summary>
         public string BestRank;
 
+        /// <summary>Giai đoạn + dạng lúc mất (Phase 2.2).</summary>
+        public EvolutionStage Stage;
+        public AdultForm Form;
+
         public double AgeDaysAtDeath() => Math.Max(0.0, (DiedAtUtc - BornAtUtc).TotalDays);
     }
 

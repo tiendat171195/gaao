@@ -121,6 +121,9 @@ namespace PawFit.Garden
         public float WakeAboveEnergy = 95f;
         public float HungryBelowSatiety = 35f;
         public float EatSeconds = 1.6f;
+
+        /// <summary>1 buổi tập ở sân tập kéo dài bấy nhiêu giây.</summary>
+        public float WorkoutSeconds = 4f;
         public float BatheSeconds = 2.6f;
         public float ReactSeconds = 0.8f;
 

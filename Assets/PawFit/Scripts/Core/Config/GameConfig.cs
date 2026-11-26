@@ -8,6 +8,8 @@ namespace PawFit.Core
     {
         public NeedsConfig Needs = new NeedsConfig();
         public HealthConfig Health = new HealthConfig();
+        public EvolutionConfig Evolution = new EvolutionConfig();
+        public StatsConfig Stats = new StatsConfig();
 
         public static GameConfig CreateDefault() => new GameConfig();
     }
@@ -75,5 +77,87 @@ namespace PawFit.Core
 
         /// <summary>Tính bù thời gian vắng mặt theo từng bước bấy nhiêu giờ (đủ mịn để biết đúng lúc nhu cầu tụt).</summary>
         public float SimulationStepHours = 0.25f;
+    }
+
+    /// <summary>Tiến hóa — GDD mục G7. Điểm tập (TrainingVector) có 4 hướng: Sức mạnh / Tốc độ / Chăm sóc / Bóng tối.</summary>
+    public sealed class EvolutionConfig
+    {
+        // ---- giai đoạn theo tuổi (ngày) ----
+        public float ChildAtDays = 3f;
+        public float TeenAtDays = 7f;
+        public float AdultAtDays = 14f;
+        public float UltimateAtDays = 30f;
+
+        // ---- CareScore: trung bình mức chăm sóc của 7 ngày gần nhất (0..100) ----
+        public int CareWindowHours = 168;
+
+        /// <summary>Giờ đang ốm chỉ tính bấy nhiêu phần điểm chăm.</summary>
+        public float SickCareFactor = 0.5f;
+
+        // ---- chọn dạng Adult ----
+        public float LightMinCareScore = 70f;
+        public float ShadowMaxCareScore = 40f;
+
+        /// <summary>Hướng tập cao nhất chiếm không quá tỉ lệ này của tổng => tập cân bằng => Thép.</summary>
+        public float BalancedTopShare = 0.32f;
+
+        /// <summary>Nhiễu theo seed: mỗi hướng ×(1 ± 0.1). Tính cách: hướng hợp tính +15%. Tổng nhiễu 10–20% (G7).</summary>
+        public float SeedNoise = 0.1f;
+        public float PersonalityBonus = 0.15f;
+
+        // ---- Ultimate ----
+        public float UltimateMinCareScore = 80f;
+        public int UltimateSkillsNeeded = 4;
+        public float UltimateHealthyDays = 7f;
+
+        // ---- nguồn điểm tập ----
+        /// <summary>Mỗi hướng tập chủ động (chăm, tập, chạy) cộng tối đa bấy nhiêu điểm 1 ngày.</summary>
+        public float DailyTrainingCap = 30f;
+        public float ShadowPerNeglectHour = 0.4f;
+        public float ShadowPerSickHour = 1f;
+        public float CareFeed = 2f;
+        public float CareBathe = 3f;
+        public float CarePet = 0.5f;
+        public float CareWipe = 1f;
+        public float CareSleep = 1f;
+        public float WorkoutStrength = 6f;
+        public float WorkoutEnergyCost = 8f;
+        public float WorkoutSatietyCost = 5f;
+        public float WorkoutMinEnergy = 20f;
+        public float SpeedPerMeterLed = 0.08f;
+
+        // ---- hình dáng theo giai đoạn (tổng trọng số blendshape tiến hóa) ----
+        public float ChildGrowth = 0.35f;
+        public float TeenGrowth = 0.75f;
+        public float UltimateScale = 1.08f;
+
+        // ---- DNA trượt dần về dạng đang nghiêng (từ Teen, mỗi ngày 1 bước) ----
+        public int DriftHueStep = 3;
+    }
+
+    /// <summary>Chỉ số + lực chiến — GDD mục G8.</summary>
+    public sealed class StatsConfig
+    {
+        public float BaseHp = 100f;
+        public float BaseAtk = 10f;
+        public float BaseDef = 10f;
+        public float BaseSpd = 10f;
+
+        /// <summary>Tỉ lệ chí mạng gốc (%).</summary>
+        public float BaseCrit = 5f;
+
+        /// <summary>Hệ số theo giai đoạn: Baby / Child / Teen / Adult / Ultimate.</summary>
+        public float[] StageMultiplier = { 1f, 1.5f, 2.2f, 3.2f, 4.2f };
+
+        /// <summary>Dạng Adult: Lửa +25% ATK, Nước +25% SPD, Ánh Sáng +25% HP, Thép +25% DEF, Bóng Tối +10 điểm Crit.</summary>
+        public float FormBonus = 0.25f;
+        public float ShadowCritBonus = 10f;
+
+        // Lực chiến = 0.25·HP + 2·ATK + 1.5·DEF + 1.5·SPD + 10·Crit%
+        public float PowerHp = 0.25f;
+        public float PowerAtk = 2f;
+        public float PowerDef = 1.5f;
+        public float PowerSpd = 1.5f;
+        public float PowerCrit = 10f;
     }
 }

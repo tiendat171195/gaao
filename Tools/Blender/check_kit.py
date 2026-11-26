@@ -8,6 +8,7 @@ Cách chạy (từ gốc repo):
     blender -b --factory-startup --python Tools/Blender/check_kit.py -- \
         Assets/PawFit/Resources/Pets/Gen1/PawFit_Gen1_PetKit.fbx out/check_kit.jpg
 (không truyền tham số thì dùng đúng 2 đường dẫn trên). Dòng "CHECK_RESULT PASS" = đạt.
+Thêm `--forms`: render dãy tiến hóa Baby -> Child -> Teen -> 5 dạng Adult (kiểm tra bộ phận bám theo dáng thân).
 """
 
 import bpy
@@ -37,6 +38,19 @@ VARIANTS = [
          chubby=0.1, legs=0.9),
     dict(fur='#C46A3A', belly='#F6D9B8', points='#4A2A1C', pattern='#5A2A14', pat='stripes', eye='cun',
          iris='#4CC38A', ear='nhon', horns=[], horn='thang', tail='vay', closed=0.5, head=0.6, chubby=0.5, legs=0.5),
+]
+
+
+# Dãy tiến hóa (Phase 2.2): Baby -> Child -> Teen (nghiêng Lửa) -> 5 dạng Adult. `forms` = trọng số to_adult_<dạng>.
+FORM_ROW = [
+    dict(VARIANTS[0], forms={}),
+    dict(VARIANTS[0], forms=dict(fire=0.07, water=0.07, light=0.07, steel=0.07, shadow=0.07)),
+    dict(VARIANTS[0], forms=dict(fire=0.45, water=0.05, light=0.05, steel=0.05, shadow=0.05)),
+    dict(VARIANTS[0], fur='#D9572B', belly='#FFD9A8', forms=dict(fire=1.0)),
+    dict(VARIANTS[1], fur='#4C8FD6', belly='#E6F2FF', horns=[], forms=dict(water=1.0)),
+    dict(VARIANTS[2], fur='#F2D27A', belly='#FFF8E1', closed=0.0, forms=dict(light=1.0)),
+    dict(VARIANTS[1], fur='#8C939E', belly='#DADDE2', horns=['PR', 'PL'], forms=dict(steel=1.0)),
+    dict(VARIANTS[3], forms=dict(shadow=1.0)),
 ]
 
 
@@ -165,9 +179,12 @@ def spawn(src, v, x, idx, anchors=None):
     tail.data.materials.clear()
     tail.data.materials.append(mask_material('Tail%d' % idx, v['fur'], v['belly'], v['points'], v['pattern'],
                                              'stripes' if v['pat'] == 'stripes' else 'solid'))
+    weights = dict(head_big=v['head'], body_chubby=v['chubby'], legs_long=v['legs'])
+    for f, w in v.get('forms', {}).items():
+        set_key(body, 'to_adult_' + f, w)
+        weights['to_adult_' + f] = w
     if anchors is not None:
-        apply_anchors(anchors, dict(head_big=v['head'], body_chubby=v['chubby'], legs_long=v['legs']),
-                      head_parts, tail)
+        apply_anchors(anchors, weights, head_parts, tail)
     return body, head_parts, tail
 
 
@@ -219,7 +236,7 @@ def render_to(path):
     bpy.ops.render.render(write_still=True)
 
 
-def main(fbx, out):
+def main(fbx, out, forms=False):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.fbx(filepath=fbx)
     src = {o.name: o for o in bpy.context.scene.objects}
@@ -253,7 +270,7 @@ def main(fbx, out):
     ap = os.path.join(os.path.dirname(fbx), 'PawFit_Gen1_Anchors.json')
     anchors = json.load(open(ap, encoding='utf-8')) if os.path.exists(ap) else None
     print("ANCHORS", ap if anchors else "KHÔNG CÓ (bộ phận sẽ không dời theo blendshape)")
-    for i, v in enumerate(VARIANTS):
+    for i, v in enumerate(FORM_ROW if forms else VARIANTS):
         body, head_parts, tail = spawn(src, v, 0.0, i, anchors)
         root = bpy.data.objects.new('Pet%d' % i, None)
         bpy.context.scene.collection.objects.link(root)
@@ -271,13 +288,15 @@ def main(fbx, out):
     def frame(span, lens):
         hfov = 2.0 * math.atan(18.0 / lens)
         return (span / 2.0) / math.tan(hfov / 2.0) * 1.05
-    row('x', 1.3)                                              # hàng ngang, nhìn chéo 3/4 từ trước
-    d = frame(n * 1.3, 50)
-    camera((-0.18 * d, -d, 0.42 * d), (0.0, 0.0, 0.62), 50)
+    gap = 1.55 if forms else 1.3
+    row('x', gap)                                              # hàng ngang, nhìn chéo 3/4 từ trước
+    d = frame(n * gap, 50)
+    camera((-0.18 * d, -d, 0.42 * d), (0.0, 0.0, 0.8 if forms else 0.62), 50)
     render_to(tmp + '_front.png')
-    row('y', 2.0)                                              # nhìn ngang: thấy đuôi gắn sau mông
-    d = frame(n * 2.0 + 0.4, 50)
-    camera((-d, 0.0, 1.2), (0.0, 0.0, 0.55), 50)
+    gap2 = 2.3 if forms else 2.0
+    row('y', gap2)                                             # nhìn ngang: thấy đuôi gắn sau mông
+    d = frame(n * gap2 + 0.4, 50)
+    camera((-d, 0.0, 1.4 if forms else 1.2), (0.0, 0.0, 0.75 if forms else 0.55), 50)
     render_to(tmp + '_side.png')
     stitch([tmp + '_front.png', tmp + '_side.png'], out)
     print("PREVIEW", out)
@@ -302,5 +321,7 @@ def stitch(paths, out):
 if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     root = os.path.join(HERE, '..', '..')
+    forms = '--forms' in args               # dãy tiến hóa thay cho 5 con mẫu
+    args = [a for a in args if a != '--forms']
     main(args[0] if args else os.path.join(root, 'Assets', 'PawFit', 'Resources', 'Pets', 'Gen1', 'PawFit_Gen1_PetKit.fbx'),
-         args[1] if len(args) > 1 else os.path.join(root, 'out', 'check_kit.jpg'))
+         args[1] if len(args) > 1 else os.path.join(root, 'out', 'check_kit_forms.jpg' if forms else 'check_kit.jpg'), forms)

@@ -84,6 +84,7 @@ namespace PawFit.Tests
         public readonly GardenLayout Layout = GardenLayout.CreateDefault();
         public readonly PetService Pets;
         public readonly HealthService Health;
+        public readonly EvolutionService Evo;
         public readonly EventBus Bus = new EventBus();
         public readonly CareActionService Care;
         public readonly PetBrain Brain;
@@ -97,7 +98,8 @@ namespace PawFit.Tests
                                   bus, gameCfg);
             Pets.LoadOrCreate("Kem");
             Health = new HealthService(Pets, Time, gameCfg);
-            Care = new CareActionService(Pets, Health, Cfg, Time, bus);
+            Evo = new EvolutionService(Pets, Health, Time, bus, gameCfg);
+            Care = new CareActionService(Pets, Health, Evo, Cfg, Time, bus);
             Brain = new PetBrain(Layout, Cfg, new SeededRandom(seed + 7), Pets, Care);
             Pos = Layout.PetSpawn;
         }
@@ -388,6 +390,65 @@ namespace PawFit.Tests
             Assert.DoesNotThrow(() => f.Brain.OnTapped());
             var expr = new PetExpressionService(f.Pets, f.Brain, new ExpressionConfig(), new SeededRandom(1));
             Assert.AreEqual(ExpressionCue.None, expr.Update(0.1f));
+        }
+    }
+
+    /// <summary>Nguồn điểm tập trong vườn (Phase 2.2).</summary>
+    public class GardenTrainingTests
+    {
+        [Test]
+        public void CareActions_AddCarePoints()
+        {
+            var f = new GardenFixture();
+            f.Pets.SetNeedForDebug(NeedType.Satiety, 20f);
+            f.Care.Feed();
+            f.Care.Bathe();
+            Assert.AreEqual(f.Pets.Config.Evolution.CareFeed + f.Pets.Config.Evolution.CareBathe, f.Evo.Training.Care, 1e-3f);
+        }
+
+        [Test]
+        public void DropAtTrainingGround_Workouts_ForStrength()
+        {
+            var f = new GardenFixture();
+            float energy = f.Pets.Current.Needs.Energy;
+            Vector2 ground = f.Layout.Get(ZoneType.TrainingGround).Center;
+            f.Brain.BeginLead(f.Pos);
+            f.Brain.Lead(ground);
+            f.Simulate(1f);
+            f.Brain.EndLead(ground, f.Pos);
+            Assert.AreEqual(PetActivity.GoingToZone, f.Brain.Activity);
+            bool trained = false;
+            for (int i = 0; i < 200 && !trained; i++)
+            {
+                f.Simulate(0.1f);
+                trained = f.Brain.Activity == PetActivity.Training;
+            }
+            Assert.IsTrue(trained, "tới sân tập thì đấm hình nộm");
+            Assert.AreEqual(f.Pets.Config.Evolution.WorkoutStrength, f.Evo.Training.Strength, 1e-3f);
+            Assert.Less(f.Pets.Current.Needs.Energy, energy);
+            f.Simulate(f.Cfg.WorkoutSeconds + 0.5f);
+            Assert.AreNotEqual(PetActivity.Training, f.Brain.Activity);
+        }
+
+        [Test]
+        public void SickPet_RefusesWorkout()
+        {
+            var f = new GardenFixture();
+            f.Pets.SetNeglectForDebug(80);
+            Assert.AreEqual(CareResult.Refused, f.Care.Workout());
+            Assert.AreEqual(0f, f.Evo.Training.Strength);
+        }
+
+        [Test]
+        public void LeadingThePet_TrainsSpeed()
+        {
+            var f = new GardenFixture();
+            f.Brain.BeginLead(f.Pos);
+            Vector2 far = f.Pos + new Vector2(0f, 8f);
+            f.Brain.Lead(far);
+            f.Simulate(4f);
+            f.Brain.EndLead(far, f.Pos);
+            Assert.AreEqual(8f * f.Pets.Config.Evolution.SpeedPerMeterLed, f.Evo.Training.Speed, 0.1f, "chạy theo tay 8 mét");
         }
     }
 }

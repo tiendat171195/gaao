@@ -59,6 +59,12 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Bóng Tối: Bóng tối trội, hoặc CareScore < 40.
   - Thép: tập cân bằng.
   - Cộng nhiễu 10–20%. Từ Teen, DNA trượt dần về dạng đang nghiêng. Ultimate cần CareScore ≥ 80 + thuộc đủ 4 chiêu + 7 ngày không bệnh.
+  - Đã cài ở Phase 2.2 (`EvolutionRules`, `EvolutionConfig`):
+    - CareScore = trung bình (4 nhu cầu / 4) từng giờ của 168 giờ gần nhất; giờ đang ốm ×0.5.
+    - Nguồn điểm: Chăm sóc (cho ăn 2, tắm 3, vuốt ve 0.5, lau 1, ngủ ổ 1); Sức mạnh (sân tập 6 / buổi); Tốc độ (0.08 / mét dắt chạy); Bóng tối (0.4 / giờ bị bỏ bê, +1 / giờ đang ốm). Mỗi hướng chủ động tối đa 30 / ngày tuổi.
+    - Nhiễu: seed ×(1 ± 0.1) mỗi hướng; tính cách hợp hướng +15% (Fiery → Sức mạnh, Playful → Tốc độ, Calm → Chăm sóc, Moody → Bóng tối, các tính cách khác chia đôi).
+    - Cân bằng = hướng cao nhất ≤ 32% tổng. Chăm sóc trội mà CareScore < 70 thì theo hướng mạnh thứ 2.
+    - DNA trượt (từ Teen, mỗi ngày): màu lông +3 nấc về màu của dạng, độ đậm / sáng / bụng / chân ±1, luân phiên 1 trong 3 gene tỉ lệ ±1. Không đổi kiểu tai / đuôi / sừng.
 - **G8 · Chỉ số:**
   - Baby: HP 100 / ATK 10 / DEF 10 / SPD 10 / Crit 5%.
   - Hệ số theo giai đoạn: ×1 / 1.5 / 2.2 / 3.2 / 4.2.
