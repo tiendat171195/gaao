@@ -74,6 +74,35 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Ngang = chiêu hệ 1 · Lên = chiêu hệ 2 · V = chiêu riêng · Z = Ultimate · Xuống = đỡ (≤ 0.2s trước đòn = phản đòn).
   - Damage = ATK × hệ số chiêu × hệ số vuốt (0.7–1.3) × 100/(100+DEF); crit ×1.5.
   - Hết 90 giây: bên còn nhiều %HP hơn thắng.
+- **G9b · Cách cài cụ thể (Phase 3.1, `BattleConfig` / `SwipeConfig` / `BotConfig`):**
+  - **Nhận dạng vuốt:**
+    - Nét dài ≥ 60 px (ở 160 dpi), trong ≤ 1,2 giây.
+    - Thẳng (độ thẳng ≥ 0,86) thì xét hướng trội: ngang / lên / xuống.
+    - V = xuống rồi lên. Z = ngang → chéo ngược xuống → ngang, vẽ được cả 2 chiều.
+    - Hệ số vuốt 0,7–1,3 = 60% tốc độ + 40% độ đúng hình.
+  - **4 chiêu (hệ số damage / thời gian vung đòn):**
+
+    | Chiêu | Vuốt | Hệ số | Vung đòn |
+    |---|---|---|---|
+    | Nhanh | Ngang | ×1 | 0,25 s |
+    | Mạnh | Lên | ×1,6 | 0,5 s |
+    | Riêng | V | ×2,2 | 0,6 s |
+    | Ultimate | Z | ×3,2 | 0,9 s |
+
+  - Chiêu chưa thuộc (Mode Huấn luyện) vẫn dùng được nhưng ×0,8.
+  - **Đánh:**
+    - Hồi chiêu 0,8 s tính từ lúc ra đòn.
+    - Vuốt sai thì hở 1 s: không đánh, không đỡ được.
+    - Đòn Mạnh / Riêng / Ultimate trúng thì cắt đòn đang vung của đối thủ (hất tung). Đòn Nhanh không cắt.
+  - **Đỡ:**
+    - Thế đỡ kéo dài 0,45 s, chỉ chịu 20% damage. Đang hồi chiêu đánh vẫn đỡ được, nhưng giữa 2 lần đỡ phải chờ 0,6 s.
+    - Đỡ ≤ 0,2 s trước khi đòn trúng thì phản đòn: bên tấn công ăn ATK × 0,8 của bên đỡ và bị hở 1 s.
+  - **SPD:** bên chậm hơn phải chờ 0,5 s mới ra được đòn đầu. 2 đòn trúng cùng lúc thì bên nhanh tính trước.
+  - **Bot 3 mức (3 hình nộm)** khác nhau ở:
+    - Tốc độ phản ứng: 0,45 / 0,3 / 0,16 s.
+    - Xác suất đỡ: 15 / 40 / 70%. Mức Khó canh đỡ sát đòn để phản đòn.
+    - Nhịp đánh, độ đẹp nét vuốt, tỉ lệ vuốt sai, chiêu hay dùng.
+  - Mô phỏng chạy theo bước cố định 1/30 s, random có seed, nên cùng đầu vào thì cùng kết quả (dùng lại được cho PvP).
 - **G10 · Rank:** Elo khởi đầu 1000, K = 32. Bronze < 1100 ≤ Silver < 1300 ≤ Gold < 1500 ≤ Diamond < 1700 ≤ Master. Hết mùa reset mềm về 1000 + (Elo − 1000)/2. Tìm 30 giây chưa có trận thì nới khoảng; 60 giây thì gợi ý đấu Bot.
 - **G11 · Kinh tế:**
   - Thức ăn cơ bản miễn phí, khởi đầu 200 Coin, thắng PvP +30, quảng cáo +20 Coin / +20 năng lượng.

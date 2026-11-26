@@ -28,7 +28,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 1.3 | Thú Gen 1 trong Unity qua `IPetAvatar` + trạng thái bằng hình + animation code + Debug overlay | ✅ |
 | 2.1 | Bệnh / chết vĩnh viễn / tưởng niệm / trứng mới (thừa hưởng 1 trait) | ✅ |
 | 2.2 | Tiến hóa (CareScore, TrainingVector, seed + tính cách) + chỉ số + lực chiến | ✅ |
-| 3.1 | SwipeRecognizer + BattleSimulation + Bot (logic thuần) | ⏳ |
+| 3.1 | SwipeRecognizer + BattleSimulation + Bot (logic thuần) | ✅ |
 | 3.2 | Màn đấu ngang + Mode Huấn luyện (bóng mờ, slow-mo, 10 lần = thuộc chiêu) | ⏳ |
 | 4.1 | Firebase Auth + Firestore + giờ server | ⏳ |
 | 4.2 | PvP real-time Photon Fusion + tìm đối thủ (Elo ±100, lực chiến ±10%) | ⏳ |
@@ -51,7 +51,8 @@ gaao/                            ← gốc repo = gốc project Unity
 │   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, PetExpressionService, CareActionService, PointerGestures
 │   │   │   └── View/ [Unity]                 GardenScene, GardenBuilder, GardenCamera, GardenInputRouter, PetController,
 │   │   │                                     MemorialView, EggView, PetDeathFx, GardenUi (bảng đặt tên / thẻ bia mộ)
-│   │   ├── Evolution/ Battle/ Network/ Economy/   (các Phase sau)
+│   │   ├── Battle/ [PawFit.Battle, C# thuần] SwipeRecognizer, BattleSimulation, BattleBot
+│   │   ├── Network/ Economy/                   (các Phase sau)
 │   │   └── App/    [PawFit.App, Unity]       GameBootstrap (composition root)
 │   ├── Resources/Pets/Gen1/                   PawFit_Gen1_PetKit.fbx + PawFit_Gen1_Anchors.json
 │   ├── Resources/Shaders/                     PawFit/Gen1Fur, PawFit/Gen1Eye (URP)

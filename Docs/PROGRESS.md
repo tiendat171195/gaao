@@ -89,6 +89,15 @@
   - Bảng DEV: xem giai đoạn / dạng / CareScore / điểm tập / chỉ số / lực chiến; nút +1 ngày tuổi, Lên giai đoạn, Thuộc 1 chiêu, +10 từng hướng.
   - Test: 100/100 pass · compile check: pass
 
+- **Phase 3.1** — Logic đấu (C# thuần, assembly `PawFit.Battle`, chưa có màn hình):
+  - `SwipeRecognizer`: ngang / lên / xuống / V / Z, vuốt sai (ngắn, chậm, không rõ hình), hệ số vuốt 0,7–1,3, ngưỡng theo DPI.
+  - `BattleSimulation`:
+    - Damage theo G9; chí mạng ×1,5; hồi chiêu 0,8 s; vuốt sai hở 1 s.
+    - Đỡ (giảm 80%) và phản đòn (đỡ ≤ 0,2 s trước đòn); đòn mạnh cắt đòn đang vung.
+    - SPD cao ra đòn trước; hết 90 s so %HP; bước cố định 1/30 s có seed nên chạy lại ra đúng kết quả.
+  - `BattleBot`: 3 mức Dễ / Thường / Khó, dùng đúng cổng vuốt như người chơi. Mức Khó biết canh phản đòn.
+  - Test: 120/120 pass, gồm "Bot Khó thắng Bot Dễ ≥ 75% trận" · compile check: pass
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -104,7 +113,7 @@
 
 ## Tiếp theo
 
-- **Phase 3.1** — SwipeRecognizer + BattleSimulation + Bot (logic thuần). Dùng `EvolutionService.Stats` làm chỉ số khi đấu, `HealthService.CanTrain` để chặn đấu khi ốm.
+- **Phase 3.2** — Màn đấu ngang + Mode Huấn luyện vs Bot (bóng mờ gesture, slow-mo, vuốt đúng 10 lần = thuộc chiêu). Chỉ số lấy từ `EvolutionService.Stats` (đổi sang `FighterStats`), ốm thì không cho đấu (`HealthService.CanTrain`).
 
 ## Ghi chú cho session sau
 
