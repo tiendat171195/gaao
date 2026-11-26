@@ -8,7 +8,8 @@ namespace PawFit.Garden.View
     /// <summary>
     /// Đổi chạm / kéo thành lệnh (không có nút nào):
     ///   chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve (đang ngủ thì dậy)
-    ///   kéo thú = dắt đi (thả vào hồ = tắm, vào ổ = ngủ) · kéo từ khay đồ ăn thả lên thú = cho ăn.
+    ///   kéo thú = dắt đi (thả vào hồ = tắm, vào ổ = ngủ) · kéo từ khay đồ ăn thả lên thú = cho ăn
+    ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy.
     /// Phân loại cử chỉ nằm ở PointerGestureClassifier (C# thuần); lớp này chỉ raycast + chuyển lệnh.
     /// </summary>
     public sealed class GardenInputRouter : MonoBehaviour
@@ -25,6 +26,9 @@ namespace PawFit.Garden.View
 
         /// <summary>Chạm trúng hình nộm ở sân tập (mức 0..2).</summary>
         public Action<int> DummyTapped { get; set; }
+
+        /// <summary>Chạm trúng quầy hàng.</summary>
+        public Action ShopTapped { get; set; }
 
         private Camera _cam;
         private IPointerInput _input;
@@ -100,6 +104,7 @@ namespace PawFit.Garden.View
                 if (_downStone != null) return PointerTarget.Memorial;
                 _downDummy = hit.collider.GetComponentInParent<TrainingDummyView>();
                 if (_downDummy != null) return PointerTarget.Dummy;
+                if (hit.collider.GetComponentInParent<ShopStallView>() != null) return PointerTarget.Shop;
             }
             return PointerTarget.Ground;
         }
@@ -125,6 +130,10 @@ namespace PawFit.Garden.View
                 case PointerTarget.Dummy:
                     if (e.Kind == GestureKind.Tap && _downDummy != null) DummyTapped?.Invoke(_downDummy.Level);
                     else HandleGround(e, screen, onGround, g);
+                    break;
+                case PointerTarget.Shop:
+                    if (e.Kind == GestureKind.Tap) ShopTapped?.Invoke();
+                    else HandleGround(e, screen, onGround, g);   // kéo từ quầy = kéo camera
                     break;
                 default: HandleGround(e, screen, onGround, g); break;
             }

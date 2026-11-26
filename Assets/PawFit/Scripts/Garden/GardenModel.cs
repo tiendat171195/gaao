@@ -4,7 +4,7 @@ using System.Numerics;
 namespace PawFit.Garden
 {
     /// <summary>Các khu nằm TRÊN MAP vườn (không phải nút UI).</summary>
-    public enum ZoneType { None = 0, FoodHut = 1, Pond = 2, TrainingGround = 3, Bed = 4, Memorial = 5 }
+    public enum ZoneType { None = 0, FoodHut = 1, Pond = 2, TrainingGround = 3, Bed = 4, Memorial = 5, Shop = 6 }
 
     /// <summary>
     /// 1 khu trong vườn. Tọa độ mặt đất dùng Vector2: X = trái/phải, Y = sâu vào trong màn hình
@@ -36,7 +36,7 @@ namespace PawFit.Garden
         public Vector2 PetSpawn;
         public readonly List<GardenZone> Zones = new List<GardenZone>();
 
-        /// <summary>Vườn mặc định: chòi ăn trái, hồ phải, sân tập phía sau, ổ ngủ giữa, tưởng niệm ở góc.</summary>
+        /// <summary>Vườn mặc định: chòi ăn trái, hồ phải, sân tập phía sau, ổ ngủ giữa, tưởng niệm ở góc, quầy hàng phía trước bên phải.</summary>
         public static GardenLayout CreateDefault()
         {
             var l = new GardenLayout
@@ -50,6 +50,8 @@ namespace PawFit.Garden
             l.Zones.Add(new GardenZone(ZoneType.Pond, new Vector2(6.8f, 0.5f), 2.6f, new Vector2(6.8f, 0.5f)));
             l.Zones.Add(new GardenZone(ZoneType.TrainingGround, new Vector2(0f, 9.5f), 3.4f, new Vector2(0f, 6.8f)));
             l.Zones.Add(new GardenZone(ZoneType.Memorial, new Vector2(8f, 12f), 1.5f, new Vector2(6.9f, 10.9f)));
+            // quầy hàng (Phase 5.1): chạm vào = mở quầy; UsePoint = chỗ đứng trước quầy (cuối lối đá)
+            l.Zones.Add(new GardenZone(ZoneType.Shop, new Vector2(4.5f, -6.5f), 1.5f, new Vector2(3.85f, -8.3f)));
             return l;
         }
 

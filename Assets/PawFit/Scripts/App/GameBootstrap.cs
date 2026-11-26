@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using PawFit.Core;
+using PawFit.Economy;
 using PawFit.Garden;
 using PawFit.Pet;
 using UnityEngine;
@@ -18,6 +19,7 @@ namespace PawFit.App
         public static ServiceLocator Services { get; private set; }
 
         private PetService _pets;
+        private MockAdService _mockAds;
         private float _tickTimer;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -71,6 +73,16 @@ namespace PawFit.App
             Services.Register(exprCfg);
             Services.Register(new PetExpressionService(_pets, brain, exprCfg, new SeededRandom(rng.NextUInt())));
 
+            // Kinh tế (Phase 5.1): ví Coin + quảng cáo tự nguyện (5 lần / ngày) + quầy hàng, vẫn là C# thuần.
+            // Quảng cáo đang là bản giả lập; Phase 5.3 thay bằng SDK thật (chỉ đổi dòng này).
+            _mockAds = new MockAdService(cfg.Economy.MockAdSeconds);
+            var economy = new EconomyService(_pets, _mockAds, time, bus, cfg, log);
+            Services.Register<IAdService>(_mockAds);
+            Services.Register(economy);
+            Services.Register<ICoinWallet>(economy);   // màn đấu cộng Coin khi thắng Bot qua interface này
+            Services.Register(new ShopService(_pets, health, economy, bus, cfg, log));
+            Debug.Log("[PawFit] Ví: " + economy.Coins + " Coin · quảng cáo còn " + economy.AdsLeftToday + "/" + economy.MaxAdsPerDay + " lượt hôm nay");
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             gameObject.AddComponent<DebugOverlay>();   // công cụ test, không có trong bản phát hành
 #endif
@@ -96,6 +108,7 @@ namespace PawFit.App
 
         private void Update()
         {
+            _mockAds?.Update(Time.unscaledDeltaTime);   // quảng cáo giả lập chạy theo giờ thật
             _tickTimer += Time.unscaledDeltaTime;
             if (_tickTimer < 1f) return;
             _tickTimer = 0f;

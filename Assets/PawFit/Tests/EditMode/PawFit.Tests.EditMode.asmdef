@@ -6,6 +6,7 @@
         "PawFit.Pet",
         "PawFit.Garden",
         "PawFit.Battle",
+        "PawFit.Economy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

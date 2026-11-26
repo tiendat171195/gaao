@@ -112,6 +112,26 @@
   - App: `SceneFlow.EnterBattle` chuyển vườn ⇄ màn đấu. Bảng DEV có nút vào sân tập nhanh.
   - Test: 128/128 pass · compile check: pass
 
+- **Phase 5.1** — Kinh tế + quầy hàng trong vườn + quảng cáo giả lập (làm trước Phase 4 theo lựa chọn của bạn):
+  - Core: `WalletData`, `ICoinWallet`, sự kiện `CoinsChanged`, `EconomyConfig` (G11 / G11b).
+  - File lưu bản 3: `GameSave.Wallet`. Ví là của người chơi, thú mất vẫn còn. File bản 1 / 2 được cấp 200 Coin.
+  - Logic (C# thuần, assembly mới `PawFit.Economy`, có test):
+    - `EconomyService`: ví Coin (cộng / trừ, có trần, lưu ngay khi đổi) + quảng cáo tự nguyện.
+      - Tối đa 5 lượt / ngày theo giờ trên máy; chỉnh đồng hồ lùi không được thêm lượt.
+      - Xem hết mới có thưởng (+20 Coin hoặc +20 năng lượng); bỏ qua thì không mất lượt.
+    - `IAdService` + `MockAdService`: quảng cáo giả 3 giây, có Bỏ qua và giả lập hết quảng cáo.
+    - `ShopService`: thuốc 60 / 150 (đi qua `HealthService.GiveMedicine`), bánh thưởng 25, nước tăng lực 30. Không bán khi không cần, không đủ tiền thì không trừ gì.
+    - `BattleSession` nhận `ICoinWallet`: thắng hình nộm Dễ / Thường / Khó +5 / +10 / +15 Coin, hiện trên thẻ kết quả.
+  - View:
+    - Khu `Shop` + `ShopStallView`: quầy gỗ mái bạt sọc, biển "QUẦY HÀNG" + đồng Coin, 3 món bày trên quầy, lối đá dẫn tới. Ảnh kiểm tra (dựng lại đúng các khối bằng Blender): `Docs/art/08_quay_hang_kiem_tra.jpg`.
+    - Chạm quầy → `GardenScene.ShopTapped`.
+    - `GardenUi.ShowChoice` có nút xám (không bấm được) và tự giãn theo số nút. Thêm `ShowLive` (thẻ chữ tự cập nhật, dùng cho quảng cáo giả đếm ngược) và `Toast` (dòng báo nhanh, không chặn chạm).
+  - App:
+    - `SceneFlow.OpenShop`: thẻ quầy hàng (Coin, lượt quảng cáo, 3 món, 2 kiểu quảng cáo). Mua xong thú ăn ngay + toast. Xem quảng cáo xong mở lại quầy.
+    - `GameBootstrap` tạo `MockAdService` / `EconomyService` / `ShopService` và cho quảng cáo giả chạy theo giờ thật.
+    - Bảng DEV có mục Kinh tế.
+  - Test: 149/149 pass · compile check: pass
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -119,7 +139,9 @@
 - Input: dùng Input Manager cũ (touch + chuột), bọc interface ở Phase 1.2.
 - Thú trong game Phase 1.3: thân mượt kiểu thú bông (vertex color + viền sáng), chưa có lông. Lông shell làm ở Phase 6.
 - Điện thoại dùng LOD1, PC / Editor dùng LOD0 (đổi được trong bảng DEV).
-- Ốm mà chăm đủ thì bệnh dừng nặng thêm nhưng không tự khỏi; phải chăm kỹ hoặc uống thuốc (G4). Thuốc mua bằng Coin ở Phase 5.1.
+- Ốm mà chăm đủ thì bệnh dừng nặng thêm nhưng không tự khỏi; phải chăm kỹ hoặc uống thuốc (G4). Thuốc mua ở quầy hàng bằng Coin (Phase 5.1).
+- Phase 5.1 làm trước Phase 4 (bạn chọn). Quầy hàng bán đồ dùng ngay, không có túi đồ. Ví nằm chung file lưu game (Phase 4.1 đồng bộ cùng hồ sơ người chơi).
+- Quảng cáo đếm "ngày" theo giờ trên máy cho tới khi có giờ server (Phase 4.1).
 - Thú mất thì xóa khỏi file lưu (chỉ còn bia mộ + trứng). Công cụ test "Thú mới" vẫn giữ bia mộ cũ.
 - Tiến hóa Gen 1 chỉ đổi dáng thân + màu lông / tỉ lệ (DNA trượt); không tự đổi kiểu tai / đuôi / sừng để tránh đổi model đột ngột.
 - Trước Phase 3.2, điểm Sức mạnh chỉ có từ sân tập trong vườn. Phase 3.2 thêm điểm từ Mode Huấn luyện.
@@ -127,6 +149,7 @@
 
 ## Tiếp theo
 
+- **Phase 5.2** — Trang trí + phụ kiện + polish (làm tiếp được ngay, không cần tài khoản ngoài).
 - **Phase 4.1** — Firebase Auth + Firestore + giờ server. **Cần bạn:** tạo project Firebase, bật Auth (ẩn danh / Google), Firestore, tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS), và cài Firebase Unity SDK. Trước khi có các thứ đó, tôi chỉ làm được interface + bản giả lập (Mock).
 
 ## Ghi chú cho session sau
@@ -140,5 +163,7 @@
 - Bản Blender của Ubuntu không có OpenImageDenoise, nên script đã tắt denoise.
 - Xuất lại FBX: `blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Resources/Pets/Gen1`, rồi kiểm tra bằng `blender -b --factory-startup --python Tools/Blender/check_kit.py` (phải ra `CHECK_RESULT PASS`). Mỗi lần xuất, repo nặng thêm khoảng 9 MB, nên chỉ xuất khi đổi model.
 - Shader `Gen1Fur` / `Gen1Eye` viết tay cho URP 17 (Unity 6.3) và chưa chạy thử trong Unity thật (container không có Unity). Lỗi thì bảng DEV có nút chuyển sang URP Lit.
-- Đổi số tiến hóa / chỉ số: `EvolutionConfig`, `StatsConfig` trong `GameConfig.cs`.
+- Đổi số tiến hóa / chỉ số: `EvolutionConfig`, `StatsConfig` trong `GameConfig.cs`. Kinh tế: `EconomyConfig` (giá thuốc ở `HealthConfig`).
+- Thêm assembly logic mới thì nhớ thêm vào `Tools/LogicTests/LogicTests.csproj` và asmdef của Tests / App (như `PawFit.Economy`).
+- `MockAdService` vẫn đang được nối trong `GameBootstrap` cho mọi bản build. Trước khi phát hành (Phase 5.3) phải thay bằng SDK quảng cáo thật.
 - Lỗi nhỏ đã biết (ảnh render): da dưới lông đậm hơn lông nên quanh mắt hơi cam. Trong Unity đã dùng shader riêng nên không bị.

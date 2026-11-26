@@ -128,6 +128,22 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
 - **G11 · Kinh tế:**
   - Thức ăn cơ bản miễn phí, khởi đầu 200 Coin, thắng PvP +30, quảng cáo +20 Coin / +20 năng lượng.
   - Không có HUD: shop = quầy hàng trên map; đấu Bot = 3 hình nộm; PvP = cổng đấu trường; cài đặt = hòm thư ở cổng.
+- **G11b · Cách cài cụ thể (Phase 5.1, `EconomyConfig` + `EconomyService` + `ShopService`):**
+  - Ví nằm trong file lưu (bản 3) và là của người chơi: thú mất vẫn còn. File cũ chưa có ví thì được cấp 200 Coin. Ví tối đa 999.999 Coin.
+  - Quầy hàng là khu `Shop` ở phía trước bên phải vườn, có lối đá dẫn tới. Mua xong thú dùng ngay, không có túi đồ:
+
+    | Món | Giá | Tác dụng | Không bán khi |
+    |---|---|---|---|
+    | Thuốc | 60 (Ốm) / 150 (Nguy kịch) | Bắt đầu hồi phục theo G4 | Thú khỏe hoặc chỉ Mệt · đã uống trong đợt hồi phục này |
+    | Bánh thưởng | 25 | No +15, vui +25 | Đang ngủ · no ≥ 92 |
+    | Nước tăng lực | 30 | Năng lượng +30 | Đang ngủ · năng lượng ≥ 92 |
+
+  - Quảng cáo: +20 Coin, hoặc +20 năng lượng (không mời khi năng lượng ≥ 90).
+    - 5 lượt / ngày tính chung 2 loại, reset lúc 0 giờ theo giờ trên máy. Chỉnh đồng hồ lùi không được thêm lượt. Phase 4.1 chuyển sang giờ server.
+    - Chỉ xem hết mới có thưởng và mới tính lượt.
+    - Bản dev dùng `MockAdService` (3 giây). Phase 5.3 thay bằng SDK thật qua `IAdService`.
+  - Thắng hình nộm Dễ / Thường / Khó: +5 / +10 / +15 Coin. Bỏ cuộc và Huấn luyện không có Coin.
+  - Số tôi điền thêm: thưởng Coin khi thắng Bot (để có nguồn Coin trước khi có PvP), giá + tác dụng của bánh và nước.
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

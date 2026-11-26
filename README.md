@@ -32,6 +32,8 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 | Kéo thú | Thú chạy theo ngón tay. Thả vào **hồ** thì tắm, thả vào **ổ** thì ngủ (nếu đã buồn ngủ) |
 | Kéo quả táo từ **khay ở chòi ăn** (bên trái) thả lên thú | Cho ăn. No rồi thì thú lắc đầu |
 | Chạm vào khay đồ ăn | Thú chạy tới chòi ăn |
+| Chạm vào **quầy hàng** (phía trước bên phải, có lối đá dẫn tới) | Mở quầy: mua thuốc / bánh / nước, xem quảng cáo lấy thưởng |
+| Chạm vào **hình nộm** ở sân tập | Vào sân tập: Huấn luyện hoặc Đấu Bot |
 
 Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ.
 
@@ -66,7 +68,7 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
 - **Bước 2 — giữ hồi phục:** xong lượt đầu thì thú bắt đầu hồi phục, có dấu + xanh bay lên. Mỗi lượt chỉ giữ hồi phục thêm 12 giờ, nên cứ 12 giờ làm thêm 1 lượt.
 - **Khỏi:** Ốm khỏi sau 24 giờ hồi phục, Nguy kịch sau 48 giờ.
 - **Tái phát:** đang hồi phục mà quá 24 giờ không chăm gì thì tái phát.
-- **Thuốc:** cũng chữa được, mua bằng Coin ở Phase 5.1. Hiện chỉ thử được bằng nút trong bảng DEV.
+- **Thuốc:** mua ở **quầy hàng** (Ốm 60 Coin, Nguy kịch 150 Coin). Uống xong là bắt đầu hồi phục. Sau đó chỉ cần chăm thường (cho ăn, lau, vuốt ve...) để giữ hồi phục, không cần đủ 3 việc chăm kỹ.
 
 **Khi thú mất:**
 - Bia mộ ở góc tưởng niệm ghi tên, số ngày đã sống, rank cao nhất (có từ Phase 4.3) và mã DNA. Chạm vào bia để đọc chữ to.
@@ -132,8 +134,27 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - **Bỏ cuộc** tính là thua.
 - **Điểm tập:**
   - Mỗi đòn trúng: ngang → Tốc độ; lên → Sức mạnh; V, Z → cả hai. Phản đòn → Tốc độ.
-  - Thắng Bot được thêm điểm.
+  - Thắng Bot được thêm điểm + Coin (Dễ +5, Thường +10, Khó +15).
   - Mỗi buổi tốn năng lượng + no bụng.
+
+## Coin, quầy hàng, quảng cáo (Phase 5.1)
+
+- **Ví Coin:** khởi đầu 200 Coin. Ví là của người chơi nên thú mất vẫn còn. Không có nạp tiền.
+- **Kiếm Coin:** thắng hình nộm (+5 / +10 / +15), xem quảng cáo (+20), sau này thắng PvP (+30, Phase 4.2).
+- **Quầy hàng:** chạm quầy ở phía trước bên phải vườn. Mua xong thú dùng ngay, không có túi đồ. Món chưa mua được thì xám, lý do ghi trong ngoặc. Đồ ăn thường ở chòi ăn vẫn miễn phí.
+
+  | Món | Giá | Tác dụng | Không bán khi |
+  |---|---|---|---|
+  | Thuốc chữa bệnh | 60 (Ốm) / 150 (Nguy kịch) | Bắt đầu hồi phục | Thú khỏe hoặc chỉ Mệt · đã uống trong đợt này |
+  | Bánh thưởng | 25 | No +15, vui +25 | Đang ngủ · no ≥ 92 |
+  | Nước tăng lực | 30 | Năng lượng +30 | Đang ngủ · năng lượng ≥ 92 |
+
+- **Quảng cáo tự nguyện** (nút trong quầy hàng):
+  - Chọn **+20 Coin** hoặc **+20 năng lượng** cho thú. Thú còn ≥ 90 năng lượng thì không mời xem loại năng lượng.
+  - Tối đa **5 lượt / ngày**, tính chung cả 2 loại. Qua 0 giờ (giờ trên máy) là có lại 5 lượt. Chỉnh đồng hồ lùi không được thêm lượt.
+  - Phải xem hết mới có thưởng. Bỏ qua giữa chừng thì không có thưởng nhưng cũng không mất lượt.
+  - Bản dev là **quảng cáo giả lập 3 giây** (màn tối có đếm ngược + nút Bỏ qua). Phase 5.3 thay bằng quảng cáo thật.
+- Số liệu nằm ở `EconomyConfig` trong `GameConfig.cs` (giá thuốc ở `HealthConfig`), chỉnh được không cần sửa luật.
 
 ## Công cụ test (chỉ Editor / bản Development)
 
@@ -141,10 +162,11 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Xem 4 nhu cầu, DNA, việc thú đang làm, biểu cảm.
   - Tăng / giảm từng nhu cầu.
   - Đặt nhanh trạng thái: **Đói** / **Bẩn** / **Buồn ngủ** / **Khỏe hết** / **Cho ngủ**.
-  - Sức khỏe: **Mệt** / **Ốm** / **Nguy kịch** / **Chết** / **Uống thuốc** / **Khỏi bệnh**. Xem số giờ bỏ bê, đã chăm kỹ mấy việc / 3, % hồi phục.
+  - Sức khỏe: **Mệt** / **Ốm** / **Nguy kịch** / **Chết** / **Uống thuốc** (miễn phí, chỉ để test) / **Khỏi bệnh**. Xem số giờ bỏ bê, đã chăm kỹ mấy việc / 3, % hồi phục.
   - Khi thú đã mất: xem trứng còn bao lâu nở, thừa hưởng trait gì, nút **Trứng nở được ngay**.
   - Tiến hóa: xem giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến. Nút **+1 ngày tuổi**, **Lên giai đoạn**, **Thuộc 1 chiêu**, **+10** từng hướng tập.
   - Nút **Huấn luyện** / **Đấu Bot Thường**: vào sân tập ngay, không cần đi tới hình nộm.
+  - Kinh tế: xem Coin, lượt quảng cáo còn lại, tổng đã nhận / đã tiêu. Nút **+100 Coin** / **-100 Coin** / **Trả lượt QC** / **Mở quầy hàng** / **QC: hết hàng** (giả lập không có quảng cáo).
   - Tua giờ +1 / +6 / +24.
   - **Thú mới** (DNA ngẫu nhiên).
   - Đổi model Gen 1 ↔ thú tạm, LOD0 ↔ LOD1, shader riêng ↔ URP Lit.
@@ -173,9 +195,10 @@ dotnet build Tools/UnityCompileCheck
 | `Assets/PawFit/Scripts/Core` | Service nền, C# thuần: ServiceLocator, EventBus, thời gian, random có seed, lưu JSON, config |
 | `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ |
 | `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx` |
-| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn, camera, input, NavMesh, bia mộ, trứng, bảng đặt tên |
+| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn (có quầy hàng), camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
 | `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt |
-| `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow, Debug overlay |
+| `Assets/PawFit/Scripts/Economy` | Kinh tế (C# thuần): ví Coin + quảng cáo `EconomyService`, quầy hàng `ShopService`, cổng quảng cáo `IAdService` + bản giả lập `MockAdService` |
+| `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow (chuyển màn, quầy hàng, quảng cáo), Debug overlay |
 | `Assets/PawFit/Resources/Pets/Gen1` | Model thú Gen 1 (FBX bản 2: thân LOD0 / LOD1 + blendshape + xương + mọi kiểu bộ phận) + file mốc neo JSON |
 | `Assets/PawFit/Resources/Shaders` | Shader URP `PawFit/Gen1Fur` (lông theo vertex color, bẩn) + `PawFit/Gen1Eye` (mắt vẽ bằng toán) |
 | `Assets/PawFit/Editor` | Menu Setup Project · tự đặt thông số import FBX Gen 1 |

@@ -10,6 +10,7 @@ namespace PawFit.Core
         public HealthConfig Health = new HealthConfig();
         public EvolutionConfig Evolution = new EvolutionConfig();
         public StatsConfig Stats = new StatsConfig();
+        public EconomyConfig Economy = new EconomyConfig();
 
         public static GameConfig CreateDefault() => new GameConfig();
     }
@@ -67,7 +68,7 @@ namespace PawFit.Core
         /// <summary>Đang hồi phục mà quá bấy nhiêu giờ không ai chăm thì tái phát.</summary>
         public float RelapseAfterHours = 24f;
 
-        /// <summary>Giá thuốc (Coin) — Phase 5.1 mới trừ tiền thật.</summary>
+        /// <summary>Giá thuốc (Coin) — bán ở quầy hàng trong vườn (ShopService, Phase 5.1).</summary>
         public int MedicineCostSick = 60;
         public int MedicineCostCritical = 150;
 
@@ -162,5 +163,42 @@ namespace PawFit.Core
         public float PowerDef = 1.5f;
         public float PowerSpd = 1.5f;
         public float PowerCrit = 10f;
+    }
+
+    /// <summary>Kinh tế — GDD mục G11 (Phase 5.1). Không nạp tiền; giá thuốc nằm ở <see cref="HealthConfig"/> (60 / 150).</summary>
+    public sealed class EconomyConfig
+    {
+        public int StartCoins = 200;
+
+        /// <summary>Ví giữ tối đa bấy nhiêu Coin (chặn tràn số).</summary>
+        public int MaxCoins = 999999;
+
+        // ---- quảng cáo tự nguyện ----
+        public int MaxAdsPerDay = 5;
+        public int AdCoins = 20;
+        public float AdEnergy = 20f;
+
+        /// <summary>Năng lượng từ mức này trở lên thì không cho xem quảng cáo lấy năng lượng (tránh phí lượt).</summary>
+        public float AdEnergyFullAbove = 90f;
+
+        /// <summary>Quảng cáo giả lập (MockAdService) dài bấy nhiêu giây.</summary>
+        public float MockAdSeconds = 3f;
+
+        // ---- quầy hàng trong vườn (thức ăn thường ở chòi ăn vẫn miễn phí) ----
+        public int TreatPrice = 25;
+        public float TreatSatiety = 15f;
+        public float TreatMood = 25f;
+        public int EnergyDrinkPrice = 30;
+        public float EnergyDrinkEnergy = 30f;
+
+        /// <summary>No (bánh thưởng) / năng lượng (nước tăng lực) từ mức này trở lên thì quầy không bán: bé không cần.</summary>
+        public float ShopFullAbove = 92f;
+
+        // ---- phần thưởng ----
+        /// <summary>Thắng hình nộm Dễ / Thường / Khó được bấy nhiêu Coin.</summary>
+        public int[] BotWinCoins = { 5, 10, 15 };
+
+        /// <summary>Thắng PvP (Phase 4.2).</summary>
+        public int PvpWinCoins = 30;
     }
 }

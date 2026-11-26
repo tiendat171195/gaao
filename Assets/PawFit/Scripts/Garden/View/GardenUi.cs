@@ -7,14 +7,24 @@ using UnityEngine.UI;
 namespace PawFit.Garden.View
 {
     /// <summary>
-    /// Giao diện tối thiểu dựng bằng code (uGUI, không cần prefab): bảng đặt tên khi trứng nở, thẻ chữ khi chạm bia mộ.
+    /// Giao diện tối thiểu dựng bằng code (uGUI, không cần prefab): bảng đặt tên khi trứng nở, thẻ chữ khi chạm bia mộ,
+    /// thẻ lựa chọn (hình nộm, quầy hàng), thẻ tự cập nhật (quảng cáo giả lập), dòng báo nhanh (toast).
     /// Vườn vẫn không có nút thường trực — bảng chỉ hiện đúng lúc cần rồi tắt. Đang mở thì vườn bỏ qua chạm.
     /// </summary>
     public static class GardenUi
     {
+        private static readonly Color[] ChoiceColors =
+        {
+            new Color(0.36f, 0.6f, 0.85f), new Color(0.85f, 0.45f, 0.36f), new Color(0.38f, 0.7f, 0.45f),
+            new Color(0.62f, 0.45f, 0.8f), new Color(0.3f, 0.68f, 0.7f),
+        };
+        private static readonly Color CancelColor = new Color(0.6f, 0.6f, 0.62f);
+        private static readonly Color DisabledColor = new Color(0.8f, 0.8f, 0.8f);
+
         private static Canvas _canvas;
         private static Font _font;
         private static GameObject _open;
+        private static GameObject _toast;
 
         /// <summary>Đang có bảng mở (vườn không nhận chạm).</summary>
         public static bool IsOpen => _open != null;
@@ -40,29 +50,89 @@ namespace PawFit.Garden.View
             input.ActivateInputField();   // điện thoại: bật bàn phím luôn
         }
 
-        /// <summary>Thẻ có vài lựa chọn (vd chạm hình nộm: Huấn luyện / Đấu / Thôi). `chosen` nhận chỉ số nút.</summary>
-        public static void ShowChoice(string title, string body, string[] options, Action<int> chosen)
+        /// <summary>
+        /// Thẻ có vài lựa chọn (vd chạm hình nộm: Huấn luyện / Đấu / Thôi; quầy hàng: các món + quảng cáo + Thôi).
+        /// Nút cuối luôn màu xám (Thôi). `enabled[i] == false` thì nút đó xám nhạt, không bấm được (vd thiếu Coin).
+        /// Bấm nút nào thì thẻ đóng rồi `chosen` nhận chỉ số nút đó.
+        /// </summary>
+        public static void ShowChoice(string title, string body, string[] options, Action<int> chosen, bool[] enabled = null)
         {
             Close();
+            int n = options.Length;
+            bool many = n > 3;   // nhiều nút: nút rộng hơn, chữ nhỏ hơn cho vừa
+            float step = many ? 112f : 120f, head = 330f, h = head + n * step + 30f, top = h * 0.5f;
+            var buttonSize = new Vector2(many ? 780f : 560f, many ? 96f : 100f);
             RectTransform dim = Panel(Root, "Choice", new Color(0f, 0f, 0f, 0.35f));
             Stretch(dim);
             RectTransform card = Panel(dim, "Box", new Color(0.97f, 0.97f, 0.95f, 1f));
-            Place(card, Vector2.zero, new Vector2(900f, 640f));
-            Label(card, title, 58, FontStyle.Bold, new Color(0.22f, 0.2f, 0.22f), new Vector2(0f, 220f), new Vector2(840f, 110f));
-            Label(card, body, 38, FontStyle.Normal, new Color(0.3f, 0.28f, 0.3f), new Vector2(0f, 90f), new Vector2(820f, 150f));
-            Color[] colors = { new Color(0.36f, 0.6f, 0.85f), new Color(0.85f, 0.45f, 0.36f), new Color(0.6f, 0.6f, 0.62f) };
-            for (int i = 0; i < options.Length; i++)
+            Place(card, Vector2.zero, new Vector2(900f, h));
+            Label(card, title, 58, FontStyle.Bold, new Color(0.22f, 0.2f, 0.22f), new Vector2(0f, top - 85f), new Vector2(840f, 110f));
+            Label(card, body, 36, FontStyle.Normal, new Color(0.3f, 0.28f, 0.3f), new Vector2(0f, top - 220f), new Vector2(820f, 150f));
+            for (int i = 0; i < n; i++)
             {
                 int index = i;
-                Button b = Button(card, options[i], colors[i % colors.Length], new Vector2(0f, -60f - i * 120f), new Vector2(560f, 100f));
+                bool on = enabled == null || i >= enabled.Length || enabled[i];
+                Color color = !on ? DisabledColor : (i == n - 1 && n > 1 ? CancelColor : ChoiceColors[i % ChoiceColors.Length]);
+                Button b = Button(card, options[i], color, new Vector2(0f, top - head - step * 0.5f - i * step), buttonSize, many ? 38 : 48);
+                b.interactable = on;
+                if (!on)
+                {
+                    b.GetComponentInChildren<Text>().color = new Color(0.42f, 0.42f, 0.44f);   // chữ xám đậm cho dễ đọc trên nền xám
+                    continue;
+                }
                 b.onClick.AddListener(() =>
                 {
                     Close();
                     chosen?.Invoke(index);
                 });
             }
-            card.sizeDelta = new Vector2(900f, 380f + options.Length * 120f);
             _open = dim.gameObject;
+        }
+
+        /// <summary>
+        /// Thẻ phủ kín màn hình, chữ tự cập nhật mỗi frame (vd quảng cáo giả lập đếm ngược) + 1 nút (null = không có nút).
+        /// Không tự đóng khi bấm nút: bên gọi tự <see cref="Close"/> khi xong việc.
+        /// </summary>
+        public static void ShowLive(string title, Func<string> body, string button, Action pressed)
+        {
+            Close();
+            RectTransform dim = Panel(Root, "Live", new Color(0.06f, 0.06f, 0.09f, 0.94f));
+            Stretch(dim);
+            Label(dim, title, 64, FontStyle.Bold, Color.white, new Vector2(0f, 320f), new Vector2(940f, 140f));
+            Text text = Label(dim, body != null ? body() : "", 44, FontStyle.Normal, new Color(0.88f, 0.88f, 0.9f),
+                              new Vector2(0f, 60f), new Vector2(940f, 300f));
+            if (body != null) dim.gameObject.AddComponent<UiTicker>().Tick = () => text.text = body();
+            if (button != null)
+            {
+                Button b = Button(dim, button, new Color(0.42f, 0.42f, 0.48f), new Vector2(0f, -320f), new Vector2(760f, 110f), 40);
+                b.onClick.AddListener(() => pressed?.Invoke());
+            }
+            _open = dim.gameObject;
+        }
+
+        /// <summary>Dòng báo nhanh ở phía trên màn hình (vd "-25 Coin"), tự mờ dần rồi tắt. Không chặn chạm.</summary>
+        public static void Toast(string text, float seconds = 2.4f)
+        {
+            if (_toast != null) UnityEngine.Object.Destroy(_toast);
+            RectTransform box = Panel(Root, "Toast", new Color(0.16f, 0.15f, 0.18f, 0.88f));
+            box.GetComponent<Image>().raycastTarget = false;
+            box.anchorMin = box.anchorMax = box.pivot = new Vector2(0.5f, 1f);
+            box.anchoredPosition = new Vector2(0f, -170f);
+            box.sizeDelta = new Vector2(920f, 120f);
+            Label(box, text, 40, FontStyle.Bold, Color.white, Vector2.zero, new Vector2(880f, 110f));
+            var group = box.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            float start = Time.unscaledTime, life = Mathf.Max(0.5f, seconds);
+            GameObject go = box.gameObject;
+            go.AddComponent<UiTicker>().Tick = () =>
+            {
+                float k = (Time.unscaledTime - start) / life;
+                group.alpha = k < 0.75f ? 1f : Mathf.Clamp01((1f - k) / 0.25f);
+                box.SetAsLastSibling();   // luôn nằm trên thẻ mở sau nó
+                if (k >= 1f) UnityEngine.Object.Destroy(go);
+            };
+            _toast = go;
         }
 
         /// <summary>Thẻ chữ to (vd thông tin bia mộ). Chạm bất kỳ đâu để đóng.</summary>
@@ -180,14 +250,22 @@ namespace PawFit.Garden.View
             return input;
         }
 
-        private static Button Button(Transform parent, string label, Color color, Vector2 pos, Vector2 size)
+        private static Button Button(Transform parent, string label, Color color, Vector2 pos, Vector2 size, int fontSize = 48)
         {
             RectTransform rt = Panel(parent, "Button", color);
             Place(rt, pos, size);
             var b = rt.gameObject.AddComponent<Button>();
             b.targetGraphic = rt.GetComponent<Image>();
-            Label(rt, label, 48, FontStyle.Bold, Color.white, Vector2.zero, size);
+            Label(rt, label, fontSize, FontStyle.Bold, Color.white, Vector2.zero, size - new Vector2(30f, 0f));
             return b;
         }
+    }
+
+    /// <summary>Gọi 1 hàm mỗi frame (chữ tự cập nhật / toast mờ dần của GardenUi). Tự hết khi GameObject bị hủy.</summary>
+    public sealed class UiTicker : MonoBehaviour
+    {
+        public Action Tick;
+
+        private void Update() => Tick?.Invoke();
     }
 }

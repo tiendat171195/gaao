@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PawFit.Core;
 using PawFit.Pet;
 
 namespace PawFit.Battle
@@ -61,6 +62,9 @@ namespace PawFit.Battle
         public bool PlayerWon;
         public TrainingVector Gained = new TrainingVector();
         public readonly List<int> Learned = new List<int>();
+
+        /// <summary>Coin nhận được (thắng Bot, Phase 5.1).</summary>
+        public int Coins;
     }
 
     /// <summary>
@@ -78,6 +82,7 @@ namespace PawFit.Battle
         private readonly EvolutionService _evo;
         private readonly BattleSessionConfig _sc;
         private readonly BattleBot _bot;
+        private readonly ICoinWallet _wallet;
         private float _accum;
         private bool _quit;
         private bool _finished;
@@ -93,12 +98,15 @@ namespace PawFit.Battle
             return reason == null;
         }
 
+        /// <param name="wallet">Ví để cộng Coin khi thắng Bot (null = không thưởng Coin).</param>
         public BattleSession(BattleMode mode, BotLevel level, PetService pets, EvolutionService evo, ulong seed,
-                             BattleConfig battleCfg = null, BattleSessionConfig sessionCfg = null, BotConfig botCfg = null)
+                             BattleConfig battleCfg = null, BattleSessionConfig sessionCfg = null, BotConfig botCfg = null,
+                             ICoinWallet wallet = null)
         {
             _pets = pets ?? throw new ArgumentNullException(nameof(pets));
             _evo = evo ?? throw new ArgumentNullException(nameof(evo));
             _sc = sessionCfg ?? new BattleSessionConfig();
+            _wallet = wallet;
             Mode = mode;
             Level = level;
             PetStats ps = evo.Stats;
@@ -241,6 +249,13 @@ namespace PawFit.Battle
                 int lv = Math.Max(0, Math.Min(_sc.WinStrength.Length - 1, (int)Level));
                 Gain(TrainingAxis.Strength, _sc.WinStrength[lv]);
                 Gain(TrainingAxis.Speed, _sc.WinSpeed[lv]);
+                int[] coins = _pets.Config.Economy.BotWinCoins;   // thắng Bot có Coin (GDD G11b)
+                int c = coins != null && coins.Length > 0 ? coins[Math.Max(0, Math.Min(coins.Length - 1, (int)Level))] : 0;
+                if (_wallet != null && c > 0)
+                {
+                    _wallet.Add(c, "thắng hình nộm " + Level);
+                    Result.Coins = c;
+                }
             }
             if (_pets.HasPet)
             {

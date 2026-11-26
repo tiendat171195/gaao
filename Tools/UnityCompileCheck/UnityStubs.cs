@@ -27,9 +27,11 @@ namespace UnityEngine
         public GameObject gameObject => null;
         public T GetComponent<T>() => default;
         public T GetComponentInParent<T>() => default;
+        public T GetComponentInChildren<T>() => default;
     }
 
     public class Behaviour : Component { public bool enabled { get; set; } }
+    public sealed class CanvasGroup : Behaviour { public float alpha { get; set; } public bool blocksRaycasts { get; set; } public bool interactable { get; set; } }
 
     public class MonoBehaviour : Behaviour
     {
@@ -84,6 +86,7 @@ namespace UnityEngine
         public Quaternion localRotation { get; set; }
         public Vector3 localScale { get; set; }
         public void SetParent(Transform parent, bool worldPositionStays) { }
+        public void SetAsLastSibling() { }
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation) { }
         public Vector3 TransformPoint(Vector3 position) => position;
     }
@@ -160,6 +163,7 @@ namespace UnityEngine
         public static float Atan2(float y, float x) => 0f;
         public static float Floor(float f) => 0f;
         public static float Min(float a, float b) => a;
+        public static int Min(int a, int b) => a;
         public static float MoveTowards(float current, float target, float maxDelta) => target;
         public static int CeilToInt(float f) => 0;
         public static int Clamp(int v, int min, int max) => v;
@@ -518,7 +522,7 @@ namespace UnityEngine.UI
         public bool supportRichText { get; set; }
     }
 
-    public class Selectable : Behaviour { public Graphic targetGraphic { get; set; } }
+    public class Selectable : Behaviour { public Graphic targetGraphic { get; set; } public bool interactable { get; set; } }
 
     public sealed class Button : Selectable
     {

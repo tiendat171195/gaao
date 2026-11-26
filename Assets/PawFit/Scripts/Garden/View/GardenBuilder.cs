@@ -15,6 +15,11 @@ namespace PawFit.Garden.View
         public int Level;
     }
 
+    /// <summary>Quầy hàng (Phase 5.1): chạm vào = mở quầy (mua thuốc / bánh / nước, xem quảng cáo lấy thưởng).</summary>
+    public sealed class ShopStallView : MonoBehaviour
+    {
+    }
+
     public sealed class GardenBuildResult
     {
         public Transform Root;
@@ -48,6 +53,7 @@ namespace PawFit.Garden.View
             BuildPond(layout.Get(ZoneType.Pond), decor);
             BuildTraining(layout.Get(ZoneType.TrainingGround), r.Obstacles, decor);
             BuildMemorial(layout.Get(ZoneType.Memorial), r.Obstacles, decor);
+            BuildShop(layout.Get(ZoneType.Shop), r.Obstacles);
             BuildTrees(r.Obstacles, decor);
             BuildFlowers(layout, decor);
             return r;
@@ -63,9 +69,11 @@ namespace PawFit.Garden.View
             Prim.Make(PrimitiveType.Cube, decor, new Vector3(c.X, -0.22f, c.Y), new Vector3(90f, 0.1f, 100f), GrassFar,
                       smoothness: 0.02f, name: "FarGround");
             // đường đá nhỏ từ chỗ thú đứng tới các khu
-            foreach (ZoneType z in new[] { ZoneType.FoodHut, ZoneType.Pond, ZoneType.TrainingGround })
+            foreach (ZoneType z in new[] { ZoneType.FoodHut, ZoneType.Pond, ZoneType.TrainingGround, ZoneType.Shop })
             {
-                NVec2 a = l.PetSpawn, b = l.Get(z).UsePoint;
+                GardenZone zone = l.Get(z);
+                if (zone == null) continue;
+                NVec2 a = l.PetSpawn, b = zone.UsePoint;
                 for (int i = 1; i < 8; i++)
                 {
                     NVec2 p = NVec2.Lerp(a, b, i / 8f) + new NVec2((i % 2 == 0 ? 0.18f : -0.18f), 0f);
@@ -185,6 +193,57 @@ namespace PawFit.Garden.View
             string[] flowers = { "#F7C6D9", "#FFFFFF", "#F2C84B", "#F7C6D9", "#B39DDB" };
             for (int i = 0; i < flowers.Length; i++)
                 Prim.Make(PrimitiveType.Sphere, decor, W(z.Center + new NVec2(-0.6f + 0.3f * i, -0.55f), 0.08f), Vector3.one * 0.14f, Prim.Hex(flowers[i]));
+        }
+
+        /// <summary>Quầy hàng gỗ mái bạt sọc, biển "QUẦY HÀNG" + đồng Coin, trên quầy bày lọ thuốc / bánh / lon nước.</summary>
+        private static void BuildShop(GardenZone z, Transform obstacles)
+        {
+            if (z == null) return;
+            Transform s = Prim.Group(obstacles, "ShopStall", W(z.Center));
+            s.localRotation = Quaternion.Euler(0f, 20f, 0f);   // mặt quầy nhìn về camera, hơi nghiêng vào giữa vườn
+            s.gameObject.AddComponent<ShopStallView>();
+            var col = s.gameObject.AddComponent<BoxCollider>();   // 1 hộp: vừa để chạm trúng, vừa là vật cản cho NavMesh
+            col.center = new Vector3(0f, 1.3f, 0f);
+            col.size = new Vector3(2.4f, 2.6f, 1.3f);
+            Color red = Prim.Hex("#E2463F"), cream = Prim.Hex("#FFF4E6");
+
+            // quầy gỗ + mặt quầy + dải màu mặt trước
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(0f, 0.45f, 0f), new Vector3(2.0f, 0.9f, 0.8f), Wood);
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(0f, 0.93f, -0.03f), new Vector3(2.2f, 0.07f, 0.95f), WoodDark);
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(0f, 0.5f, -0.41f), new Vector3(1.9f, 0.32f, 0.02f), Prim.Hex("#6FC2B0"));
+            foreach (float x in new[] { -1f, 1f })   // 4 cột, cột sau cao hơn để mái nghiêng về trước
+            {
+                Prim.Make(PrimitiveType.Cylinder, s, new Vector3(x, 1.2f, -0.38f), new Vector3(0.08f, 1.2f, 0.08f), WoodDark);
+                Prim.Make(PrimitiveType.Cylinder, s, new Vector3(x, 1.3f, 0.38f), new Vector3(0.08f, 1.3f, 0.08f), WoodDark);
+            }
+            // mái bạt sọc đỏ trắng (mép trước thấp hơn) + diềm hạt tròn
+            for (int i = 0; i < 5; i++)
+                Prim.Make(PrimitiveType.Cube, s, new Vector3(-0.92f + i * 0.46f, 2.5f, 0f), new Vector3(0.46f, 0.05f, 1.25f),
+                          i % 2 == 0 ? red : cream, rotation: Quaternion.Euler(-14f, 0f, 0f));
+            for (int i = 0; i < 9; i++)
+                Prim.Make(PrimitiveType.Sphere, s, new Vector3(-1f + i * 0.25f, 2.31f, -0.62f), Vector3.one * 0.12f, i % 2 == 0 ? red : cream);
+
+            // biển hiệu ngửa nhẹ về phía camera (camera nhìn chéo từ trên xuống)
+            Transform sign = Prim.Group(s, "Sign", new Vector3(0f, 2.95f, 0.1f));
+            sign.localRotation = Quaternion.Euler(25f, 0f, 0f);
+            Prim.Make(PrimitiveType.Cube, sign, Vector3.zero, new Vector3(1.8f, 0.42f, 0.06f), cream);
+            Prim.Make(PrimitiveType.Cube, sign, new Vector3(0f, 0f, 0.01f), new Vector3(1.9f, 0.5f, 0.04f), WoodDark);
+            MemorialView.Text3D(sign, new Vector3(-0.14f, 0f, -0.05f), "QUẦY HÀNG", 0.2f, Prim.Hex("#7A3B2E"), FontStyle.Bold);
+            Prim.Make(PrimitiveType.Cylinder, sign, new Vector3(0.68f, 0f, -0.05f), new Vector3(0.28f, 0.02f, 0.28f), Prim.Hex("#F2C84B"),
+                      smoothness: 0.85f, rotation: Quaternion.Euler(90f, 0f, 0f));   // đồng Coin
+            foreach (float x in new[] { -0.6f, 0.6f })
+                Prim.Make(PrimitiveType.Cylinder, s, new Vector3(x, 2.63f, 0.1f), new Vector3(0.04f, 0.11f, 0.04f), WoodDark);
+
+            // hàng bày trên quầy: lọ thuốc (nắp đỏ, chữ thập đỏ), bánh hồng có quả anh đào, lon nước tăng lực
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(-0.62f, 1.1f, -0.1f), new Vector3(0.16f, 0.13f, 0.16f), Color.white, smoothness: 0.6f);
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(-0.62f, 1.25f, -0.1f), new Vector3(0.17f, 0.04f, 0.17f), red);
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(-0.62f, 1.1f, -0.185f), new Vector3(0.08f, 0.025f, 0.01f), red);
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(-0.62f, 1.1f, -0.185f), new Vector3(0.025f, 0.08f, 0.01f), red);
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(0f, 1.04f, -0.1f), new Vector3(0.3f, 0.07f, 0.3f), Prim.Hex("#F7C6D9"));
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(0f, 1.12f, -0.1f), new Vector3(0.31f, 0.015f, 0.31f), Color.white);
+            Prim.Make(PrimitiveType.Sphere, s, new Vector3(0f, 1.17f, -0.1f), Vector3.one * 0.08f, red, smoothness: 0.7f);
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(0.6f, 1.1f, -0.1f), new Vector3(0.12f, 0.13f, 0.12f), Prim.Hex("#B5E655"), smoothness: 0.75f);
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(0.6f, 1.12f, -0.1f), new Vector3(0.125f, 0.03f, 0.125f), Prim.Hex("#2E86C1"), smoothness: 0.75f);
         }
 
         private static void BuildTrees(Transform obstacles, Transform decor)

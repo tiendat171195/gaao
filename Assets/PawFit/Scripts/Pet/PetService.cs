@@ -31,8 +31,8 @@ namespace PawFit.Pet
     /// <summary>File lưu game: 1 người = 1 thú (hoặc 1 quả trứng chờ nở) + các bia mộ.</summary>
     public sealed class GameSave
     {
-        /// <summary>2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). File bản 1 vẫn đọc được.</summary>
-        public const int CurrentVersion = 2;
+        /// <summary>2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). 3 = Phase 5.1 (thêm ví Coin). File bản cũ vẫn đọc được.</summary>
+        public const int CurrentVersion = 3;
         public int Version = CurrentVersion;
 
         /// <summary>Thú đang sống. null khi thú đã mất và trứng chưa nở.</summary>
@@ -42,6 +42,12 @@ namespace PawFit.Pet
         public EggData Egg;
 
         public List<MemorialEntry> Memorials = new List<MemorialEntry>();
+
+        /// <summary>
+        /// Ví Coin của người chơi (còn nguyên khi thú mất). Cố ý không khởi tạo sẵn: file cũ chưa có ví
+        /// đọc ra null, lúc đó mới cấp số Coin khởi đầu (xem <see cref="PetService.Wallet"/>).
+        /// </summary>
+        public WalletData Wallet;
     }
 
     // ---- Sự kiện (View lắng nghe qua EventBus) ----
@@ -117,6 +123,20 @@ namespace PawFit.Pet
         /// <summary>Các bia mộ, cũ trước mới sau.</summary>
         public IReadOnlyList<MemorialEntry> Memorials =>
             _game?.Memorials != null ? (IReadOnlyList<MemorialEntry>)_game.Memorials : Array.Empty<MemorialEntry>();
+
+        /// <summary>
+        /// Ví Coin trong file lưu (EconomyService đọc / ghi qua đây, mỗi lần đổi thì gọi <see cref="Save"/>).
+        /// Chưa có ví (người mới, hoặc file từ trước Phase 5.1) thì tạo ví với số Coin khởi đầu.
+        /// null nếu chưa nạp file lưu (chưa gọi LoadOrCreate).
+        /// </summary>
+        public WalletData Wallet
+        {
+            get
+            {
+                if (_game == null) return null;
+                return _game.Wallet ?? (_game.Wallet = new WalletData { Coins = _cfg.Economy.StartCoins });
+            }
+        }
 
         /// <summary>Mã DNA để khoe (PF-XXXX-XXXX-XXXX).</summary>
         public string DnaCode => HasPet ? DnaCodec.Encode(Current.Dna) : null;
@@ -378,7 +398,7 @@ namespace PawFit.Pet
             };
         }
 
-        /// <summary>Đọc file lưu bản cũ: bổ sung phần còn thiếu (bản 1 chưa có sức khỏe / trứng / bia mộ).</summary>
+        /// <summary>Đọc file lưu bản cũ: bổ sung phần còn thiếu (bản 1 chưa có sức khỏe / trứng / bia mộ; bản 2 chưa có ví — ví tạo khi cần).</summary>
         private static void Upgrade(GameSave g)
         {
             if (g.Memorials == null) g.Memorials = new List<MemorialEntry>();

@@ -20,6 +20,11 @@ namespace PawFit.Tests
             GardenZone m = l.Get(ZoneType.Memorial);
             Assert.IsTrue(Math.Abs(m.Center.X) > 6f && m.Center.Y > 9f, "tưởng niệm ở góc");
             foreach (GardenZone z in l.Zones) Assert.IsTrue(l.Contains(z.Center, 1f), z.Type + " phải nằm trong vườn");
+            GardenZone shop = l.Get(ZoneType.Shop);
+            Assert.Less(shop.Center.Y, l.PetSpawn.Y - 2f, "quầy hàng phía trước (gần camera)");
+            foreach (GardenZone z in l.Zones)
+                if (z != shop) Assert.Greater(Vector2.Distance(z.Center, shop.Center), z.Radius + shop.Radius, "quầy hàng không đè lên " + z.Type);
+            Assert.AreEqual(ZoneType.None, l.ZoneAt(shop.UsePoint), "chỗ đứng trước quầy nằm ngoài khu quầy");
         }
 
         [Test]

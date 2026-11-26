@@ -286,7 +286,8 @@ namespace PawFit.Tests
             Assert.IsNotNull(pets.Current.Health);
             Assert.AreEqual(HealthStage.Healthy, pets.Current.Health.Stage);
             pets.Save();
-            StringAssert.Contains("\"Version\": 2", store.RawJson(PetService.SaveKey));
+            StringAssert.Contains("\"Version\": " + GameSave.CurrentVersion, store.RawJson(PetService.SaveKey));
+            Assert.AreEqual(GameConfig.CreateDefault().Economy.StartCoins, pets.Wallet.Coins, "file cũ được cấp Coin khởi đầu");
         }
 
         [Test]

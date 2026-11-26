@@ -36,6 +36,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm hình nộm ở sân tập (App mở màn đấu). Tham số = mức 0..2.</summary>
         public Action<int> DummyTapped { get; set; }
 
+        /// <summary>Chạm quầy hàng (App mở thẻ quầy hàng, Phase 5.1).</summary>
+        public Action ShopTapped { get; set; }
+
         /// <summary>Tạm dừng vườn khi đang ở màn đấu: không nhận chạm, camera đứng, thú đứng yên.</summary>
         public void SetPaused(bool paused)
         {
@@ -86,6 +89,7 @@ namespace PawFit.Garden.View
             _router.EggTapped = OnEggTapped;
             _router.StoneTapped = stone => GardenUi.ShowCard(stone.Entry.Name, MemorialView.CardText(stone.Entry));
             _router.DummyTapped = level => DummyTapped?.Invoke(level);
+            _router.ShopTapped = () => ShopTapped?.Invoke();
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
             _subs.Add(bus.Subscribe<PetCreated>(OnPetCreated));
@@ -95,7 +99,8 @@ namespace PawFit.Garden.View
             }));
 
             _log.Info("[PawFit] Vườn sẵn sàng · chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve · " +
-                      "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn");
+                      "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn · " +
+                      "chạm quầy hàng (trước bên phải) = mua đồ / xem quảng cáo");
         }
 
         private void SpawnPet(Vector3 at)

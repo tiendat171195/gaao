@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using PawFit.Core;
+using PawFit.Economy;
 using PawFit.Garden;
 using PawFit.Garden.View;
 using PawFit.Pet;
@@ -15,6 +16,7 @@ namespace PawFit.App
     ///  * tua giờ, đặt nhanh trạng thái (đói / bẩn / buồn ngủ / khỏe / ngủ), chỉnh từng nhu cầu
     ///  * bệnh: Mệt / Ốm / Nguy kịch / Chết ngay, uống thuốc, trứng nở ngay
     ///  * tiến hóa: giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến; thêm tuổi / điểm tập / chiêu
+    ///  * kinh tế: số Coin, lượt quảng cáo còn lại; +/- 100 Coin, trả lại lượt quảng cáo, mở quầy hàng, giả lập hết quảng cáo
     ///  * thú mới DNA ngẫu nhiên, đổi model Gen 1 / thú tạm, LOD0 / LOD1, shader riêng / URP Lit
     /// Mở / đóng: nút "DEV" góc trên trái, hoặc phím F1. Phím tắt: 1 / 2 / 3 tua +1 / +6 / +24 giờ, N in nhu cầu.
     /// Chỉ GỌI service (logic nằm ở PetService / DebugTimeProvider), không tự sửa luật game.
@@ -89,6 +91,7 @@ namespace PawFit.App
                 DrawEvolution();
             }
             else DrawEgg();
+            DrawEconomy();
             DrawTime();
             DrawAvatar();
             GUILayout.EndScrollView();
@@ -193,6 +196,25 @@ namespace PawFit.App
             if (GUILayout.Button("+10 Tốc", _button)) evo.Training.Add(TrainingAxis.Speed, 10f);
             if (GUILayout.Button("+10 Chăm", _button)) evo.Training.Add(TrainingAxis.Care, 10f);
             if (GUILayout.Button("+10 Tối", _button)) evo.Training.Add(TrainingAxis.Shadow, 10f);
+            GUILayout.EndHorizontal();
+        }
+
+        private void DrawEconomy()
+        {
+            if (!S.TryGet(out EconomyService eco)) return;
+            GUILayout.Space(4f);
+            WalletData w = S.Get<PetService>().Wallet;
+            string total = w != null ? $" · đã nhận {w.Earned} / đã tiêu {w.Spent}" : "";
+            GUILayout.Label($"Coin: {eco.Coins} · quảng cáo còn {eco.AdsLeftToday}/{eco.MaxAdsPerDay} lượt hôm nay{total}", _label);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("+100 Coin", _button)) eco.Add(100, "công cụ test");
+            if (GUILayout.Button("-100 Coin", _button)) eco.TrySpend(Mathf.Min(100, eco.Coins), "công cụ test");
+            if (GUILayout.Button("Trả lượt QC", _button)) eco.ResetAdsForDebug();
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Mở quầy hàng", _button)) SceneFlow.OpenShop();
+            if (eco.Ads is MockAdService mock && GUILayout.Button(mock.NoFill ? "QC: có lại" : "QC: hết hàng", _button))
+                mock.NoFill = !mock.NoFill;
             GUILayout.EndHorizontal();
         }
 

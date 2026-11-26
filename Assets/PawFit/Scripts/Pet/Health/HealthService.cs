@@ -42,7 +42,7 @@ namespace PawFit.Pet
         /// <summary>Thú ốm không chịu xuống hồ tắm (GDD G4).</summary>
         public bool CanBathe => _pets.HasPet && !IsIll;
 
-        /// <summary>Giá thuốc theo giai đoạn (Phase 5.1 trừ Coin).</summary>
+        /// <summary>Giá thuốc theo giai đoạn (quầy hàng trong vườn bán theo giá này).</summary>
         public int MedicineCost => Stage == HealthStage.Critical ? _cfg.Health.MedicineCostCritical : _cfg.Health.MedicineCostSick;
 
         /// <summary>Ghi nhận 1 việc chăm kỹ khi thú đang ốm. Trả true nếu vừa đủ 1 lượt (cháo + chăn + lau).</summary>
@@ -58,7 +58,7 @@ namespace PawFit.Pet
             return change == HealthChange.RecoveryStarted || change == HealthChange.CarefulRoundDone;
         }
 
-        /// <summary>Cho uống thuốc (đang ốm mới có tác dụng). Phase 5.1: trừ <see cref="MedicineCost"/> Coin trước khi gọi.</summary>
+        /// <summary>Cho uống thuốc (đang ốm mới có tác dụng). Mua ở quầy hàng: ShopService trừ <see cref="MedicineCost"/> Coin rồi mới gọi hàm này.</summary>
         public bool GiveMedicine()
         {
             if (!_pets.HasPet) return false;

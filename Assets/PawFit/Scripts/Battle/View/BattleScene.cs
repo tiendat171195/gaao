@@ -54,7 +54,8 @@ namespace PawFit.Battle.View
             _evo = s.Get<EvolutionService>();
             _log = s.Get<ILog>();
             _onExit = onExit;
-            _session = new BattleSession(mode, level, _pets, _evo, (ulong)DateTime.UtcNow.Ticks);
+            ICoinWallet wallet = s.TryGet(out ICoinWallet w) ? w : null;   // thắng Bot có Coin (Phase 5.1)
+            _session = new BattleSession(mode, level, _pets, _evo, (ulong)DateTime.UtcNow.Ticks, wallet: wallet);
             transform.position = ArenaPos;
             BuildArena();
 
@@ -262,6 +263,7 @@ namespace PawFit.Battle.View
             }
             if (r.Gained.Strength > 0.01f) lines.Add("+" + r.Gained.Strength.ToString("0.#") + " Sức mạnh");
             if (r.Gained.Speed > 0.01f) lines.Add("+" + r.Gained.Speed.ToString("0.#") + " Tốc độ");
+            if (r.Coins > 0) lines.Add("+" + r.Coins + " Coin");
             if (lines.Count == 0) lines.Add("Hôm nay tập đủ rồi, mai tập tiếp nhé");
             _hud.ShowResult(title, string.Join("\n", lines), Exit);
         }
