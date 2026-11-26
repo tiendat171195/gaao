@@ -1,8 +1,55 @@
-# Python / Blender
+# ---- Unity ----
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/Assets/Plugins/Editor/JetBrains*
+.vs/
+.idea/
+.gradle/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+mono_crash*
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+
+# ---- Test logic C# chạy bằng dotnet (ngoài Unity) ----
+!/Tools/LogicTests/LogicTests.csproj
+/Tools/LogicTests/bin/
+/Tools/LogicTests/obj/
+/Tools/LogicTests/TestResults/
+
+# ---- Python / Blender ----
 __pycache__/
 *.pyc
 *.blend1
 
 # Ảnh render tạm (ảnh demo chính thức nằm ở Docs/art)
-Tools/Blender/*.png
-out/
+/Tools/Blender/*.png
+/out/

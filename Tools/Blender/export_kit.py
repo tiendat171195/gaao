@@ -3,11 +3,11 @@
 export_kit.py — Xuất bộ model thú (FBX) cho Unity: base mesh + blendshape + xương + bộ phận.
 
 Cách chạy:
-    blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Art/Pet/PawFit_PetKit.fbx
+    blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Art/Pets/Gen1/PawFit_Gen1_PetKit.fbx
 
 Trong file FBX:
   * PF_Rig             : bộ xương (hips, spine, chest, neck, head, 4 chân, tail)
-  * PF_Body            : thân Baby, blendshape: to_adult_fire, head_big, body_chubby, legs_long
+  * PF_Body            : thân Baby, blendshape: to_adult_fire / water / light / steel / shadow, head_big, body_chubby, legs_long
                          Vertex color: R = vùng sáng (bụng/mõm/má/ngực), G = vùng chân,
                                        B = sọc mặc định, A = vùng lưng (đổ bóng lưng)
                          UV2: x = độ dài lông (0..1), y = mật độ lông (0..1)  -> shader lông shell ở Unity

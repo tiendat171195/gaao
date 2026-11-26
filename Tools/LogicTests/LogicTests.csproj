@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Chạy unit test logic C# thuần NGOÀI Unity (trong container / máy không có Unity):
+        dotnet test Tools/LogicTests
+    Biên dịch đúng các file nguồn trong Assets (Core, Pet, Tests) — không copy code.
+    LangVersion 9 = giống Unity 6, lỡ dùng cú pháp C# mới hơn là báo lỗi ngay.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>PawFit.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/PawFit/Scripts/Core/**/*.cs" />
+    <Compile Include="../../Assets/PawFit/Scripts/Pet/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Pet/View/**" />
+    <Compile Include="../../Assets/PawFit/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

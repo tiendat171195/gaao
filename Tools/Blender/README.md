@@ -1,4 +1,6 @@
-# Tools/Blender — Bộ dựng thú PawFit (Phase 0.5 · POC hình ảnh)
+# Tools/Blender — Bộ dựng thú PawFit · Gen 1
+
+> **Gen 1** = bộ thú dựng hoàn toàn bằng script này (dùng để build gameplay). **Gen 2** = bộ model đẹp hơn làm sau bằng tool khác, thay vào mà không sửa gameplay.
 
 Bộ script Python chạy trong **Blender** để dựng thú PawFit hoàn toàn bằng code, không cần artist:
 thân từ metaball → base mesh + blendshape, tai / đuôi / sừng / mắt sinh theo tham số DNA, lông thật
@@ -12,7 +14,7 @@ thân từ metaball → base mesh + blendshape, tai / đuôi / sừng / mắt si
 
 ## Lệnh chạy (đứng ở gốc repo)
 
-Render 1 cảnh (`hero`, `angles`, `variants`, `morph`). Chất lượng `draft` mất khoảng 20 giây, `final` mất khoảng 10–20 phút trên CPU:
+Render 1 cảnh (`hero`, `angles`, `variants`, `morph`, `gen1` = 5 dạng Adult của bộ Gen 1). Chất lượng `draft` mất khoảng 20 giây, `final` mất khoảng 10–20 phút trên CPU:
 
 ```bash
 blender -b --factory-startup --python Tools/Blender/render_demo.py -- hero out/final_hero.png final
@@ -27,7 +29,7 @@ python3 Tools/Blender/make_sheet.py out Docs/art
 Xuất bộ model cho Unity:
 
 ```bash
-blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Art/Pet/PawFit_PetKit.fbx
+blender -b --factory-startup --python Tools/Blender/export_kit.py -- Assets/PawFit/Art/Pets/Gen1/PawFit_Gen1_PetKit.fbx
 ```
 
 ## Các file
@@ -54,12 +56,12 @@ Muốn thêm 1 con mới: copy 1 dict DNA trong `render_demo.py` rồi đổi ge
 | Dạng đuôi (5) | `cao`, `tua`, `bong`, `vay`, `xoan` |
 | Tỉ lệ | `head_big`, `body_chubby`, `legs_long` (0..1 = giá trị blendshape) |
 
-## Bên trong file FBX (`Assets/PawFit/Art/Pet/PawFit_PetKit.fbx`)
+## Bên trong file FBX (`Assets/PawFit/Art/Pets/Gen1/PawFit_Gen1_PetKit.fbx`)
 
 | Object | Nội dung |
 |---|---|
 | `PF_Rig` | 10 xương: hips, spine, chest, neck, head, legFR/FL/BR/BL, tail |
-| `PF_Body` | Thân Baby, blendshape `to_adult_fire`, `head_big`, `body_chubby`, `legs_long`. Vertex color: R = vùng sáng, G = vùng chân, B = sọc mặc định, A = vùng lưng. UV2 `FurMap`: x = độ dài lông, y = mật độ lông |
+| `PF_Body` | Thân Baby, blendshape tiến hóa `to_adult_fire` / `to_adult_water` / `to_adult_light` / `to_adult_steel` / `to_adult_shadow` + tỉ lệ `head_big`, `body_chubby`, `legs_long`. Vertex color: R = vùng sáng, G = vùng chân, B = sọc mặc định, A = vùng lưng. UV2 `FurMap`: x = độ dài lông, y = mật độ lông |
 | `PF_Eye*`, `PF_Liner*`, `PF_Nose`, `PF_Mouth`, `PF_Ear*`, `PF_Tail` | Bộ phận của con mẫu, đã gắn vào xương `head` / `tail` |
 | `Kit_Ear` / `Kit_Tail` / `Kit_Horn` / `Kit_Eye` | Bộ kiểu dáng: mỗi kiểu là 1 blendshape, nên morph mượt giữa các kiểu được |
 

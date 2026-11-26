@@ -292,6 +292,49 @@ def elems_adult_fire():
     return E
 
 
+FORM_BODY = {   # tỉ lệ thân của 5 dạng Adult (so với Adult Lửa) — bộ thú Gen 1
+    'fire':   dict(h=1.00, leg_r=1.00, torso=(1.00, 1.00, 1.00), chest=1.00, head=1.00, muzzle=(1.00, 1.00, 1.00)),
+    'water':  dict(h=0.80, leg_r=0.95, torso=(1.02, 1.15, 0.92), chest=0.92, head=1.02, muzzle=(1.08, 0.85, 1.00)),
+    'light':  dict(h=1.12, leg_r=0.85, torso=(0.90, 0.92, 0.90), chest=1.08, head=0.96, muzzle=(0.92, 0.90, 0.92)),
+    'steel':  dict(h=0.94, leg_r=1.35, torso=(1.25, 1.00, 1.18), chest=1.22, head=1.08, muzzle=(1.22, 0.88, 1.10)),
+    'shadow': dict(h=1.08, leg_r=0.85, torso=(0.88, 1.06, 0.88), chest=0.94, head=0.92, muzzle=(0.88, 1.15, 0.92)),
+}
+FORMS = tuple(FORM_BODY.keys())
+
+
+def elems_adult(form):
+    """Khối dựng thân Adult của 1 dạng: lấy Adult Lửa rồi đổi chiều cao chân, độ to thân / đầu / mõm."""
+    P = FORM_BODY[form]
+    E = _copy(elems_adult_fire())
+    h = P['h']
+    for e in E:
+        n = e['name']
+        if n.startswith('paw'):
+            e['r'] *= P['leg_r'] ** 0.5
+            continue
+        if n.startswith('leg'):
+            e['a'] = Vector((e['a'].x, e['a'].y, e['a'].z * h))   # đầu trên của chân theo chiều cao thân
+            e['r'] *= P['leg_r']
+            continue
+        for key in ('co', 'a', 'b'):
+            if key in e:
+                e[key] = Vector((e[key].x, e[key].y, e[key].z * h))
+        if n == 'torso':
+            e['semi'] = Vector((e['semi'].x * P['torso'][0], e['semi'].y * P['torso'][1], e['semi'].z * P['torso'][2]))
+        elif n == 'chest':
+            e['r'] *= P['chest']
+        elif n.startswith('thigh'):
+            e['r'] *= P['leg_r'] ** 0.7
+        elif n == 'muzzle':
+            e['semi'] = Vector((e['semi'].x * P['muzzle'][0], e['semi'].y * P['muzzle'][1], e['semi'].z * P['muzzle'][2]))
+        elif e['bone'] == 'head':
+            if 'semi' in e:
+                e['semi'] = e['semi'] * P['head']
+            else:
+                e['r'] *= P['head']
+    return E
+
+
 def _copy(E):
     out = []
     for e in E:
@@ -497,10 +540,10 @@ def ensure_base():
         for i, w in lst:
             bone_w[E[i]['bone']][vi] += w
     body.shape_key_add(name='Basis', from_mix=False)
-    for key, target in (('to_adult_fire', elems_adult_fire()),
+    for key, target in ([('to_adult_' + f, elems_adult(f)) for f in FORMS] + [
                         ('head_big', elems_head_big(E)),
                         ('body_chubby', elems_chubby(E)),
-                        ('legs_long', elems_legs_long(E))):
+                        ('legs_long', elems_legs_long(E))]):
         _add_lbs_key(body, key, E, target, W, co)
     me.use_fake_user = True
     bpy.context.scene.collection.objects.unlink(body)
@@ -750,7 +793,7 @@ def simple_material(name, color, rough=0.4, coat=0.0, emission=None, strength=0.
     return mat
 
 
-def horn_material(name, base, tip, glow=0.0, glow_col=None):
+def horn_material(name, base, tip, glow=0.0, glow_col=None, metal=0.0):
     mat = bpy.data.materials.new(name)
     nb = NB(mat)
     tc = nb.node('ShaderNodeTexCoord')
@@ -760,7 +803,8 @@ def horn_material(name, base, tip, glow=0.0, glow_col=None):
     col = nb.mix(nb.smooth(v, 0.25, 1.0), C(base), C(tip))
     bs = nb.node('ShaderNodeBsdfPrincipled')
     nb.link(col, bs.inputs['Base Color'])
-    bs.inputs['Roughness'].default_value = 0.32
+    bs.inputs['Roughness'].default_value = 0.32 - 0.12 * metal
+    bs.inputs['Metallic'].default_value = metal
     bs.inputs['Coat Weight'].default_value = 0.4
     if glow > 0.0:
         bs.inputs['Emission Color'].default_value = C(glow_col or tip)
@@ -1167,7 +1211,7 @@ def make_horns(name, dna, bvh, hc, fw, u, r, s):
               3: [(0, 1.0), (1, 0.75), (-1, 0.75)]}[min(n, 3)]
     mat = horn_material(name + '_HornMat', dna.get('horn_color', '#EFE6D6'),
                         dna.get('horn_tip', '#FFFFFF'), dna.get('horn_glow', 0.0),
-                        dna.get('horn_tip', '#FFFFFF'))
+                        dna.get('horn_tip', '#FFFFFF'), dna.get('horn_metal', 0.0))
     obs = []
     for side, k in layout:
         if side == 0:
@@ -1274,7 +1318,7 @@ def make_tail(name, dna, bvh, P, base, Q, ember):
 # 7. Ghép thành 1 con thú hoàn chỉnh
 # ============================================================================
 
-def build_creature(name, dna, stage=0.0, pose=None, quality='final'):
+def build_creature(name, dna, stage=0.0, pose=None, quality='final', form='fire'):
     """Dựng 1 con thú tại gốc tọa độ (mặt nhìn -Y). Trả về empty gốc để đặt vị trí / xoay.
     stage: 0 = Baby ... 1 = Adult Lửa (giá trị blendshape to_adult_fire)."""
     base = ensure_base()
@@ -1284,7 +1328,7 @@ def build_creature(name, dna, stage=0.0, pose=None, quality='final'):
     me.name = name + '_BodyMesh'
     body = link(bpy.data.objects.new(name + '_Body', me))
     kb = me.shape_keys.key_blocks
-    kb['to_adult_fire'].value = stage
+    kb['to_adult_' + form].value = stage
     kb['head_big'].value = dna.get('head_big', 0.0)
     kb['body_chubby'].value = dna.get('body_chubby', 0.0)
     kb['legs_long'].value = dna.get('legs_long', 0.0)

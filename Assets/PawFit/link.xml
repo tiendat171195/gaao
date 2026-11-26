@@ -1,0 +1,5 @@
+<!-- Giữ nguyên code logic khi build IL2CPP (tránh bị strip làm hỏng việc đọc/ghi JSON bằng Newtonsoft) -->
+<linker>
+  <assembly fullname="PawFit.Core" preserve="all"/>
+  <assembly fullname="PawFit.Pet" preserve="all"/>
+</linker>

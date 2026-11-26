@@ -1,0 +1,14 @@
+{
+    "name": "PawFit.App",
+    "rootNamespace": "PawFit.App",
+    "references": ["PawFit.Core", "PawFit.Pet"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

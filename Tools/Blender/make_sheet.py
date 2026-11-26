@@ -35,6 +35,13 @@ SHEETS = [
       (0.36, 'Child · Ngày 3', 'thân dài ra · màu ấm dần'),
       (0.60, 'Teen · Ngày 7', 'nhú sừng · sọc than hồng'),
       (0.845, 'Adult Lửa · Ngày 14', 'sừng cong · chân sẫm · sọc phát sáng')]),
+    ('final_gen1.png', '05_gen1_5_dang_adult.jpg',
+     'Bộ thú Gen 1 — 5 dạng Adult (cùng 1 base mesh + blendshape)',
+     [(0.09, 'Lửa', 'Sức mạnh trội · sọc than hồng\n2 sừng cong · chân sẫm'),
+      (0.29, 'Nước', 'Tốc độ trội · thân thấp dài\nđốm phát sáng · tai + đuôi vây'),
+      (0.49, 'Ánh Sáng', 'Chăm sóc trội · cao thanh\n1 sừng vàng phát sáng'),
+      (0.685, 'Thép', 'Tập cân bằng · chắc nịch\n2 sừng kim loại · sọc giáp'),
+      (0.88, 'Bóng Tối', 'Bóng tối trội · thon dài\n3 sừng · sọc tím · mắt đỏ')]),
 ]
 
 

@@ -92,6 +92,52 @@ def fire_stage(t):
 
 
 # ----------------------------------------------------------------------------
+# Bộ thú Gen 1: 5 dạng Adult (Lửa, Nước, Ánh Sáng, Thép, Bóng Tối)
+# ----------------------------------------------------------------------------
+
+GEN1_ADULT = {
+    'fire': None,   # dùng fire_stage(1.0)
+    'water': dict(  # thân thấp dài như rái cá, lông ngắn bóng, đốm phát sáng xanh như giọt nước
+        fur='#2F8FB5', belly='#E6F7FA', points='#123F5C', pattern='spots', pattern_color='#8FE8FF',
+        pattern_strength=1.0, spot_count=26, eye_shape='tron', eye_color='#3FD0F5', ear='vay', ear_tip=0.6,
+        ear_tip_color='#123F5C', inner_ear='#9AD8E8', horns=0, tail='vay', tail_tip='#8FE8FF', fur_len=0.06,
+        nose='#123040', paws_dark=0.3, dorsal=0.5,
+        ember=dict(color='#5FE6FF', strength=2.2, tips=0.08, amount=1.0)),
+    'light': dict(  # cao thanh, lông kem trắng xù, 1 sừng thẳng phát sáng vàng
+        fur='#F5E7C6', belly='#FFFFFF', points='#C9952A', pattern='solid', eye_shape='cun', eye_color='#F5B83A',
+        ear='nhon', ear_scale=1.15, ear_tip=0.95, ear_tip_color='#D9A030', inner_ear='#F8D9C0', horns=1,
+        horn_shape='thang', horn_len=0.30, horn_color='#E8C46A', horn_tip='#FFF6C8', horn_glow=4.0,
+        tail='cao', tail_scale=1.25, tail_tip='#FFD24A', fur_len=0.11, nose='#C9876A', paws_dark=0.85,
+        dorsal=0.2, ember=dict(color='#FFD24A', strength=2.2, tips=0.28, amount=1.0)),
+    'steel': dict(  # chắc nịch, lông xám bạc sọc như giáp, 2 sừng thẳng kim loại
+        fur='#9AA4B0', belly='#DDE2E8', points='#2E343C', pattern='stripes', pattern_color='#363D47',
+        pattern_strength=1.0, eye_shape='sac_hep', eye_color='#8FD8FF', ear='tron', ear_tip=0.8,
+        ear_tip_color='#2E343C', inner_ear='#B8A8A8', horns=2, horn_shape='thang', horn_len=0.24,
+        horn_color='#C9D2DC', horn_tip='#FFFFFF', horn_metal=1.0, tail='tua', tail_tip='#262B32',
+        fur_len=0.07, nose='#2A2E35', paws_dark=0.9, dorsal=0.65),
+    'shadow': dict(  # thon dài, lông tím đen, 3 sừng dài + sọc phát sáng tím, mắt đỏ
+        fur='#2E2638', belly='#5A4C6A', points='#140F1A', pattern='stripes', pattern_color='#B266FF',
+        pattern_strength=1.0, eye_shape='meo', eye_color='#FF3B5C', ear='vay', ear_tip=0.8,
+        ear_tip_color='#8A5CFF', inner_ear='#4A3A5A', horns=3, horn_shape='dai', horn_len=0.24,
+        horn_color='#1A1420', horn_tip='#B98CFF', horn_glow=3.0, tail='xoan', tail_tip='#9A6CFF',
+        fur_len=0.08, nose='#120E16', liner='#060408', paws_dark=0.9, dorsal=0.6,
+        ember=dict(color='#A35CFF', strength=2.4, tips=0.1, amount=1.0)),
+}
+GEN1_NAMES = dict(fire='Lửa', water='Nước', light='Ánh Sáng', steel='Thép', shadow='Bóng Tối')
+
+
+def adult_dna(form):
+    """DNA của con Adult dạng `form` trong bộ Gen 1 (gốc là Baby Kem Cam)."""
+    if form == 'fire':
+        return fire_stage(1.0)
+    d = dict(V1_KEM_CAM)
+    d.update(GEN1_ADULT[form])
+    d['seed'] = 101 + K.FORMS.index(form)
+    d['eye_scale'] = 0.9
+    return d
+
+
+# ----------------------------------------------------------------------------
 # Dựng cảnh: phông nền cong, 3 đèn mềm (chính / phụ / viền), camera
 # ----------------------------------------------------------------------------
 
@@ -244,7 +290,18 @@ def scene_morph(out, q):
     render(out)
 
 
-SCENES = dict(hero=scene_hero, angles=scene_angles, variants=scene_variants, morph=scene_morph)
+def scene_gen1(out, q):
+    res = (1200, 450) if q == 'draft' else (2400, 900)
+    setup(res, 20 if q == 'draft' else 112, look=(0.0, 0.0, 0.72), cam_loc=(-0.7, -10.6, 1.9),
+          lens=50, light_scale=1.9, y_back=4.0, radius=3.4)
+    for i, form in enumerate(K.FORMS):
+        place(K.build_creature('G%d' % i, adult_dna(form), 1.0, quality=q, form=form),
+              x=-3.0 + 1.5 * i, rot_deg=-40)
+    render(out)
+
+
+SCENES = dict(hero=scene_hero, angles=scene_angles, variants=scene_variants, morph=scene_morph,
+              gen1=scene_gen1)
 
 if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
