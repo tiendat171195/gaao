@@ -106,7 +106,7 @@ namespace PawFit.Pet.View
         private AvatarLook _look = AvatarLook.Normal;
         private Vector3? _lookAt;
         private float _speed, _phase, _tailPhase, _sleepBlend;
-        private float _lookYaw, _lookPitch, _appliedClosed = -1f, _appliedDirt = -1f;
+        private float _lookYaw, _lookPitch, _appliedClosed = -1f, _appliedDirt = -1f, _appliedPale = -1f;
         private float _hopT = -1f, _eatT = -1f, _batheT = -1f, _refuseT = -1f, _cryT = -1f, _yawnT = -1f;
         private float _blinkTimer = 2f, _blinkT = -1f, _earFlickTimer = 5f, _earFlickT = -1f;
         private int _earFlickIndex;
@@ -462,7 +462,8 @@ namespace PawFit.Pet.View
             float breathe = Mathf.Sin(time * Mathf.Lerp(2.2f, 1.3f, _sleepBlend)) * Mathf.Lerp(0.012f, 0.025f, _sleepBlend);
             _visual.localPosition = new Vector3(0f, bob + hop - _sleepBlend * 0.11f, 0f);
             _visual.localScale = Vector3.Scale(squash, new Vector3(1f + 0.04f * _sleepBlend, 1f + breathe - 0.06f * _sleepBlend, 1f));
-            _visual.localRotation = Quaternion.Euler(0f, wiggle, 0f);
+            float shiver = _look.Sick >= 0.5f ? Mathf.Sin(time * 55f) * 2.2f * _look.Sick * (1f - 0.5f * _sleepBlend) : 0f;
+            _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver);   // ốm: run lẩy bẩy
 
             // ---- chân: bước chéo (trước phải + sau trái cùng nhịp), gập lại khi ngủ ----
             float swing = Mathf.Sin(_phase) * moving * 28f;
@@ -544,6 +545,21 @@ namespace PawFit.Pet.View
             }
 
             ApplyDirt(_look.Dirt);
+            ApplyPale(_look.Sick);
+        }
+
+        /// <summary>Ốm: lông nhợt đi (shader riêng có _Pale; URP Lit dự phòng thì pha xám).</summary>
+        private void ApplyPale(float sick)
+        {
+            float pale = Mathf.Clamp01((sick - 0.2f) / 0.8f);
+            if (Mathf.Abs(pale - _appliedPale) < 0.01f) return;
+            _appliedPale = pale;
+            for (int i = 0; i < _furMaterials.Count; i++)
+            {
+                Material m = _furMaterials[i];
+                if (m.HasProperty("_Pale")) m.SetFloat("_Pale", pale);
+            }
+            if (_furMaterials.Count > 0 && !_furMaterials[0].HasProperty("_Pale")) _appliedDirt = -1f;   // để ApplyDirt pha lại màu
         }
 
         private void ApplyEyes(float closed)
@@ -569,7 +585,13 @@ namespace PawFit.Pet.View
             {
                 Material m = _furMaterials[i];
                 if (m.HasProperty("_Dirt")) m.SetFloat("_Dirt", dirt);
-                else m.color = Color.Lerp(_furBaseColors[i], mud, dirt * 0.35f);   // URP Lit dự phòng: chỉ xỉn màu
+                else   // URP Lit dự phòng: chỉ xỉn màu + nhợt khi ốm
+                {
+                    Color c = Color.Lerp(_furBaseColors[i], mud, dirt * 0.35f);
+                    float pale = Mathf.Max(0f, _appliedPale);
+                    float g = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+                    m.color = Color.Lerp(c, new Color(g * 0.9f + 0.06f, g + 0.06f, g * 0.92f + 0.06f), pale * 0.6f);
+                }
             }
         }
 

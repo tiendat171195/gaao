@@ -18,6 +18,9 @@ namespace PawFit.Pet.View
         /// <summary>0 = tai / đuôi bình thường, 1 = cụp hẳn.</summary>
         public float Droop;
 
+        /// <summary>Mức ốm: 0 = khỏe, 0.3 = mệt, 0.65 = ốm, 1 = nguy kịch (lông nhợt, run).</summary>
+        public float Sick;
+
         public static AvatarLook Normal => new AvatarLook { EyeOpen = 1f };
     }
 
@@ -310,7 +313,8 @@ namespace PawFit.Pet.View
             float breathe = sleep ? Mathf.Sin(Time.time * 2f) * 0.02f : 0f;
             _visual.localPosition = new Vector3(0f, bob + hop + (sleep ? -0.1f : 0f), 0f);
             _visual.localScale = Vector3.Scale(squash, sleep ? new Vector3(1.08f, 0.8f + breathe, 1.05f) : Vector3.one);
-            _visual.localRotation = Quaternion.Euler(0f, wiggle, 0f);
+            float shiver = _look.Sick >= 0.5f ? Mathf.Sin(Time.time * 55f) * 2.2f * _look.Sick : 0f;   // ốm: run lẩy bẩy
+            _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver);
             _head.localRotation = Quaternion.Euler(headPitch + (sleep ? 20f : 0f), headYaw, 0f);
             float open = sleep ? 0f : Mathf.Clamp01(_look.EyeOpen);
             Vector3 eye = new Vector3(_eyeScale.x, _eyeScale.y * Mathf.Lerp(0.15f, 1f, open), _eyeScale.z);   // ngủ: nhắm mắt

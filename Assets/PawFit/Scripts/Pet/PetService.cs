@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using PawFit.Core;
 
 namespace PawFit.Pet
@@ -18,20 +19,31 @@ namespace PawFit.Pet
         public PetNeeds Needs;
         public bool IsSleeping;
 
+        /// <summary>Sức khỏe: đồng hồ bỏ bê, giai đoạn bệnh, hồi phục (Phase 2.1).</summary>
+        public PetHealth Health = new PetHealth();
+
         public double AgeDays(DateTime nowUtc) => (nowUtc - BornAtUtc).TotalDays;
     }
 
-    /// <summary>File lưu game: 1 người = 1 thú.</summary>
+    /// <summary>File lưu game: 1 người = 1 thú (hoặc 1 quả trứng chờ nở) + các bia mộ.</summary>
     public sealed class GameSave
     {
-        public const int CurrentVersion = 1;
+        /// <summary>2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). File bản 1 vẫn đọc được.</summary>
+        public const int CurrentVersion = 2;
         public int Version = CurrentVersion;
+
+        /// <summary>Thú đang sống. null khi thú đã mất và trứng chưa nở.</summary>
         public PetData Pet;
+
+        /// <summary>Trứng chờ nở (sau khi thú mất).</summary>
+        public EggData Egg;
+
+        public List<MemorialEntry> Memorials = new List<MemorialEntry>();
     }
 
     // ---- Sự kiện (View lắng nghe qua EventBus) ----
 
-    /// <summary>Có thú mới (nở lần đầu).</summary>
+    /// <summary>Có thú mới (nở lần đầu, hoặc nở từ trứng).</summary>
     public readonly struct PetCreated
     {
         public readonly PetData Pet;
@@ -54,8 +66,8 @@ namespace PawFit.Pet
     }
 
     /// <summary>
-    /// Quản lý con thú hiện tại: tạo / nạp / lưu, nhu cầu chạy theo giờ thực, hành động chăm sóc.
-    /// Logic C# thuần: không dùng UnityEngine, mọi phụ thuộc nhận qua constructor.
+    /// Quản lý vòng đời thú: nở / nạp / lưu, nhu cầu chạy theo giờ thực, sức khỏe (bỏ bê -> bệnh -> chết),
+    /// bia mộ + trứng thừa hưởng 1 trait, nở trứng. Logic C# thuần: không dùng UnityEngine, phụ thuộc nhận qua constructor.
     /// </summary>
     public sealed class PetService
     {
@@ -68,6 +80,7 @@ namespace PawFit.Pet
         private readonly GameConfig _cfg;
         private readonly ILog _log;
         private GameSave _game;
+        private bool _eggAnnounced;
 
         public PetService(ITimeProvider time, IRandom rng, ISaveService save, EventBus bus, GameConfig cfg, ILog log = null)
         {
@@ -79,8 +92,21 @@ namespace PawFit.Pet
             _log = log ?? NullLog.Instance;
         }
 
+        /// <summary>Thú đang sống (null nếu thú đã mất và trứng chưa nở).</summary>
         public PetData Current => _game?.Pet;
         public bool HasPet => Current != null;
+
+        public GameConfig Config => _cfg;
+
+        /// <summary>Trứng chờ nở (null nếu không có).</summary>
+        public EggData Egg => _game?.Egg;
+
+        /// <summary>Có trứng và đã tới lúc nở.</summary>
+        public bool IsEggReady => Egg != null && _time.UtcNow >= Egg.ReadyAtUtc;
+
+        /// <summary>Các bia mộ, cũ trước mới sau.</summary>
+        public IReadOnlyList<MemorialEntry> Memorials =>
+            _game?.Memorials != null ? (IReadOnlyList<MemorialEntry>)_game.Memorials : Array.Empty<MemorialEntry>();
 
         /// <summary>Mã DNA để khoe (PF-XXXX-XXXX-XXXX).</summary>
         public string DnaCode => HasPet ? DnaCodec.Encode(Current.Dna) : null;
@@ -91,53 +117,127 @@ namespace PawFit.Pet
         /// <summary>Nạp file lưu; chưa có thì cho nở thú mới. Tự tính bù thời gian đã trôi qua khi tắt app.</summary>
         public void LoadOrCreate(string defaultName)
         {
-            if (_save.TryLoad(SaveKey, out GameSave loaded) && loaded?.Pet != null)
+            if (_save.TryLoad(SaveKey, out GameSave loaded) && loaded != null)
             {
                 _game = loaded;
-                double hoursAway = Math.Max(0.0, (_time.UtcNow - Current.LastSimulatedUtc).TotalHours);
+                Upgrade(_game);
+                if (!HasPet && Egg == null)   // file không có thú lẫn trứng: nở thú mới, vẫn giữ bia mộ cũ
+                {
+                    CreateNewPet(defaultName);
+                    return;
+                }
+                if (!HasPet)
+                {
+                    _log.Info("[PawFit] Nạp file: thú đã mất, có trứng chờ nở");
+                    Tick();
+                    return;
+                }
+                PetData pet = Current;
+                double hoursAway = Math.Max(0.0, (_time.UtcNow - pet.LastSimulatedUtc).TotalHours);
                 Tick();
-                _log.Info("[PawFit] Nạp thú '" + Current.Name + "', vắng " + hoursAway.ToString("0.0") + " giờ");
-                _bus.Publish(new PetLoaded(Current, hoursAway));
+                _log.Info("[PawFit] Nạp thú '" + pet.Name + "', vắng " + hoursAway.ToString("0.0") + " giờ");
+                if (HasPet) _bus.Publish(new PetLoaded(Current, hoursAway));
                 return;
             }
             CreateNewPet(defaultName);
         }
 
-        /// <summary>Cho nở 1 con thú mới với DNA ngẫu nhiên (Gen 1).</summary>
+        /// <summary>Cho nở 1 con thú mới với DNA ngẫu nhiên (lần đầu chơi / công cụ test). Bia mộ cũ vẫn giữ.</summary>
         public PetData CreateNewPet(string name)
         {
-            DateTime now = _time.UtcNow;
-            var pet = new PetData
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                Name = string.IsNullOrWhiteSpace(name) ? "Bé" : name.Trim(),
-                Dna = DnaGenerator.Random(_rng),
-                Hidden = DnaGenerator.RandomHidden(_rng),
-                BornAtUtc = now,
-                LastSimulatedUtc = now,
-                Needs = PetNeeds.Filled(_cfg.Needs.StartValue),
-            };
-            _game = new GameSave { Pet = pet };
+            PetData pet = NewPet(name, DnaGenerator.Random(_rng), DnaGenerator.RandomHidden(_rng));
+            if (_game == null) _game = new GameSave();
+            _game.Pet = pet;
+            _game.Egg = null;
             Save();
             _log.Info("[PawFit] Thú mới '" + pet.Name + "' DNA " + DnaCodec.Encode(pet.Dna));
             _bus.Publish(new PetCreated(pet));
             return pet;
         }
 
+        /// <summary>Chạm trứng đã tới lúc: nở ra thú mới mang DNA của trứng. Chưa tới lúc thì trả null.</summary>
+        public PetData HatchEgg(string name)
+        {
+            EggData egg = Egg;
+            if (egg == null || HasPet || !IsEggReady) return null;
+            PetData pet = NewPet(name, egg.Dna, egg.Hidden ?? DnaGenerator.RandomHidden(_rng));
+            _game.Pet = pet;
+            _game.Egg = null;
+            Save();
+            _log.Info("[PawFit] Trứng nở: '" + pet.Name + "' DNA " + DnaCodec.Encode(pet.Dna) +
+                      " · thừa hưởng " + egg.Trait + " từ '" + egg.ParentName + "'");
+            _bus.Publish(new PetCreated(pet));
+            return pet;
+        }
+
         /// <summary>
-        /// Áp dụng thời gian trôi qua tới hiện tại. Gọi đều đặn (mỗi giây) và khi app quay lại.
-        /// Nếu đồng hồ máy bị chỉnh lùi thì bỏ qua (thú không "trẻ lại").
+        /// Áp dụng thời gian trôi qua tới hiện tại: nhu cầu + sức khỏe, theo từng bước nhỏ (tắt app lâu vẫn tính đúng
+        /// lúc thú bắt đầu bị bỏ bê). Gọi đều đặn (mỗi giây) và khi app quay lại. Đồng hồ chỉnh lùi thì bỏ qua.
         /// </summary>
         public void Tick()
         {
-            if (!HasPet) return;
+            if (_game == null) return;
             DateTime now = _time.UtcNow;
             PetData pet = Current;
-            double hours = (now - pet.LastSimulatedUtc).TotalHours;
-            if (hours <= 0) return;
-            NeedsSimulator.Advance(pet.Needs, hours, pet.IsSleeping, _cfg.Needs);
+            if (pet != null)
+            {
+                double hours = (now - pet.LastSimulatedUtc).TotalHours;
+                if (hours > 0) Simulate(pet, hours, now);
+            }
+            if (Egg != null && !_eggAnnounced && now >= Egg.ReadyAtUtc)
+            {
+                _eggAnnounced = true;
+                _bus.Publish(new EggReady(Egg));
+            }
+        }
+
+        private void Simulate(PetData pet, double hours, DateTime now)
+        {
+            double step = Math.Max(0.001, _cfg.Health.SimulationStepHours);
+            double left = hours;
+            while (left > 1e-9)
+            {
+                double dt = Math.Min(step, left);
+                left -= dt;
+                DateTime end = left > 1e-9 ? now.AddHours(-left) : now;
+                NeedsSimulator.Advance(pet.Needs, dt, pet.IsSleeping, _cfg.Needs);
+                HealthStage before = pet.Health.Stage;
+                HealthChange change = HealthRules.Step(pet.Health, pet.Needs, dt, end, _cfg);
+                if (change == HealthChange.Died)
+                {
+                    pet.LastSimulatedUtc = end;
+                    Die(pet);
+                    return;
+                }
+                if (change != HealthChange.None) PublishHealth(pet, before, change);
+            }
             pet.LastSimulatedUtc = now;
             _bus.Publish(new PetNeedsChanged(pet));
+        }
+
+        /// <summary>Chết vĩnh viễn: thêm bia mộ, đẻ trứng thừa hưởng 1 trait (nở sau 24h), thú biến mất khỏi file lưu.</summary>
+        private void Die(PetData pet)
+        {
+            DateTime died = pet.Health.DiedAtUtc ?? _time.UtcNow;
+            pet.Health.Stage = HealthStage.Dead;
+            pet.Health.DiedAtUtc = died;
+            var memorial = new MemorialEntry
+            {
+                PetId = pet.Id,
+                Name = pet.Name,
+                Dna = pet.Dna.Clone(),
+                DnaCode = DnaCodec.Encode(pet.Dna),
+                BornAtUtc = pet.BornAtUtc,
+                DiedAtUtc = died,
+            };
+            _game.Memorials.Add(memorial);
+            _game.Egg = EggFactory.Lay(pet, died, _cfg.Health.EggAfterDeathHours, _rng);
+            _game.Pet = null;
+            _eggAnnounced = false;
+            Save();
+            _log.Info("[PawFit] '" + pet.Name + "' đã mất sau " + memorial.AgeDaysAtDeath().ToString("0.0") +
+                      " ngày. Trứng mới nở sau " + _cfg.Health.EggAfterDeathHours.ToString("0") + " giờ.");
+            _bus.Publish(new PetDied(pet, memorial, _game.Egg));
         }
 
         /// <summary>Hành động chăm sóc (cho ăn, tắm, vuốt ve...): tăng 1 nhu cầu, tối đa 100.</summary>
@@ -146,8 +246,13 @@ namespace PawFit.Pet
             RequirePet();
             if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Chăm sóc chỉ làm tăng nhu cầu");
             Tick();
-            Current.Needs.Add(need, amount);
-            _bus.Publish(new PetNeedsChanged(Current));
+            if (!HasPet) return;   // vừa mất trong lúc tính bù
+            PetData pet = Current;
+            pet.Needs.Add(need, amount);
+            HealthStage before = pet.Health.Stage;
+            HealthChange change = HealthRules.AfterCare(pet.Health, pet.Needs, _time.UtcNow, _cfg);
+            if (change != HealthChange.None) PublishHealth(pet, before, change);
+            _bus.Publish(new PetNeedsChanged(pet));
         }
 
         /// <summary>Cho thú ngủ / thức. Khi ngủ, năng lượng hồi thay vì giảm.</summary>
@@ -155,23 +260,101 @@ namespace PawFit.Pet
         {
             RequirePet();
             Tick();
-            if (Current.IsSleeping == sleeping) return;
+            if (!HasPet || Current.IsSleeping == sleeping) return;
             Current.IsSleeping = sleeping;
             _bus.Publish(new PetNeedsChanged(Current));
         }
 
-        /// <summary>CHỈ dùng cho công cụ test (Debug overlay): đặt thẳng 1 nhu cầu về giá trị bất kỳ 0..100.</summary>
+        /// <summary>Báo 1 thay đổi sức khỏe (dùng chung cho HealthService, vd khi bắt đầu hồi phục).</summary>
+        public void PublishHealth(PetData pet, HealthStage before, HealthChange change)
+        {
+            _log.Info("[PawFit] Sức khỏe '" + pet.Name + "': " + before + " -> " + pet.Health.Stage + " (" + change + ")");
+            _bus.Publish(new PetHealthChanged(pet, before, pet.Health.Stage, change));
+        }
+
+        // ------------------------------------------------------------------
+        // CHỈ dùng cho công cụ test (Debug overlay) — vẫn đi qua đúng luật
+        // ------------------------------------------------------------------
+
+        /// <summary>Đặt thẳng 1 nhu cầu về giá trị bất kỳ 0..100.</summary>
         public void SetNeedForDebug(NeedType need, float value)
         {
             RequirePet();
             Tick();
-            Current.Needs.Set(need, value);
-            _bus.Publish(new PetNeedsChanged(Current));
+            if (!HasPet) return;
+            PetData pet = Current;
+            pet.Needs.Set(need, value);
+            HealthStage before = pet.Health.Stage;
+            HealthChange change = HealthRules.CheckFullCare(pet.Health, pet.Needs, _cfg);
+            if (change != HealthChange.None) PublishHealth(pet, before, change);
+            _bus.Publish(new PetNeedsChanged(pet));
+        }
+
+        /// <summary>Đặt số giờ bị bỏ bê (để thử nhanh Mệt / Ốm / Nguy kịch / Chết). Bỏ dở hồi phục nếu có.</summary>
+        public void SetNeglectForDebug(double hours)
+        {
+            RequirePet();
+            Tick();
+            if (!HasPet) return;
+            PetData pet = Current;
+            HealthConfig c = _cfg.Health;
+            HealthStage before = pet.Health.Stage;
+            pet.Health.NeglectHours = Math.Max(0.0, hours);
+            pet.Health.Recovery = null;
+            pet.Health.Marks = new CarefulCareMarks();
+            if (hours >= c.DeathAfterHours)
+            {
+                pet.Health.DiedAtUtc = _time.UtcNow;
+                Die(pet);
+                return;
+            }
+            pet.Health.Stage = hours >= c.CriticalAfterHours ? HealthStage.Critical
+                             : hours >= c.SickAfterHours ? HealthStage.Sick
+                             : hours >= c.TiredAfterHours ? HealthStage.Tired
+                             : HealthStage.Healthy;
+            if (pet.Health.Stage != before) PublishHealth(pet, before, HealthChange.None);
+        }
+
+        /// <summary>Cho trứng tới lúc nở ngay.</summary>
+        public void MakeEggReadyForDebug()
+        {
+            if (Egg == null) return;
+            Egg.ReadyAtUtc = _time.UtcNow;
+            Tick();
         }
 
         public void Save()
         {
             if (_game != null) _save.Save(SaveKey, _game);
+        }
+
+        private PetData NewPet(string name, PetDna dna, HiddenGenes hidden)
+        {
+            DateTime now = _time.UtcNow;
+            return new PetData
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Name = PetNames.Normalize(name),
+                Dna = dna,
+                Hidden = hidden,
+                BornAtUtc = now,
+                LastSimulatedUtc = now,
+                Needs = PetNeeds.Filled(_cfg.Needs.StartValue),
+                Health = new PetHealth(),
+            };
+        }
+
+        /// <summary>Đọc file lưu bản cũ: bổ sung phần còn thiếu (bản 1 chưa có sức khỏe / trứng / bia mộ).</summary>
+        private static void Upgrade(GameSave g)
+        {
+            if (g.Memorials == null) g.Memorials = new List<MemorialEntry>();
+            if (g.Pet != null)
+            {
+                if (g.Pet.Health == null) g.Pet.Health = new PetHealth();
+                if (g.Pet.Health.Marks == null) g.Pet.Health.Marks = new CarefulCareMarks();
+                if (g.Pet.Needs == null) g.Pet.Needs = PetNeeds.Filled(PetNeeds.Max);
+            }
+            g.Version = GameSave.CurrentVersion;
         }
 
         private void RequirePet()

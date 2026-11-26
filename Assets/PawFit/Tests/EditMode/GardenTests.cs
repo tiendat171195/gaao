@@ -83,17 +83,21 @@ namespace PawFit.Tests
         public readonly GardenConfig Cfg = new GardenConfig();
         public readonly GardenLayout Layout = GardenLayout.CreateDefault();
         public readonly PetService Pets;
+        public readonly HealthService Health;
+        public readonly EventBus Bus = new EventBus();
         public readonly CareActionService Care;
         public readonly PetBrain Brain;
         public Vector2 Pos;
 
         public GardenFixture(ulong seed = 1)
         {
-            var bus = new EventBus();
+            EventBus bus = Bus;
+            var gameCfg = GameConfig.CreateDefault();
             Pets = new PetService(Time, new SeededRandom(seed), new InMemorySaveService(new NewtonsoftSerializer()),
-                                  bus, GameConfig.CreateDefault());
+                                  bus, gameCfg);
             Pets.LoadOrCreate("Kem");
-            Care = new CareActionService(Pets, Cfg, Time, bus);
+            Health = new HealthService(Pets, Time, gameCfg);
+            Care = new CareActionService(Pets, Health, Cfg, Time, bus);
             Brain = new PetBrain(Layout, Cfg, new SeededRandom(seed + 7), Pets, Care);
             Pos = Layout.PetSpawn;
         }
@@ -271,6 +275,119 @@ namespace PawFit.Tests
             f.Simulate(0.3f);
             Assert.IsFalse(f.Pets.Current.IsSleeping);
             Assert.AreNotEqual(PetActivity.Sleeping, f.Brain.Activity);
+        }
+    }
+
+    /// <summary>Thú ốm trong vườn (Phase 2.1).</summary>
+    public class SickPetGardenTests
+    {
+        private static GardenFixture SickFixture(double neglectHours = 80)
+        {
+            var f = new GardenFixture();
+            f.Pets.SetNeglectForDebug(neglectHours);
+            Assert.IsTrue(f.Health.IsIll);
+            return f;
+        }
+
+        [Test]
+        public void SickPet_RefusesPond_EvenWhenDroppedThere()
+        {
+            GardenFixture f = SickFixture();
+            float hygiene = f.Pets.Current.Needs.Hygiene;
+            Assert.AreEqual(CareResult.Refused, f.Care.Bathe());
+            Vector2 pond = f.Layout.Get(ZoneType.Pond).Center;
+            f.Brain.BeginLead(f.Pos);
+            f.Brain.Lead(pond);
+            f.Simulate(1f);
+            f.Brain.EndLead(pond, f.Pos);
+            f.Simulate(12f);
+            Assert.AreNotEqual(PetActivity.Bathing, f.Brain.Activity);
+            Assert.AreEqual(hygiene, f.Pets.Current.Needs.Hygiene, 0.01f, "không tắm được");
+        }
+
+        [Test]
+        public void SickPet_PorridgeBlanketWipe_IsOneCarefulRound()
+        {
+            GardenFixture f = SickFixture();
+            Assert.AreEqual(CareResult.Ok, f.Care.Feed(), "cho ăn = bát cháo");
+            f.Pets.Care(NeedType.Energy, 100f);
+            Assert.AreEqual(CareResult.Ok, f.Care.Sleep(), "ốm thì nằm nghỉ được dù chưa buồn ngủ (đắp chăn)");
+            Assert.IsFalse(f.Health.IsRecovering);
+            float hygiene = f.Pets.Current.Needs.Hygiene;
+            f.Brain.OnTapped();                                   // chạm = lau người
+            Assert.Greater(f.Pets.Current.Needs.Hygiene, hygiene);
+            Assert.IsTrue(f.Pets.Current.IsSleeping, "lau người không đánh thức thú");
+            Assert.IsTrue(f.Health.IsRecovering, "đủ cháo + chăn + lau: bắt đầu hồi phục");
+        }
+
+        [Test]
+        public void Wipe_PublishesWipe_AndHasCooldown()
+        {
+            GardenFixture f = SickFixture();
+            var kinds = new System.Collections.Generic.List<CareKind>();
+            f.Bus.Subscribe<CareDone>(e => kinds.Add(e.Kind));
+            float h0 = f.Pets.Current.Needs.Hygiene;
+            f.Care.Pet();
+            f.Care.Pet();
+            Assert.AreEqual(h0 + f.Cfg.WipeHygiene, f.Pets.Current.Needs.Hygiene, 0.01f, "lau liên tục chỉ tính 1 lần mỗi khoảng hồi");
+            Assert.AreEqual(CareKind.Wipe, kinds[0]);
+        }
+
+        [Test]
+        public void SickPet_WalksSlower_NeverRuns_AndRests()
+        {
+            GardenFixture f = SickFixture();
+            Assert.AreEqual(f.Cfg.SickSpeedFactor, f.Brain.SpeedFactor);
+            f.Brain.CommandMoveTo(new Vector2(3f, 4f), f.Pos);
+            Assert.IsFalse(f.Brain.Run, "ốm không chạy");
+            f.Pets.Current.Needs.Energy = 30f;
+            f.Pets.Current.Needs.Satiety = 90f;
+            f.Simulate(25f);
+            Assert.AreEqual(PetActivity.Sleeping, f.Brain.Activity, "mệt là về ổ nằm nghỉ");
+            GardenFixture c = SickFixture(130);
+            Assert.AreEqual(f.Cfg.CriticalSpeedFactor, c.Brain.SpeedFactor);
+        }
+
+        [Test]
+        public void HealthyAgain_AfterTiredIsCared_RunsNormally()
+        {
+            var f = new GardenFixture();
+            f.Pets.SetNeglectForDebug(30);
+            Assert.AreEqual(f.Cfg.TiredSpeedFactor, f.Brain.SpeedFactor);
+            foreach (NeedType t in new[] { NeedType.Satiety, NeedType.Hygiene, NeedType.Energy, NeedType.Mood })
+                f.Pets.Care(t, 100f);
+            Assert.AreEqual(1f, f.Brain.SpeedFactor);
+            f.Brain.CommandMoveTo(new Vector2(3f, 4f), f.Pos);
+            Assert.IsTrue(f.Brain.Run);
+        }
+
+        [Test]
+        public void Expression_ShowsSickness()
+        {
+            GardenFixture f = SickFixture(130);
+            var expr = new PetExpressionService(f.Pets, f.Brain, new ExpressionConfig(), new SeededRandom(1));
+            expr.Update(0.1f);
+            PetExpression e = expr.Current;
+            Assert.IsTrue(e.Has(PetCondition.Critical));
+            Assert.AreEqual(1f, e.Sickness);
+            Assert.LessOrEqual(e.EyeOpen, new ExpressionConfig().CriticalEyeOpen);
+            Assert.GreaterOrEqual(e.Droop, new ExpressionConfig().CriticalDroop);
+            f.Health.GiveMedicine();
+            expr.Update(0.1f);
+            Assert.IsTrue(expr.Current.Has(PetCondition.Recovering));
+        }
+
+        [Test]
+        public void DeadPet_BrainAndCareDoNothing()
+        {
+            GardenFixture f = SickFixture();
+            f.Pets.SetNeglectForDebug(500);
+            Assert.IsFalse(f.Pets.HasPet);
+            Assert.DoesNotThrow(() => f.Simulate(1f));
+            Assert.AreEqual(CareResult.Refused, f.Care.Feed());
+            Assert.DoesNotThrow(() => f.Brain.OnTapped());
+            var expr = new PetExpressionService(f.Pets, f.Brain, new ExpressionConfig(), new SeededRandom(1));
+            Assert.AreEqual(ExpressionCue.None, expr.Update(0.1f));
         }
     }
 }

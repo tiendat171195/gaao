@@ -126,5 +126,20 @@ namespace PawFit.Garden
 
         /// <summary>Đi quá lâu chưa tới đích (bị kẹt) thì coi như đã tới.</summary>
         public float MoveTimeoutExtraSeconds = 4f;
+
+        // ---- Thú mệt / ốm (Phase 2.1) ----
+        /// <summary>Tốc độ đi so với lúc khỏe.</summary>
+        public float TiredSpeedFactor = 0.85f;
+        public float SickSpeedFactor = 0.65f;
+        public float CriticalSpeedFactor = 0.45f;
+
+        /// <summary>Thú ốm: năng lượng dưới mức này thì tự về ổ nằm nghỉ (nguy kịch: ngưỡng cao hơn => nằm gần như cả ngày).</summary>
+        public float SickRestBelowEnergy = 60f;
+        public float CriticalRestBelowEnergy = 90f;
+
+        /// <summary>Chạm vào thú đang ốm = lau người bằng khăn ấm.</summary>
+        public float WipeHygiene = 15f;
+        public float WipeMood = 2f;
+        public float WipeCooldownSeconds = 3f;
     }
 }

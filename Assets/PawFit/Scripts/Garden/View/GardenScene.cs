@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using PawFit.Core;
 using PawFit.Core.Unity;
@@ -13,10 +15,21 @@ namespace PawFit.Garden.View
     /// <summary>
     /// Màn vườn (màn dọc): dựng vườn bằng code, ánh sáng mềm + hậu kỳ URP, NavMesh lúc chạy,
     /// thả thú, camera, input. Lấy service qua ServiceLocator (do App đăng ký).
+    /// Phase 2.1: thú mất -> cảnh chia tay -> bia mộ mới -> trứng trong ổ -> chạm trứng nở -> đặt tên -> thú mới.
     /// </summary>
     public sealed class GardenScene : MonoBehaviour
     {
         private NavMeshDataInstance _navMesh;
+        private ServiceLocator _s;
+        private GardenLayout _layout;
+        private PetService _pets;
+        private ILog _log;
+        private GardenCamera _camCtl;
+        private GardenInputRouter _router;
+        private MemorialView _memorial;
+        private EggView _egg;
+        private Transform _focus;
+        private readonly List<IDisposable> _subs = new List<IDisposable>();
 
         public PetController Pet { get; private set; }
 
@@ -30,27 +43,105 @@ namespace PawFit.Garden.View
         private void Build(ServiceLocator s)
         {
             if (Application.isMobilePlatform) Screen.orientation = ScreenOrientation.Portrait;   // vườn: màn dọc
-            var layout = s.Get<GardenLayout>();
+            _s = s;
+            _layout = s.Get<GardenLayout>();
+            _pets = s.Get<PetService>();
+            _log = s.Get<ILog>();
             var cfg = s.Get<GardenConfig>();
-            var pets = s.Get<PetService>();
-            var log = s.Get<ILog>();
+            var bus = s.Get<EventBus>();
 
             SetupLighting();
             Camera cam = SetupCamera();
             SetupPostFx(cam);
-            GardenBuildResult built = GardenBuilder.Build(layout, transform);
-            BakeNavMesh(built, layout);
+            GardenBuildResult built = GardenBuilder.Build(_layout, transform);
+            BakeNavMesh(built, _layout);
+            _memorial = MemorialView.Create(transform, _layout, _pets.Memorials);
+            _focus = new GameObject("CameraFocus").transform;
+            _focus.SetParent(transform, false);
 
-            NVec2 spawn = pets.Current.IsSleeping ? layout.Get(ZoneType.Bed).UsePoint : layout.PetSpawn;
-            Pet = PetController.Spawn(spawn.ToWorld(), pets.Current.Dna, s.Get<PetBrain>(), s.Get<CareActionService>(),
-                                      s.Get<PetExpressionService>(), layout, cfg, s.Get<EventBus>(), transform);
-            GardenCamera camCtl = cam.GetComponent<GardenCamera>();
-            if (camCtl == null) camCtl = cam.gameObject.AddComponent<GardenCamera>();
-            camCtl.Init(cam, Pet.transform, layout);
-            gameObject.AddComponent<GardenInputRouter>().Init(cam, new LegacyPointerInput(), camCtl, Pet, cfg, log);
+            if (_pets.HasPet)
+            {
+                NVec2 spawn = _pets.Current.IsSleeping ? _layout.Get(ZoneType.Bed).UsePoint : _layout.PetSpawn;
+                SpawnPet(spawn.ToWorld());
+            }
+            else if (_pets.Egg != null) ShowEgg();
 
-            log.Info("[PawFit] Vườn sẵn sàng · chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve · " +
-                     "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn");
+            _camCtl = cam.GetComponent<GardenCamera>();
+            if (_camCtl == null) _camCtl = cam.gameObject.AddComponent<GardenCamera>();
+            _camCtl.Init(cam, Pet != null ? Pet.transform : (_egg != null ? _egg.transform : null), _layout);
+            _router = gameObject.AddComponent<GardenInputRouter>();
+            _router.Init(cam, new LegacyPointerInput(), _camCtl, Pet, cfg, _log);
+            _router.EggTapped = OnEggTapped;
+            _router.StoneTapped = stone => GardenUi.ShowCard(stone.Entry.Name, MemorialView.CardText(stone.Entry));
+
+            _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
+            _subs.Add(bus.Subscribe<PetCreated>(OnPetCreated));
+            _subs.Add(bus.Subscribe<EggReady>(e =>
+            {
+                if (_egg != null) _egg.SetReady(true);
+            }));
+
+            _log.Info("[PawFit] Vườn sẵn sàng · chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve · " +
+                      "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn");
+        }
+
+        private void SpawnPet(Vector3 at)
+        {
+            Pet = PetController.Spawn(at, _pets.Current.Dna, _s.Get<PetBrain>(), _s.Get<CareActionService>(),
+                                      _s.Get<PetExpressionService>(), _layout, _s.Get<GardenConfig>(), _s.Get<EventBus>(), transform);
+        }
+
+        /// <summary>Trứng nằm trong ổ ngủ (giữa vườn).</summary>
+        private void ShowEgg()
+        {
+            if (_egg != null || _pets.Egg == null) return;
+            _egg = EggView.Create(transform, _layout.Get(ZoneType.Bed).Center.ToWorld(0.13f), _pets.Egg, _pets.IsEggReady);
+        }
+
+        /// <summary>Cảnh chia tay: thú nằm xuống, hồn bay lên -> camera sang khu tưởng niệm, bia mới nhô lên -> trứng trong ổ.</summary>
+        private IEnumerator Farewell(PetDied e)
+        {
+            PetController dying = Pet;
+            Pet = null;
+            _router.SetPet(null);
+            GardenUi.Close();
+            if (dying != null)
+            {
+                bool done = false;
+                dying.PlayDeath(() => done = true);
+                while (!done) yield return null;
+            }
+            _focus.position = _memorial.Focus;
+            _camCtl.SetFollow(_focus);
+            yield return new WaitForSeconds(1.2f);
+            _memorial.Add(e.Memorial);
+            yield return new WaitForSeconds(3.2f);
+            ShowEgg();
+            if (_egg != null) _camCtl.SetFollow(_egg.transform);
+        }
+
+        /// <summary>Chạm trứng: chưa tới lúc thì trứng chỉ nhúc nhích; tới lúc thì nở + hỏi tên.</summary>
+        private void OnEggTapped(EggView egg)
+        {
+            if (egg != _egg || egg.IsHatching) return;
+            egg.Tap(() => GardenUi.AskName("Trứng nở rồi! Đặt tên cho bé nhé", name =>
+            {
+                if (_pets.HatchEgg(name) == null) _log.Warn("[PawFit] Trứng chưa nở được (chưa tới lúc?)");
+            }));
+        }
+
+        /// <summary>Có thú mới: nếu vườn đang không có thú (vừa nở từ trứng) thì thả thú ra ở chỗ quả trứng.</summary>
+        private void OnPetCreated(PetCreated e)
+        {
+            if (Pet != null) return;   // đã có thú: PetController tự dựng lại hình (công cụ test "Thú mới")
+            Vector3 at = _egg != null ? _egg.transform.position : _layout.Get(ZoneType.Bed).Center.ToWorld();
+            if (_egg != null && !_egg.IsHatching) Destroy(_egg.gameObject);
+            _egg = null;
+            _s.Get<PetBrain>().Reset();
+            SpawnPet(at);
+            _router.SetPet(Pet);
+            _camCtl.SetFollow(Pet.transform);
+            Pet.Avatar.PlayHop();
         }
 
         private static void SetupLighting()
@@ -139,6 +230,8 @@ namespace PawFit.Garden.View
 
         private void OnDestroy()
         {
+            foreach (IDisposable d in _subs) d.Dispose();
+            _subs.Clear();
             if (_navMesh.valid) _navMesh.Remove();
         }
     }

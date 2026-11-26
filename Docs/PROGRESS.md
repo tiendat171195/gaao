@@ -47,6 +47,28 @@
   - App: `DebugOverlay` (nút DEV, chỉ Editor / bản dev) thay `DevHotkeys`
   - Test: 58/58 pass · compile check: pass
 
+- **Phase 2.1** — Bệnh / chết vĩnh viễn / tưởng niệm / trứng mới:
+  - Logic (C# thuần, có test):
+    - `HealthRules` + `HealthService`: đồng hồ bỏ bê (G2); Mệt 24h → Ốm 72h → Nguy kịch 120h → Mất 168h (G3).
+    - Chữa (G4): chăm kỹ (cháo + chăn + lau trong 12h) hoặc thuốc → hồi phục 24h / 48h; quá 24h không chăm thì tái phát.
+    - Hệ số chỉ số −30 / −40 / −60% và cờ cấm tập / Rank (dùng ở Phase 2.2 / 3 / 4).
+  - Logic: `PetService` tính bù offline theo bước 15 phút, nên biết đúng giờ thú mất. Mất → bia mộ (`MemorialEntry`) + trứng (`EggFactory`, thừa hưởng 1 trong 8 nhóm trait) → 24h sau `HatchEgg(tên)`. Tên chuẩn hóa ở `PetNames`.
+  - Logic: file lưu bản 2 (trứng + bia mộ + sức khỏe), đọc được file bản 1.
+  - Vườn khi ốm:
+    - Cho ăn = cháo, ngủ ổ = đắp chăn, chạm = lau người (không đánh thức thú).
+    - Không chịu xuống hồ.
+    - Đi chậm, không chạy, hay về ổ nằm.
+    - Biểu cảm thêm Mệt / Ốm / Nguy kịch / Đang hồi phục.
+  - View (Unity):
+    - Thú ốm: lông nhợt (`_Pale` trong shader), run lẩy bẩy, túi chườm, mây mưa khi nguy kịch, chăn, khăn lau, bát cháo, dấu + khi đang hồi phục.
+    - `PetDeathFx`: cảnh chia tay.
+    - `MemorialView`: bia mộ có chữ, chạm để xem thẻ.
+    - `EggView`: trứng trong ổ, lắc lư khi sẵn sàng, nứt + vỡ khi nở.
+    - `GardenUi`: bảng đặt tên + thẻ chữ, uGUI dựng bằng code.
+    - Camera đổi theo thú / bia / trứng.
+  - Bảng DEV: nút Mệt / Ốm / Nguy kịch / Chết / Uống thuốc / Khỏi bệnh / Trứng nở được ngay
+  - Test: 81/81 pass · compile check: pass
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -54,11 +76,13 @@
 - Input: dùng Input Manager cũ (touch + chuột), bọc interface ở Phase 1.2.
 - Thú trong game Phase 1.3: thân mượt kiểu thú bông (vertex color + viền sáng), chưa có lông. Lông shell làm ở Phase 6.
 - Điện thoại dùng LOD1, PC / Editor dùng LOD0 (đổi được trong bảng DEV).
+- Ốm mà chăm đủ thì bệnh dừng nặng thêm nhưng không tự khỏi; phải chăm kỹ hoặc uống thuốc (G4). Thuốc mua bằng Coin ở Phase 5.1.
+- Thú mất thì xóa khỏi file lưu (chỉ còn bia mộ + trứng). Công cụ test "Thú mới" vẫn giữ bia mộ cũ.
 - Giả định GDD G1–G11: tạm dùng, bạn sửa khi cần.
 
 ## Tiếp theo
 
-- **Phase 2.1** — Bệnh / chết vĩnh viễn / tưởng niệm / trứng mới (thừa hưởng 1 trait).
+- **Phase 2.2** — Tiến hóa (CareScore, TrainingVector, seed + tính cách) + chỉ số + lực chiến. Dùng `HealthService.StatFactor` để giảm chỉ số khi bệnh.
 
 ## Ghi chú cho session sau
 

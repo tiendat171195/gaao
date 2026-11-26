@@ -55,7 +55,9 @@ namespace PawFit.App
             // Vườn (Phase 1.2): luật chăm sóc + "bộ não" thú đều là C# thuần
             var gardenCfg = new GardenConfig();
             var layout = GardenLayout.CreateDefault();
-            var care = new CareActionService(_pets, gardenCfg, time, bus, log);
+            var health = new HealthService(_pets, time, cfg);
+            Services.Register(health);
+            var care = new CareActionService(_pets, health, gardenCfg, time, bus, log);
             var brain = new PetBrain(layout, gardenCfg, new SeededRandom(rng.NextUInt()), _pets, care);
             Services.Register(gardenCfg);
             Services.Register(layout);
@@ -76,6 +78,14 @@ namespace PawFit.App
         private void LogPet(ITimeProvider time)
         {
             PetData p = _pets.Current;
+            if (p == null)   // thú đã mất (kể cả lúc tắt app), đang chờ trứng nở
+            {
+                EggData egg = _pets.Egg;
+                Debug.Log("[PawFit] Thú đã mất · " + _pets.Memorials.Count + " bia mộ · " +
+                          (egg == null ? "không có trứng" : _pets.IsEggReady ? "trứng đã sẵn sàng nở"
+                              : "trứng nở sau " + (egg.ReadyAtUtc - time.UtcNow).TotalHours.ToString("0.0") + " giờ"));
+                return;
+            }
             PetNeeds n = p.Needs;
             Debug.Log($"[PawFit] Thú '{p.Name}' · DNA {_pets.DnaCode} · {p.Dna} · tuổi {p.AgeDays(time.UtcNow):0.00} ngày · " +
                       $"no {n.Satiety:0} / sạch {n.Hygiene:0} / năng lượng {n.Energy:0} / vui {n.Mood:0} · " +

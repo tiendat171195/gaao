@@ -47,12 +47,40 @@ Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng ch
 
 Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được không cần sửa code.
 
+## Bệnh, chết vĩnh viễn, trứng mới (Phase 2.1)
+
+**Đồng hồ bỏ bê** chỉ về 0 khi **chăm đủ**, tức cả 4 nhu cầu ≥ 60 cùng lúc. Bỏ bê liên tục thì:
+
+| Bỏ bê | Giai đoạn | Thú trông thế nào |
+|---|---|---|
+| 24 giờ | Mệt | Mắt hơi lờ đờ, đi chậm, lười đi lang thang. Chăm đủ là khỏi ngay |
+| 72 giờ (3 ngày) | Ốm | Lông nhợt, run, túi chườm trên đầu. Đi chậm, không chạy, hay về ổ nằm. Không chịu xuống hồ |
+| 120 giờ | Nguy kịch | Như Ốm nhưng nặng hơn: có đám mây mưa nhỏ trên đầu, nằm gần như cả ngày |
+| 168 giờ (7 ngày) | Mất | Nằm xuống, hồn bay lên. Khu tưởng niệm có thêm bia mộ |
+
+**Chữa Ốm / Nguy kịch:** chăm đủ không tự khỏi, phải chăm kỹ.
+- **Bước 1 — 1 lượt chăm kỹ:** làm đủ 3 việc trong vòng 12 giờ:
+  - **Cháo:** kéo đồ ăn từ khay, lúc thú ốm khay đưa ra bát cháo.
+  - **Đắp chăn:** dắt thú vào ổ ngủ. Thú ốm nằm được lúc nào cũng được.
+  - **Lau người:** chạm vào thú, khăn ấm sẽ lau qua. Thú đang ngủ cũng không bị đánh thức.
+- **Bước 2 — giữ hồi phục:** xong lượt đầu thì thú bắt đầu hồi phục, có dấu + xanh bay lên. Mỗi lượt chỉ giữ hồi phục thêm 12 giờ, nên cứ 12 giờ làm thêm 1 lượt.
+- **Khỏi:** Ốm khỏi sau 24 giờ hồi phục, Nguy kịch sau 48 giờ.
+- **Tái phát:** đang hồi phục mà quá 24 giờ không chăm gì thì tái phát.
+- **Thuốc:** cũng chữa được, mua bằng Coin ở Phase 5.1. Hiện chỉ thử được bằng nút trong bảng DEV.
+
+**Khi thú mất:**
+- Bia mộ ở góc tưởng niệm ghi tên, số ngày đã sống, rank cao nhất (có từ Phase 4.3) và mã DNA. Chạm vào bia để đọc chữ to.
+- Trong ổ có 1 quả trứng mang đúng 1 trait của thú cũ, ví dụ dạng đuôi, màu lông hoặc dạng tai.
+- 24 giờ sau trứng lắc lư và lấp lánh. Chạm vào để trứng nở, rồi đặt tên cho thú mới.
+
 ## Công cụ test (chỉ Editor / bản Development)
 
 - Nút **DEV** góc trên trái màn hình (hoặc phím `F1`) mở bảng test:
   - Xem 4 nhu cầu, DNA, việc thú đang làm, biểu cảm.
   - Tăng / giảm từng nhu cầu.
   - Đặt nhanh trạng thái: **Đói** / **Bẩn** / **Buồn ngủ** / **Khỏe hết** / **Cho ngủ**.
+  - Sức khỏe: **Mệt** / **Ốm** / **Nguy kịch** / **Chết** / **Uống thuốc** / **Khỏi bệnh**. Xem số giờ bỏ bê, đã chăm kỹ mấy việc / 3, % hồi phục.
+  - Khi thú đã mất: xem trứng còn bao lâu nở, thừa hưởng trait gì, nút **Trứng nở được ngay**.
   - Tua giờ +1 / +6 / +24.
   - **Thú mới** (DNA ngẫu nhiên).
   - Đổi model Gen 1 ↔ thú tạm, LOD0 ↔ LOD1, shader riêng ↔ URP Lit.
@@ -80,8 +108,8 @@ dotnet build Tools/UnityCompileCheck
 |---|---|
 | `Assets/PawFit/Scripts/Core` | Service nền, C# thuần: ServiceLocator, EventBus, thời gian, random có seed, lưu JSON, config |
 | `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ |
-| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx` |
-| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn, camera, input, NavMesh |
+| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx` |
+| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn, camera, input, NavMesh, bia mộ, trứng, bảng đặt tên |
 | `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow, Debug overlay |
 | `Assets/PawFit/Resources/Pets/Gen1` | Model thú Gen 1 (FBX bản 2: thân LOD0 / LOD1 + blendshape + xương + mọi kiểu bộ phận) + file mốc neo JSON |
 | `Assets/PawFit/Resources/Shaders` | Shader URP `PawFit/Gen1Fur` (lông theo vertex color, bẩn) + `PawFit/Gen1Eye` (mắt vẽ bằng toán) |

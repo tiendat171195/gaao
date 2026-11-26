@@ -11,8 +11,9 @@ namespace PawFit.App
 {
     /// <summary>
     /// Bảng công cụ test — CHỈ có trong Editor / bản Development, bản phát hành không có (vườn thật không có số, không có nút):
-    ///  * xem 4 nhu cầu, DNA, việc thú đang làm, biểu cảm
+    ///  * xem 4 nhu cầu, DNA, việc thú đang làm, biểu cảm, sức khỏe (bỏ bê bao lâu, hồi phục bao nhiêu)
     ///  * tua giờ, đặt nhanh trạng thái (đói / bẩn / buồn ngủ / khỏe / ngủ), chỉnh từng nhu cầu
+    ///  * bệnh: Mệt / Ốm / Nguy kịch / Chết ngay, uống thuốc, trứng nở ngay
     ///  * thú mới DNA ngẫu nhiên, đổi model Gen 1 / thú tạm, LOD0 / LOD1, shader riêng / URP Lit
     /// Mở / đóng: nút "DEV" góc trên trái, hoặc phím F1. Phím tắt: 1 / 2 / 3 tua +1 / +6 / +24 giờ, N in nhu cầu.
     /// Chỉ GỌI service (logic nằm ở PetService / DebugTimeProvider), không tự sửa luật game.
@@ -77,9 +78,15 @@ namespace PawFit.App
             GUI.Box(_panelRect, GUIContent.none);
             GUILayout.BeginArea(new Rect(_panelRect.x + 8f, _panelRect.y + 6f, _panelRect.width - 16f, _panelRect.height - 12f));
             _scroll = GUILayout.BeginScrollView(_scroll);
-            DrawPet();
-            DrawNeeds();
-            DrawQuickStates();
+            GUILayout.Label("PawFit · công cụ test (bản dev)", _title);
+            if (S.Get<PetService>().HasPet)
+            {
+                DrawPet();
+                DrawNeeds();
+                DrawQuickStates();
+                DrawHealth();
+            }
+            else DrawEgg();
             DrawTime();
             DrawAvatar();
             GUILayout.EndScrollView();
@@ -92,7 +99,6 @@ namespace PawFit.App
             PetData p = pets.Current;
             if (p == null) return;
             var time = S.Get<ITimeProvider>();
-            GUILayout.Label("PawFit · công cụ test (bản dev)", _title);
             GUILayout.Label($"'{p.Name}' · {pets.DnaCode} · Gen {p.Dna.Gen} · {p.AgeDays(time.UtcNow):0.00} ngày tuổi", _label);
             GUILayout.Label(p.Dna.ToString(), _small);
             PetBrain brain = S.Get<PetBrain>();
@@ -131,6 +137,40 @@ namespace PawFit.App
                 pets.SetSleeping(!pets.Current.IsSleeping);
             if (GUILayout.Button("Lưu", _button)) pets.Save();
             GUILayout.EndHorizontal();
+        }
+
+        private void DrawHealth()
+        {
+            var pets = S.Get<PetService>();
+            var health = S.Get<HealthService>();
+            HealthConfig c = pets.Config.Health;
+            GUILayout.Space(4f);
+            string rec = health.IsRecovering ? $" · hồi phục {health.RecoveryProgress01 * 100f:0}%" : "";
+            GUILayout.Label($"Sức khỏe: {health.Stage} · bỏ bê {health.NeglectHours:0.#} giờ · chăm kỹ {health.CarefulMarksDone}/3{rec}", _label);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Mệt", _button)) pets.SetNeglectForDebug(c.TiredAfterHours + 1);
+            if (GUILayout.Button("Ốm", _button)) pets.SetNeglectForDebug(c.SickAfterHours + 1);
+            if (GUILayout.Button("Nguy kịch", _button)) pets.SetNeglectForDebug(c.CriticalAfterHours + 1);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Chết", _button)) pets.SetNeglectForDebug(c.DeathAfterHours + 1);
+            if (GUILayout.Button("Uống thuốc", _button)) health.GiveMedicine();
+            if (GUILayout.Button("Khỏi bệnh", _button)) pets.SetNeglectForDebug(0);
+            GUILayout.EndHorizontal();
+        }
+
+        private void DrawEgg()
+        {
+            var pets = S.Get<PetService>();
+            var time = S.Get<ITimeProvider>();
+            EggData egg = pets.Egg;
+            GUILayout.Label($"Thú đã mất · {pets.Memorials.Count} bia mộ", _label);
+            if (egg == null) return;
+            double left = (egg.ReadyAtUtc - time.UtcNow).TotalHours;
+            GUILayout.Label(left > 0 ? $"Trứng nở sau {left:0.0} giờ · thừa hưởng {egg.Trait} từ '{egg.ParentName}'"
+                                     : $"Trứng đã sẵn sàng — chạm vào trứng trong ổ · thừa hưởng {egg.Trait}", _label);
+            GUILayout.Label(DnaCodec.Encode(egg.Dna) + " · " + egg.Dna, _small);
+            if (GUILayout.Button("Trứng nở được ngay", _button)) pets.MakeEggReadyForDebug();
         }
 
         private void DrawTime()
@@ -179,7 +219,7 @@ namespace PawFit.App
 
         private static void Rebuild(PetController pc, PetService pets)
         {
-            if (pc != null) pc.RebuildAvatar(pets.Current.Dna);
+            if (pc != null && pets.HasPet) pc.RebuildAvatar(pets.Current.Dna);
         }
 
         private static void Skip(int hours)
@@ -192,6 +232,11 @@ namespace PawFit.App
         private static void LogNeeds(string prefix)
         {
             PetData p = S.Get<PetService>().Current;
+            if (p == null)
+            {
+                Debug.Log("[PawFit] " + prefix + "thú đã mất, đang chờ trứng nở");
+                return;
+            }
             PetNeeds n = p.Needs;
             Debug.Log($"[PawFit] {prefix}no {n.Satiety:0} / sạch {n.Hygiene:0} / năng lượng {n.Energy:0} / vui {n.Mood:0}" +
                       (p.IsSleeping ? " · đang ngủ" : ""));

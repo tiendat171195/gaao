@@ -14,6 +14,7 @@ Shader "PawFit/Gen1Fur"
         _SpotAmount ("Spots (A)", Range(0, 1)) = 0
         _DorsalAmount ("Darker back (UV1.x)", Range(0, 1)) = 0.25
         _Dirt ("Dirt", Range(0, 1)) = 0
+        _Pale ("Sick pale", Range(0, 1)) = 0
         _DirtColor ("Dirt color", Color) = (0.36, 0.28, 0.2, 1)
         _Fuzz ("Fuzz rim", Range(0, 1)) = 1
         _Wrap ("Wrap lighting", Range(0, 1)) = 0.5
@@ -40,6 +41,7 @@ Shader "PawFit/Gen1Fur"
             half _SpotAmount;
             half _DorsalAmount;
             half _Dirt;
+            half _Pale;
             half _Fuzz;
             half _Wrap;
             half _Gloss;
@@ -106,6 +108,10 @@ Shader "PawFit/Gen1Fur"
                 half blotch = smoothstep(dirtEdge, dirtEdge + 0.1, (half)i.uv1.y) * step(0.001, _Dirt);
                 albedo = lerp(albedo, albedo * half3(0.8, 0.76, 0.7), _Dirt * 0.6);
                 albedo = lerp(albedo, _DirtColor.rgb, blotch * 0.85);
+
+                // ốm: lông nhợt, ngả xám xanh
+                half lum = dot(albedo, half3(0.3, 0.59, 0.11));
+                albedo = lerp(albedo, lum * half3(0.9, 1.0, 0.92) + 0.06, _Pale * 0.6);
 
                 float3 N = normalize(i.normalWS);
                 float3 V = GetWorldSpaceNormalizeViewDir(i.positionWS);

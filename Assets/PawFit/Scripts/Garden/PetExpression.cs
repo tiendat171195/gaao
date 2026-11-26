@@ -4,7 +4,7 @@ using PawFit.Pet;
 
 namespace PawFit.Garden
 {
-    /// <summary>Thú "nói" nhu cầu bằng hình (vườn không có thanh số): đói, bẩn, buồn ngủ, đang ngủ.</summary>
+    /// <summary>Thú "nói" nhu cầu bằng hình (vườn không có thanh số): đói, bẩn, buồn ngủ, đang ngủ, mệt / ốm.</summary>
     [Flags]
     public enum PetCondition
     {
@@ -13,6 +13,10 @@ namespace PawFit.Garden
         Dirty = 2,
         Sleepy = 4,
         Sleeping = 8,
+        Tired = 16,       // bỏ bê 1–3 ngày
+        Sick = 32,        // ốm
+        Critical = 64,    // nguy kịch
+        Recovering = 128, // đang hồi phục (đã chăm kỹ / uống thuốc)
     }
 
     /// <summary>Hành động biểu cảm ngắn View cần chạy đúng 1 lần.</summary>
@@ -37,6 +41,9 @@ namespace PawFit.Garden
 
         /// <summary>Tai / đuôi cụp xuống: 0 = bình thường, 1 = cụp hẳn (ngủ).</summary>
         public float Droop;
+
+        /// <summary>Mức ốm để vẽ (lông nhợt, run): 0 = khỏe, 0.3 = mệt, 0.65 = ốm, 1 = nguy kịch.</summary>
+        public float Sickness;
 
         public bool Has(PetCondition c) => (Conditions & c) != 0;
     }
@@ -75,6 +82,14 @@ namespace PawFit.Garden
 
         /// <summary>Nhịp kêu / ngáp lệch ngẫu nhiên ±30% cho tự nhiên.</summary>
         public float IntervalJitter = 0.3f;
+
+        // ---- mệt / ốm (Phase 2.1): mắt mở tối đa + tai / đuôi cụp tối thiểu ----
+        public float TiredEyeOpen = 0.85f;
+        public float SickEyeOpen = 0.62f;
+        public float CriticalEyeOpen = 0.45f;
+        public float TiredDroop = 0.2f;
+        public float SickDroop = 0.5f;
+        public float CriticalDroop = 0.8f;
     }
 
     /// <summary>
@@ -109,6 +124,7 @@ namespace PawFit.Garden
         {
             if (dt < 0f) dt = 0f;
             PetData pet = _pets.Current;
+            if (pet == null) return ExpressionCue.None;   // thú đã mất
             PetNeeds n = pet.Needs;
             bool sleeping = pet.IsSleeping;
             var e = new PetExpression { EyeOpen = 1f };
@@ -120,6 +136,14 @@ namespace PawFit.Garden
                 if (n.Energy < _cfg.SleepyBelowEnergy) e.Conditions |= PetCondition.Sleepy;
             }
             if (n.Hygiene < _cfg.DirtyBelowHygiene) e.Conditions |= PetCondition.Dirty;
+            HealthStage stage = pet.Health != null ? pet.Health.Stage : HealthStage.Healthy;
+            switch (stage)
+            {
+                case HealthStage.Tired: e.Conditions |= PetCondition.Tired; e.Sickness = 0.3f; break;
+                case HealthStage.Sick: e.Conditions |= PetCondition.Sick; e.Sickness = 0.65f; break;
+                case HealthStage.Critical: e.Conditions |= PetCondition.Critical; e.Sickness = 1f; break;
+            }
+            if (pet.Health?.Recovery != null) e.Conditions |= PetCondition.Recovering;
 
             // mắt + tai / đuôi
             if (sleeping)
@@ -132,6 +156,17 @@ namespace PawFit.Garden
                 float t = Clamp01((_cfg.SleepyBelowEnergy - n.Energy) / _cfg.SleepyBelowEnergy);
                 e.EyeOpen = Lerp(_cfg.SleepyEyeOpenMax, _cfg.SleepyEyeOpenMin, t);
                 e.Droop = Lerp(0.35f, 0.8f, t);
+            }
+
+            // mệt / ốm: mắt lờ đờ + tai / đuôi cụp (không mở to hơn mức đã díp vì buồn ngủ)
+            if (!sleeping && e.Sickness > 0f)
+            {
+                float open = stage == HealthStage.Critical ? _cfg.CriticalEyeOpen
+                           : stage == HealthStage.Sick ? _cfg.SickEyeOpen : _cfg.TiredEyeOpen;
+                float droop = stage == HealthStage.Critical ? _cfg.CriticalDroop
+                            : stage == HealthStage.Sick ? _cfg.SickDroop : _cfg.TiredDroop;
+                if (e.EyeOpen > open) e.EyeOpen = open;
+                if (e.Droop < droop) e.Droop = droop;
             }
 
             // bẩn: lông lấm lem + ruồi

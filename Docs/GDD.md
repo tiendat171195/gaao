@@ -37,11 +37,20 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Ốm: 72–120h, −40%, cấm Rank và tập luyện, chỉ chăm nhẹ.
   - Nguy kịch: 120–168h, −60%.
   - Chết: 168h.
-- **G4 · Chữa:**
+- **G4 · Chữa** (đã cài ở Phase 2.1, `HealthRules` + `HealthConfig`):
   - Mệt: chăm đủ là hết.
   - Ốm / Nguy kịch: dùng thuốc (60 / 150 Coin), hoặc chăm kỹ (cháo + chăn + lau người, ít nhất 1 lượt mỗi 12h). Cả 2 cách khỏi sau 24h / 48h.
   - Đang hồi phục mà quá 24h không chăm thì tái phát. Thú ốm không chịu xuống hồ tắm.
+- **G4b · Cách cài cụ thể (Phase 2.1):**
+  - 1 lượt chăm kỹ = cháo (cho ăn lúc ốm) + chăn (ngủ trong ổ lúc ốm) + lau người (chạm vào thú lúc ốm), cả 3 trong vòng 12h.
+  - Lượt đầu (hoặc thuốc) bắt đầu hồi phục. Mỗi lượt sau giữ hồi phục thêm 12h. Đã uống thuốc thì chăm thường (cho ăn, lau...) cũng giữ được 12h.
+  - Hồi phục chỉ tiến triển trong khoảng còn được giữ. Đang hồi phục thì bệnh không nặng thêm.
+  - Ốm mà chưa chữa thì chăm đủ chỉ làm bệnh dừng nặng thêm, không tự khỏi.
+  - Khỏi bệnh: đồng hồ bỏ bê về 0.
+  - Thú ốm đi chậm (mệt ×0.85, ốm ×0.65, nguy kịch ×0.45), không chạy, mệt chút là về ổ nằm.
 - **G5 · Chết & trứng:** bia mộ ghi tên, tuổi, rank cao nhất, mã DNA. Sau 24h có trứng thừa hưởng 1 gene hình dạng; chạm trứng để nở và đặt tên.
+  - Đã cài: trứng chọn ngẫu nhiên 1 trong 8 nhóm trait: dạng mắt, màu mắt, màu lông, họa tiết, tai, sừng, đuôi, tỉ lệ thân. Các gene còn lại ngẫu nhiên. Giữ nguyên `Gen`.
+  - Tên tối đa 16 ký tự; để trống thì là "Bé".
 - **G6 · Mã DNA:** `PF-XXXX-XXXX-XXXX` = 55 bit gene → 11 ký tự Base32 + 1 ký tự kiểm tra (đã cài: `DnaCodec`). Chỉ chứa gene hình dạng và trường `Gen`; seed + tính cách ẩn không có trong mã.
 - **G7 · Tiến hóa:**
   - Lửa: Sức mạnh trội.

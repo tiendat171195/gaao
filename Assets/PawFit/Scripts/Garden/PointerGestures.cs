@@ -3,7 +3,7 @@ using System.Numerics;
 namespace PawFit.Garden
 {
     /// <summary>Ngón tay chạm xuống trúng cái gì.</summary>
-    public enum PointerTarget { Ground = 0, Pet = 1, FoodSource = 2 }
+    public enum PointerTarget { Ground = 0, Pet = 1, FoodSource = 2, Egg = 3, Memorial = 4 }
 
     public enum GestureKind { Tap, DragStart, DragMove, DragEnd }
 

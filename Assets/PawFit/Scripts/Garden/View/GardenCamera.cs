@@ -59,6 +59,14 @@ namespace PawFit.Garden.View
         /// <summary>Có lệnh mới cho thú: camera theo thú ngay.</summary>
         public void ResumeFollow() => _resumeAt = 0f;
 
+        /// <summary>Đổi thứ camera đi theo (thú, trứng, khu tưởng niệm...).</summary>
+        public void SetFollow(Transform follow)
+        {
+            _follow = follow;
+            _panning = false;
+            ResumeFollow();
+        }
+
         /// <summary>Điểm trên mặt đất (y = 0) nằm dưới vị trí màn hình.</summary>
         public bool GroundPoint(Vector2 screen, out Vector3 point)
         {

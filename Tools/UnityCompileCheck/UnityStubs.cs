@@ -31,7 +31,16 @@ namespace UnityEngine
 
     public class Behaviour : Component { public bool enabled { get; set; } }
 
-    public class MonoBehaviour : Behaviour { }
+    public class MonoBehaviour : Behaviour
+    {
+        public Coroutine StartCoroutine(System.Collections.IEnumerator routine) => null;
+    }
+
+    public sealed class Coroutine { }
+
+    public class YieldInstruction { }
+
+    public sealed class WaitForSeconds : YieldInstruction { public WaitForSeconds(float seconds) { } }
 
     public class ScriptableObject : Object
     {
@@ -42,6 +51,9 @@ namespace UnityEngine
     {
         public GameObject() { }
         public GameObject(string name) { }
+        public GameObject(string name, params Type[] components) { }
+        public bool activeSelf => true;
+        public void SetActive(bool value) { }
         public Transform transform => null;
         public string tag { get; set; }
         public T AddComponent<T>() where T : Component => default;
@@ -64,6 +76,7 @@ namespace UnityEngine
         public Vector3 InverseTransformDirection(Vector3 direction) => direction;
         public Vector3 TransformDirection(Vector3 direction) => direction;
         public Vector3 TransformVector(Vector3 vector) => vector;
+        public void Rotate(float xAngle, float yAngle, float zAngle) { }
         public Vector3 position { get; set; }
         public Vector3 localPosition { get; set; }
         public Quaternion rotation { get; set; }
@@ -79,6 +92,10 @@ namespace UnityEngine
         public float x, y;
         public Vector2(float x, float y) { this.x = x; this.y = y; }
         public float magnitude => 0f;
+        public static Vector2 zero => default;
+        public static Vector2 one => new Vector2(1, 1);
+        public static Vector2 operator -(Vector2 a, Vector2 b) => a;
+        public static Vector2 operator +(Vector2 a, Vector2 b) => a;
         public static implicit operator Vector2(Vector3 v) => new Vector2(v.x, v.y);
         public static implicit operator Vector3(Vector2 v) => new Vector3(v.x, v.y, 0f);
     }
@@ -185,7 +202,50 @@ namespace UnityEngine
         public void SetBlendShapeWeight(int index, float value) { }
     }
 
-    public static class Resources { public static T Load<T>(string path) where T : Object => null; }
+    public static class Resources
+    {
+        public static T Load<T>(string path) where T : Object => null;
+        public static T GetBuiltinResource<T>(string path) where T : Object => null;
+    }
+
+    public sealed class Font : Object { public Material material => null; }
+
+    public enum TextAnchor { UpperLeft, UpperCenter, UpperRight, MiddleLeft, MiddleCenter, MiddleRight, LowerLeft, LowerCenter, LowerRight }
+
+    public enum TextAlignment { Left, Center, Right }
+
+    public sealed class TextMesh : Component
+    {
+        public string text { get; set; }
+        public Font font { get; set; }
+        public int fontSize { get; set; }
+        public float characterSize { get; set; }
+        public TextAnchor anchor { get; set; }
+        public TextAlignment alignment { get; set; }
+        public FontStyle fontStyle { get; set; }
+        public Color color { get; set; }
+    }
+
+    public class MeshRenderer : Renderer { }
+
+    public enum RenderMode { ScreenSpaceOverlay, ScreenSpaceCamera, WorldSpace }
+
+    public sealed class Canvas : Behaviour
+    {
+        public RenderMode renderMode { get; set; }
+        public int sortingOrder { get; set; }
+    }
+
+    public class RectTransform : Transform
+    {
+        public Vector2 anchorMin { get; set; }
+        public Vector2 anchorMax { get; set; }
+        public Vector2 pivot { get; set; }
+        public Vector2 anchoredPosition { get; set; }
+        public Vector2 sizeDelta { get; set; }
+        public Vector2 offsetMin { get; set; }
+        public Vector2 offsetMax { get; set; }
+    }
 
     public sealed class TextAsset : Object { public string text => ""; }
 
@@ -346,6 +406,8 @@ namespace UnityEngine
 
     public sealed class BoxCollider : Collider { public Vector3 size { get; set; } public Vector3 center { get; set; } }
 
+    public sealed class SphereCollider : Collider { public Vector3 center { get; set; } public float radius { get; set; } }
+
     public sealed class CapsuleCollider : Collider
     {
         public int direction { get; set; }
@@ -397,6 +459,80 @@ namespace UnityEngine
 
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class RuntimeInitializeOnLoadMethodAttribute : Attribute { public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t) { } }
+}
+
+namespace UnityEngine.Events
+{
+    public delegate void UnityAction();
+
+    public class UnityEvent { public void AddListener(UnityAction call) { } }
+}
+
+namespace UnityEngine.EventSystems
+{
+    public sealed class EventSystem : Behaviour { public static EventSystem current => null; }
+
+    public sealed class StandaloneInputModule : Behaviour { }
+}
+
+namespace UnityEngine.UI
+{
+    using UnityEngine.Events;
+
+    public class Graphic : Behaviour
+    {
+        public Color color { get; set; }
+        public bool raycastTarget { get; set; }
+    }
+
+    public class MaskableGraphic : Graphic { }
+
+    public sealed class Image : MaskableGraphic { }
+
+    public enum HorizontalWrapMode { Wrap, Overflow }
+
+    public enum VerticalWrapMode { Truncate, Overflow }
+
+    public sealed class Text : MaskableGraphic
+    {
+        public Font font { get; set; }
+        public string text { get; set; }
+        public int fontSize { get; set; }
+        public FontStyle fontStyle { get; set; }
+        public TextAnchor alignment { get; set; }
+        public HorizontalWrapMode horizontalOverflow { get; set; }
+        public VerticalWrapMode verticalOverflow { get; set; }
+        public bool supportRichText { get; set; }
+    }
+
+    public class Selectable : Behaviour { public Graphic targetGraphic { get; set; } }
+
+    public sealed class Button : Selectable
+    {
+        public sealed class ButtonClickedEvent : UnityEvent { }
+        public ButtonClickedEvent onClick { get; set; } = new ButtonClickedEvent();
+    }
+
+    public sealed class InputField : Selectable
+    {
+        public enum LineType { SingleLine, MultiLineSubmit, MultiLineNewline }
+        public string text { get; set; }
+        public Text textComponent { get; set; }
+        public Graphic placeholder { get; set; }
+        public int characterLimit { get; set; }
+        public LineType lineType { get; set; }
+        public void ActivateInputField() { }
+    }
+
+    public sealed class CanvasScaler : Behaviour
+    {
+        public enum ScaleMode { ConstantPixelSize, ScaleWithScreenSize, ConstantPhysicalSize }
+        public ScaleMode uiScaleMode { get; set; }
+        public Vector2 referenceResolution { get; set; }
+        public float matchWidthOrHeight { get; set; }
+    }
+
+    public sealed class GraphicRaycaster : Behaviour { }
 }
 
 namespace UnityEngine.AI

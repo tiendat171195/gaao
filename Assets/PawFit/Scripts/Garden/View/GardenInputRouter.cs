@@ -19,8 +19,14 @@ namespace PawFit.Garden.View
         /// </summary>
         public static Func<Vector2, bool> PointerBlocker { get; set; }
 
+        /// <summary>Chạm trúng quả trứng / bia mộ (GardenScene xử lý).</summary>
+        public Action<EggView> EggTapped { get; set; }
+        public Action<MemorialStone> StoneTapped { get; set; }
+
         private Camera _cam;
         private IPointerInput _input;
+        private EggView _downEgg;
+        private MemorialStone _downStone;
         private PointerGestureClassifier _gestures;
         private GardenCamera _camCtl;
         private PetController _pet;
@@ -40,10 +46,26 @@ namespace PawFit.Garden.View
             _gestures = new PointerGestureClassifier(cfg.TapMaxSeconds, cfg.DragThresholdPx * Mathf.Max(1f, dpiScale));
         }
 
+        /// <summary>Đổi thú đang điều khiển (null khi thú đã mất, chờ trứng nở).</summary>
+        public void SetPet(PetController pet)
+        {
+            _pet = pet;
+            if (_food != null)
+            {
+                _food.Drop();
+                _food = null;
+            }
+        }
+
         private void Update()
         {
             if (_gestures == null) return;
             PointerSample s = _input.Read();
+            if (GardenUi.IsOpen)   // đang mở bảng đặt tên / thẻ bia mộ
+            {
+                if (s.Phase == PointerPhase.Began) _gestures.Cancel();
+                return;
+            }
             switch (s.Phase)
             {
                 case PointerPhase.Began:
@@ -61,10 +83,16 @@ namespace PawFit.Garden.View
 
         private PointerTarget Pick(Vector2 screen)
         {
+            _downEgg = null;
+            _downStone = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
-                if (hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
+                if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
                 if (hit.collider.GetComponentInParent<FoodSourceView>() != null) return PointerTarget.FoodSource;
+                _downEgg = hit.collider.GetComponentInParent<EggView>();
+                if (_downEgg != null) return PointerTarget.Egg;
+                _downStone = hit.collider.GetComponentInParent<MemorialStone>();
+                if (_downStone != null) return PointerTarget.Memorial;
             }
             return PointerTarget.Ground;
         }
@@ -79,6 +107,14 @@ namespace PawFit.Garden.View
             {
                 case PointerTarget.Pet: HandlePet(e, onGround, g); break;
                 case PointerTarget.FoodSource: HandleFood(e, onGround, g); break;
+                case PointerTarget.Egg:
+                    if (e.Kind == GestureKind.Tap && _downEgg != null) EggTapped?.Invoke(_downEgg);
+                    else HandleGround(e, screen, onGround, g);   // kéo từ trứng = kéo camera
+                    break;
+                case PointerTarget.Memorial:
+                    if (e.Kind == GestureKind.Tap && _downStone != null) StoneTapped?.Invoke(_downStone);
+                    else HandleGround(e, screen, onGround, g);
+                    break;
                 default: HandleGround(e, screen, onGround, g); break;
             }
         }
@@ -88,7 +124,7 @@ namespace PawFit.Garden.View
             switch (e.Kind)
             {
                 case GestureKind.Tap:
-                    if (!onGround) break;
+                    if (!onGround || _pet == null) break;
                     _pet.MoveTo(g);
                     _camCtl.ResumeFollow();
                     break;
@@ -108,6 +144,7 @@ namespace PawFit.Garden.View
 
         private void HandlePet(GestureEvent e, bool onGround, Vector3 g)
         {
+            if (_pet == null) return;
             switch (e.Kind)
             {
                 case GestureKind.Tap:
@@ -128,6 +165,7 @@ namespace PawFit.Garden.View
 
         private void HandleFood(GestureEvent e, bool onGround, Vector3 g)
         {
+            if (_pet == null) return;   // thú đã mất: khay đồ ăn không dùng được
             switch (e.Kind)
             {
                 case GestureKind.Tap:
@@ -136,7 +174,7 @@ namespace PawFit.Garden.View
                     break;
                 case GestureKind.DragStart:
                     if (_food != null) _food.Drop();
-                    _food = FoodItemView.Spawn(transform, onGround ? g : _pet.transform.position);
+                    _food = FoodItemView.Spawn(transform, onGround ? g : _pet.transform.position, _pet.IsIll);   // ốm: bát cháo
                     break;
                 case GestureKind.DragMove:
                     if (_food != null && onGround) _food.Hold(g);
@@ -146,7 +184,9 @@ namespace PawFit.Garden.View
                     Vector3 pet = _pet.transform.position;
                     Vector3 drop = onGround ? g : _food.transform.position;
                     pet.y = drop.y = 0f;
-                    if (Vector3.Distance(pet, drop) <= _cfg.FeedReach && _pet.TryFeed()) _food.FlyInto(() => _pet.MouthPosition);
+                    PetController eater = _pet;
+                    if (Vector3.Distance(pet, drop) <= _cfg.FeedReach && eater.TryFeed())
+                        _food.FlyInto(() => eater != null ? eater.MouthPosition : drop);
                     else _food.Drop();
                     _food = null;
                     break;
@@ -166,14 +206,24 @@ namespace PawFit.Garden.View
         private Func<Vector3> _mouth;
         private float _t;
 
-        public static FoodItemView Spawn(Transform parent, Vector3 ground)
+        /// <summary>Tạo đồ ăn đang cầm: quả táo, hoặc bát cháo khi thú đang ốm (1 việc của lượt chăm kỹ).</summary>
+        public static FoodItemView Spawn(Transform parent, Vector3 ground, bool porridge = false)
         {
-            var go = new GameObject("Food");
+            var go = new GameObject(porridge ? "Porridge" : "Food");
             go.transform.SetParent(parent, false);
             go.transform.position = ground + Vector3.up * HoldHeight;
-            Prim.Make(PrimitiveType.Sphere, go.transform, Vector3.zero, Vector3.one * 0.3f, Prim.Hex("#E8453C"), smoothness: 0.6f);
-            Prim.Make(PrimitiveType.Cube, go.transform, new Vector3(0.03f, 0.18f, 0f), new Vector3(0.12f, 0.03f, 0.07f),
-                      Prim.Hex("#5DBB4A"), rotation: Quaternion.Euler(0f, 0f, 25f));
+            if (porridge)
+            {
+                Prim.Make(PrimitiveType.Cylinder, go.transform, new Vector3(0f, -0.04f, 0f), new Vector3(0.34f, 0.07f, 0.34f), Prim.Hex("#8D5A3B"), smoothness: 0.4f);
+                Prim.Make(PrimitiveType.Sphere, go.transform, new Vector3(0f, 0.02f, 0f), new Vector3(0.3f, 0.08f, 0.3f), Prim.Hex("#FFF3D6"), smoothness: 0.3f);
+                Prim.Make(PrimitiveType.Sphere, go.transform, new Vector3(0.05f, 0.06f, 0.02f), new Vector3(0.05f, 0.02f, 0.05f), Prim.Hex("#7CC36B"));
+            }
+            else
+            {
+                Prim.Make(PrimitiveType.Sphere, go.transform, Vector3.zero, Vector3.one * 0.3f, Prim.Hex("#E8453C"), smoothness: 0.6f);
+                Prim.Make(PrimitiveType.Cube, go.transform, new Vector3(0.03f, 0.18f, 0f), new Vector3(0.12f, 0.03f, 0.07f),
+                          Prim.Hex("#5DBB4A"), rotation: Quaternion.Euler(0f, 0f, 25f));
+            }
             return go.AddComponent<FoodItemView>();
         }
 

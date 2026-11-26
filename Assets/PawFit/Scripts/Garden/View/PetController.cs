@@ -34,8 +34,12 @@ namespace PawFit.Garden.View
         private IDisposable _careSub, _createdSub;
         private NVec2 _sentTarget = NoTarget;
         private PetActivity _lastActivity = (PetActivity)(-1);
+        private bool _dead;
 
         public IPetAvatar Avatar => _avatar;
+
+        /// <summary>Thú đang ốm / nguy kịch (khay đồ ăn đưa bát cháo thay quả táo).</summary>
+        public bool IsIll => _expr != null && (_expr.Current.Has(PetCondition.Sick) || _expr.Current.Has(PetCondition.Critical));
 
         public static PetController Spawn(Vector3 position, PetDna dna, PetBrain brain, CareActionService care,
                                           PetExpressionService expr, GardenLayout layout, GardenConfig cfg, EventBus bus,
@@ -68,13 +72,18 @@ namespace PawFit.Garden.View
             pc._foodPoint = hut != null ? NVec2.Lerp(hut.UsePoint, hut.Center, 0.55f).ToWorld(0.5f) : position;
             pc._fx = go.AddComponent<PetMoodFx>();
             pc.RebuildAvatar(dna);
-            // bị từ chối (no rồi, chưa buồn ngủ...) thì lắc đầu
+            // bị từ chối (no rồi, chưa buồn ngủ, ốm không chịu tắm...) thì lắc đầu; lau người thì có khăn
             pc._careSub = bus.Subscribe<CareDone>(e =>
             {
+                if (pc._dead || pc._avatar == null) return;
                 if (e.Result == CareResult.Refused) pc._avatar.PlayRefuse();
+                else if (e.Kind == CareKind.Wipe) pc._fx.Wipe();
             });
-            // có thú mới (Debug overlay / sau này: trứng nở) thì dựng lại hình
-            pc._createdSub = bus.Subscribe<PetCreated>(e => pc.RebuildAvatar(e.Pet.Dna));
+            // có thú mới khi con này còn sống (công cụ test "Thú mới") thì dựng lại hình
+            pc._createdSub = bus.Subscribe<PetCreated>(e =>
+            {
+                if (!pc._dead) pc.RebuildAvatar(e.Pet.Dna);
+            });
             return pc;
         }
 
@@ -106,16 +115,32 @@ namespace PawFit.Garden.View
             _createdSub?.Dispose();
         }
 
+        /// <summary>Thú đã mất: đứng lại, chạy cảnh chia tay rồi tự biến mất (gọi `done` khi xong).</summary>
+        public void PlayDeath(Action done)
+        {
+            _dead = true;
+            if (_agent != null && _agent.isOnNavMesh)
+            {
+                _agent.isStopped = true;
+                _agent.ResetPath();
+            }
+            _fx.SetFlies(0);
+            _fx.SetSleeping(false);
+            _fx.SetHealth(0f, false, false);
+            PetDeathFx.Play(gameObject, _avatar, done);
+        }
+
         private void Update()
         {
-            if (_brain == null || _avatar == null || !_agent.isOnNavMesh) return;
+            if (_dead || _brain == null || _avatar == null || !_agent.isOnNavMesh) return;
             float dt = Time.deltaTime;
             _brain.Update(dt, transform.position.ToGround());
 
             if (_brain.IsMoving)
             {
                 _agent.isStopped = false;
-                _agent.speed = _brain.Activity == PetActivity.Led ? _cfg.LeadSpeed : (_brain.Run ? _cfg.RunSpeed : _cfg.WalkSpeed);
+                float baseSpeed = _brain.Activity == PetActivity.Led ? _cfg.LeadSpeed : (_brain.Run ? _cfg.RunSpeed : _cfg.WalkSpeed);
+                _agent.speed = baseSpeed * _brain.SpeedFactor;   // mệt / ốm đi chậm
                 NVec2 t = _brain.Target;
                 if (float.IsNaN(_sentTarget.X) || NVec2.Distance(t, _sentTarget) > 0.05f)
                 {
@@ -150,7 +175,7 @@ namespace PawFit.Garden.View
             if (_expr == null) return;
             ExpressionCue cue = _expr.Update(dt);
             PetExpression e = _expr.Current;
-            _avatar.SetLook(new AvatarLook { EyeOpen = e.EyeOpen, Dirt = e.Dirt, Droop = e.Droop });
+            _avatar.SetLook(new AvatarLook { EyeOpen = e.EyeOpen, Dirt = e.Dirt, Droop = e.Droop, Sick = e.Sickness });
             if (e.LookAtFood)
             {
                 _avatar.LookAt(_foodPoint);
@@ -160,6 +185,7 @@ namespace PawFit.Garden.View
             else _avatar.LookAt(null);
             _fx.SetFlies(e.Flies);
             _fx.SetSleeping(e.Has(PetCondition.Sleeping));
+            _fx.SetHealth(e.Sickness, e.Has(PetCondition.Critical), e.Has(PetCondition.Recovering));
             switch (cue)
             {
                 case ExpressionCue.Cry:
@@ -186,7 +212,7 @@ namespace PawFit.Garden.View
         public void Tap()
         {
             _brain.OnTapped();
-            if (_brain.Activity == PetActivity.Reacting) _avatar.PlayHop();
+            if (_brain.Activity == PetActivity.Reacting && !IsIll) _avatar.PlayHop();   // ốm: chỉ được lau, không nhảy
         }
 
         public void MoveTo(Vector3 ground) => _brain.CommandMoveTo(ground.ToGround(), transform.position.ToGround());

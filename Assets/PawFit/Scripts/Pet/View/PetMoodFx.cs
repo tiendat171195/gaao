@@ -6,7 +6,8 @@ namespace PawFit.Pet.View
 {
     /// <summary>
     /// Hiệu ứng "nói bằng hình" quanh thú (không có chữ / thanh số):
-    ///   ruồi bay quanh khi bẩn · bong bóng có quả táo khi đòi ăn · chữ Z bay lên khi ngủ · tiếng kêu / ngáp.
+    ///   ruồi bay quanh khi bẩn · bong bóng có quả táo khi đòi ăn · chữ Z bay lên khi ngủ · tiếng kêu / ngáp
+    ///   ốm: túi chườm trên đầu, nguy kịch có đám mây mưa nhỏ, đắp chăn khi nằm, khăn lau, dấu + xanh khi đang hồi phục.
     /// Dựng bằng khối cơ bản + âm thanh tạo bằng code, không cần asset.
     /// </summary>
     public sealed class PetMoodFx : MonoBehaviour
@@ -38,6 +39,14 @@ namespace PawFit.Pet.View
         private bool _sleeping;
         private float _zTimer;
 
+        // ---- ốm (Phase 2.1) ----
+        private float _sickness;
+        private bool _critical, _recovering;
+        private Transform _iceBag, _cloud, _blanket, _towel;
+        private readonly List<Transform> _drops = new List<Transform>();
+        private readonly List<Glyph> _pluses = new List<Glyph>();
+        private float _plusTimer, _towelT = -1f;
+
         public void Init(IPetAvatar avatar)
         {
             _avatar = avatar;
@@ -64,6 +73,27 @@ namespace PawFit.Pet.View
         }
 
         public void SetSleeping(bool sleeping) => _sleeping = sleeping;
+
+        /// <summary>Mức ốm (0 khỏe .. 1 nguy kịch) + có đang hồi phục không.</summary>
+        public void SetHealth(float sickness, bool critical, bool recovering)
+        {
+            _sickness = sickness;
+            _critical = critical;
+            _recovering = recovering;
+        }
+
+        /// <summary>Lau người cho thú ốm: khăn ấm chà qua lưng.</summary>
+        public void Wipe()
+        {
+            if (_root == null) return;
+            if (_towel == null)
+            {
+                _towel = Prim.Group(_root, "Towel");
+                Prim.Make(PrimitiveType.Cube, _towel, Vector3.zero, new Vector3(0.34f, 0.06f, 0.22f), Prim.Hex("#F4F7FB"), smoothness: 0.1f);
+                Prim.Make(PrimitiveType.Cube, _towel, new Vector3(0f, 0.001f, 0f), new Vector3(0.35f, 0.055f, 0.05f), Prim.Hex("#8EC5E8"));
+            }
+            _towelT = 0f;
+        }
 
         /// <summary>Đòi ăn: bong bóng có quả táo trên đầu + tiếng kêu.</summary>
         public void Cry()
@@ -117,6 +147,8 @@ namespace PawFit.Pet.View
                 else _bubble.localScale = Vector3.zero;
             }
 
+            UpdateHealth(dt, time, head);
+
             // Zzz khi ngủ
             if (_sleeping)
             {
@@ -142,6 +174,130 @@ namespace PawFit.Pet.View
                 z.T.localScale = Vector3.one * (Mathf.Lerp(0.6f, 1.15f, t) * (t > 0.8f ? (1f - t) / 0.2f : 1f));
                 Billboard(z.T);
             }
+        }
+
+        private void UpdateHealth(float dt, float time, Vector3 head)
+        {
+            bool ill = _sickness >= 0.6f;
+            // túi chườm trên đầu
+            if (ill && _iceBag == null) _iceBag = MakeIceBag();
+            if (_iceBag != null)
+            {
+                _iceBag.gameObject.SetActive(ill);
+                if (ill)
+                {
+                    _iceBag.position = head + Vector3.up * (-0.1f + Mathf.Sin(time * 2f) * 0.005f);
+                    _iceBag.rotation = transform.rotation * Quaternion.Euler(0f, 0f, 8f);
+                }
+            }
+            // nguy kịch: đám mây mưa nhỏ lơ lửng trên đầu
+            if (_critical && _cloud == null) _cloud = MakeCloud();
+            if (_cloud != null)
+            {
+                _cloud.gameObject.SetActive(_critical);
+                if (_critical)
+                {
+                    _cloud.position = head + new Vector3(Mathf.Sin(time * 0.8f) * 0.05f, 0.42f, 0f);
+                    for (int i = 0; i < _drops.Count; i++)
+                    {
+                        float t = (time * 0.9f + i / (float)_drops.Count) % 1f;
+                        _drops[i].localPosition = new Vector3(-0.12f + 0.12f * i, -0.06f - 0.42f * t, 0f);
+                        _drops[i].localScale = new Vector3(0.025f, 0.045f, 0.025f) * (1f - t * 0.6f);
+                    }
+                }
+            }
+            // đắp chăn khi đang ốm mà nằm ngủ
+            bool blanket = ill && _sleeping;
+            if (blanket && _blanket == null) _blanket = MakeBlanket();
+            if (_blanket != null)
+            {
+                _blanket.gameObject.SetActive(blanket);
+                if (blanket)
+                {
+                    _blanket.position = transform.position + Vector3.up * 0.36f + transform.forward * (-0.05f);
+                    _blanket.rotation = transform.rotation;
+                }
+            }
+            // khăn lau chà qua lại trên lưng
+            if (_towel != null)
+            {
+                if (_towelT >= 0f)
+                {
+                    _towelT += dt / 0.9f;
+                    float s = Mathf.Sin(_towelT * Mathf.PI * 4f);
+                    _towel.gameObject.SetActive(true);
+                    _towel.position = transform.position + Vector3.up * 0.62f + transform.right * (s * 0.15f) +
+                                      transform.forward * (-0.05f);
+                    _towel.rotation = transform.rotation * Quaternion.Euler(0f, s * 12f, 0f);
+                    _towel.localScale = Vector3.one * Mathf.Clamp01(Mathf.Min(_towelT * 6f, (1f - _towelT) * 6f));
+                    if (_towelT >= 1f) _towelT = -1f;
+                }
+                else _towel.gameObject.SetActive(false);
+            }
+            // đang hồi phục: dấu + xanh thỉnh thoảng bay lên
+            if (_recovering)
+            {
+                _plusTimer -= dt;
+                if (_plusTimer <= 0f)
+                {
+                    _plusTimer = 2.4f;
+                    _pluses.Add(new Glyph { T = MakePlus(), Start = head + new Vector3(-0.15f, 0.08f, 0f) });
+                }
+            }
+            for (int i = _pluses.Count - 1; i >= 0; i--)
+            {
+                Glyph g = _pluses[i];
+                g.Age += dt;
+                float t = g.Age / 1.6f;
+                if (t >= 1f)
+                {
+                    Destroy(g.T.gameObject);
+                    _pluses.RemoveAt(i);
+                    continue;
+                }
+                g.T.position = g.Start + new Vector3(0f, 0.45f * t, 0f);
+                g.T.localScale = Vector3.one * (t < 0.2f ? t / 0.2f : t > 0.75f ? (1f - t) / 0.25f : 1f);
+                Billboard(g.T);
+            }
+        }
+
+        private Transform MakeIceBag()
+        {
+            Transform t = Prim.Group(_root, "IceBag");
+            Prim.Make(PrimitiveType.Sphere, t, Vector3.zero, new Vector3(0.26f, 0.08f, 0.22f), Prim.Hex("#A9D8F5"), smoothness: 0.7f);
+            Prim.Make(PrimitiveType.Sphere, t, new Vector3(0f, 0.05f, 0f), new Vector3(0.07f, 0.06f, 0.07f), Prim.Hex("#E8F4FC"), smoothness: 0.5f);
+            return t;
+        }
+
+        private Transform MakeCloud()
+        {
+            Transform t = Prim.Group(_root, "RainCloud");
+            Color c = Prim.Hex("#8C939E");
+            Prim.Make(PrimitiveType.Sphere, t, Vector3.zero, new Vector3(0.22f, 0.15f, 0.15f), c);
+            Prim.Make(PrimitiveType.Sphere, t, new Vector3(-0.13f, -0.02f, 0f), new Vector3(0.16f, 0.12f, 0.13f), c);
+            Prim.Make(PrimitiveType.Sphere, t, new Vector3(0.13f, -0.02f, 0f), new Vector3(0.17f, 0.12f, 0.13f), c);
+            for (int i = 0; i < 3; i++)
+                _drops.Add(Prim.Make(PrimitiveType.Sphere, t, Vector3.zero, Vector3.one * 0.03f, Prim.Hex("#5FA8E6"), smoothness: 0.8f).transform);
+            return t;
+        }
+
+        private Transform MakeBlanket()
+        {
+            Transform t = Prim.Group(_root, "Blanket");
+            Prim.Make(PrimitiveType.Cube, t, Vector3.zero, new Vector3(0.7f, 0.1f, 0.78f), Prim.Hex("#F2A65A"), smoothness: 0.05f);
+            Prim.Make(PrimitiveType.Cube, t, new Vector3(0f, 0.002f, 0.25f), new Vector3(0.71f, 0.1f, 0.12f), Prim.Hex("#FFF1D6"));
+            Prim.Make(PrimitiveType.Cube, t, new Vector3(0f, 0.002f, -0.15f), new Vector3(0.71f, 0.1f, 0.06f), Prim.Hex("#E07B39"));
+            return t;
+        }
+
+        /// <summary>Dấu + màu xanh (đang khỏe dần).</summary>
+        private Transform MakePlus()
+        {
+            Transform p = Prim.Group(_root, "Plus");
+            Color c = Prim.Hex("#4CC38A");
+            Prim.Make(PrimitiveType.Cube, p, Vector3.zero, new Vector3(0.12f, 0.035f, 0.02f), c);
+            Prim.Make(PrimitiveType.Cube, p, Vector3.zero, new Vector3(0.035f, 0.12f, 0.02f), c);
+            return p;
         }
 
         private void Billboard(Transform t)

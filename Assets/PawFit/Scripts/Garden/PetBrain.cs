@@ -10,8 +10,8 @@ namespace PawFit.Garden
 
     /// <summary>
     /// "Bộ não" của thú trong vườn (C# thuần): nhận lệnh người chơi + tự quyết khi rảnh
-    /// (đi lang thang, đói thì tới chòi ăn chờ, buồn ngủ thì về ổ). View chỉ đọc Activity / Target / Run
-    /// để điều khiển NavMeshAgent và chạy hiệu ứng.
+    /// (đi lang thang, đói thì tới chòi ăn chờ, buồn ngủ thì về ổ; ốm thì đi chậm, không chạy, hay về ổ nằm nghỉ).
+    /// View chỉ đọc Activity / Target / Run / SpeedFactor để điều khiển NavMeshAgent và chạy hiệu ứng.
     /// </summary>
     public sealed class PetBrain
     {
@@ -44,6 +44,35 @@ namespace PawFit.Garden
         public bool Run { get; private set; }
 
         public ZoneType ZoneGoal => _zoneGoal;
+
+        /// <summary>Hệ số tốc độ theo sức khỏe (mệt / ốm / nguy kịch đi chậm hơn).</summary>
+        public float SpeedFactor
+        {
+            get
+            {
+                switch (Stage)
+                {
+                    case HealthStage.Tired: return _cfg.TiredSpeedFactor;
+                    case HealthStage.Sick: return _cfg.SickSpeedFactor;
+                    case HealthStage.Critical: return _cfg.CriticalSpeedFactor;
+                    default: return 1f;
+                }
+            }
+        }
+
+        private HealthStage Stage => _pets.HasPet ? _pets.Current.Health.Stage : HealthStage.Dead;
+        private bool Ill => HealthRules.IsIll(Stage);
+
+        /// <summary>Có thú mới (nở từ trứng / thú mới): quên hết việc đang làm của con cũ.</summary>
+        public void Reset()
+        {
+            Activity = PetActivity.Idle;
+            _timer = 1f;
+            _playerHold = 0f;
+            _moveTimeout = 0f;
+            _zoneGoal = ZoneType.None;
+            Run = false;
+        }
 
         /// <summary>Thú có đang cần di chuyển tới Target không.</summary>
         public bool IsMoving =>
@@ -95,9 +124,19 @@ namespace PawFit.Garden
             _playerHold = _cfg.PlayerHoldSeconds;
         }
 
-        /// <summary>Chạm vào thú: đang ngủ thì dậy, đang thức thì phản ứng (vuốt ve).</summary>
+        /// <summary>Chạm vào thú: đang ngủ thì dậy, đang thức thì phản ứng (vuốt ve). Thú ốm: lau người, không đánh thức.</summary>
         public void OnTapped()
         {
+            if (!_pets.HasPet) return;
+            if (Ill)
+            {
+                _care.Pet();   // = lau người
+                if (_pets.Current.IsSleeping) return;
+                Activity = PetActivity.Reacting;
+                _timer = _cfg.ReactSeconds;
+                _playerHold = Math.Max(_playerHold, 2f);
+                return;
+            }
             if (_pets.Current.IsSleeping)
             {
                 _care.Wake();
@@ -124,6 +163,7 @@ namespace PawFit.Garden
 
         public void Update(float dt, Vector2 petPos)
         {
+            if (!_pets.HasPet) return;
             _playerHold = Math.Max(0f, _playerHold - dt);
             PetData pet = _pets.Current;
             if (pet.IsSleeping && Activity != PetActivity.Sleeping) Activity = PetActivity.Sleeping;
@@ -179,7 +219,19 @@ namespace PawFit.Garden
             {
                 GardenZone hut = _layout.Get(ZoneType.FoodHut);
                 if (hut != null && Vector2.Distance(petPos, hut.UsePoint) > 1.2f) GoUse(ZoneType.FoodHut, petPos);
-                else SetIdle(RandomIdle() * 1.5f);   // đói: đứng chờ ở chòi ăn (Phase 1.3: nhìn chòi + kêu)
+                else SetIdle(RandomIdle() * 1.5f);   // đói: đứng chờ ở chòi ăn (nhìn chòi + kêu)
+                return;
+            }
+            if (Ill)   // ốm: không lang thang, mệt chút là về ổ nằm nghỉ
+            {
+                float rest = Stage == HealthStage.Critical ? _cfg.CriticalRestBelowEnergy : _cfg.SickRestBelowEnergy;
+                if (n.Energy < rest) GoUse(ZoneType.Bed, petPos);
+                else SetIdle(RandomIdle() * 2f);
+                return;
+            }
+            if (Stage == HealthStage.Tired && _rng.NextDouble() < 0.5)   // mệt: lười đi hơn
+            {
+                SetIdle(RandomIdle() * 1.5f);
                 return;
             }
             StartMove(PetActivity.Wander, RandomWanderPoint(petPos), _rng.NextDouble() < 0.15, petPos);
@@ -190,9 +242,12 @@ namespace PawFit.Garden
             switch (zone)
             {
                 case ZoneType.Pond:
-                    _care.Bathe();
-                    Activity = PetActivity.Bathing;
-                    _timer = _cfg.BatheSeconds;
+                    if (_care.Bathe() == CareResult.Ok)
+                    {
+                        Activity = PetActivity.Bathing;
+                        _timer = _cfg.BatheSeconds;
+                    }
+                    else SetIdle(RandomIdle());   // ốm: lắc đầu không chịu xuống nước
                     break;
                 case ZoneType.Bed:
                     if (_care.Sleep() == CareResult.Ok) Activity = PetActivity.Sleeping;
@@ -221,7 +276,7 @@ namespace PawFit.Garden
         {
             Activity = activity;
             Target = target;
-            Run = run;
+            Run = run && !Ill;   // ốm thì không chạy
             float speed = run ? _cfg.RunSpeed : _cfg.WalkSpeed;
             _moveTimeout = Vector2.Distance(petPos, target) / speed * 2f + _cfg.MoveTimeoutExtraSeconds;
         }
