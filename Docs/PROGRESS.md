@@ -26,3 +26,5 @@
   `apt-get install -y --no-install-recommends blender python3-numpy`
 - Bản Blender của Ubuntu không có OpenImageDenoise, nên script đã tắt denoise.
 - Thân base mesh hiện 38k đỉnh. Phase 1.3 cần xuất thêm bản LOD nhẹ cho mobile.
+- Render chất lượng `final` cho 4 ảnh mất khoảng 42 phút trên CPU container (hero 15 phút, mỗi ảnh dàn hàng 7–10 phút).
+- Lỗi nhỏ đã biết: da dưới lông màu đậm hơn lông, nên quanh mắt và chân hơi cam (trông như má hồng). Sẽ chỉnh trong shader Unity ở Phase 1.3.
