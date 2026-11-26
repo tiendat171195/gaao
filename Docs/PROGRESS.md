@@ -153,6 +153,15 @@
   - App: quầy hàng có thêm thẻ **Phụ kiện cho bé...** / **Trang trí vườn...**. Bảng DEV có **Có hết đồ (test)**, **Đổi phụ kiện**.
   - Test: 157/157 pass · compile check: pass
 
+- **Phase 5.3 (đang làm)** — Build Android:
+  - `Editor/PawFitBuild.cs`: menu **PawFit ▸ Build Android ▸ Dev (APK)** / **Dev + chạy trên điện thoại (USB)** / **Release (APK)**.
+    - Tự đặt tên gói `com.pawfit.game`, bản `0.5.3` (mã 53), IL2CPP + ARM64, APK (không AAB), scene Main.
+    - Báo rõ nếu chưa cài module Android hoặc chưa chạy Setup Project.
+  - Bản Release dùng `NoAdService`: không có bảng DEV, không có quảng cáo giả. `Application.targetFrameRate = 60` (điện thoại mặc định chỉ 30 fps).
+  - Sửa input: không tắt "chuột giả từ chạm" nữa (để bảng DEV IMGUI bấm được trên điện thoại); trên điện thoại chỉ đọc cảm ứng.
+  - Hướng dẫn cài môi trường Mac + build + cài APK: `Docs/BUILD.md`.
+  - Test: 158/158 pass · compile check: pass (cả chế độ Editor lẫn chế độ bản phát hành không có `UNITY_EDITOR`)
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -171,7 +180,10 @@
 
 ## Tiếp theo
 
-- **Phase 5.3** — Build Android / iOS. Tôi chuẩn bị được trong repo: menu build, Player Settings (tên gói, xoay màn hình, icon tạm), tắt quảng cáo giả trong bản phát hành. **Cần bạn:** build và chạy thử trên máy có Unity (iOS cần Mac + Xcode); container không có Unity.
+- **Phase 5.3** — Bạn build Android theo `Docs/BUILD.md`, gửi lỗi Console / log điện thoại + số fps. Tôi sửa theo kết quả, rồi làm tiếp:
+  - icon / tên hiển thị
+  - khóa ký phát hành (keystore) + AAB cho Google Play
+  - build iOS (cần Xcode)
 - **Phase 4.1** — Firebase Auth + Firestore + giờ server. **Cần bạn:** tạo project Firebase, bật Auth (ẩn danh / Google), Firestore, tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS), và cài Firebase Unity SDK. Trước khi có các thứ đó, tôi chỉ làm được interface + bản giả lập (Mock).
 
 ## Ghi chú cho session sau
@@ -187,5 +199,6 @@
 - Shader `Gen1Fur` / `Gen1Eye` viết tay cho URP 17 (Unity 6.3) và chưa chạy thử trong Unity thật (container không có Unity). Lỗi thì bảng DEV có nút chuyển sang URP Lit.
 - Đổi số tiến hóa / chỉ số: `EvolutionConfig`, `StatsConfig` trong `GameConfig.cs`. Kinh tế: `EconomyConfig` (giá thuốc ở `HealthConfig`).
 - Thêm assembly logic mới thì nhớ thêm vào `Tools/LogicTests/LogicTests.csproj` và asmdef của Tests / App (như `PawFit.Economy`).
-- `MockAdService` vẫn đang được nối trong `GameBootstrap` cho mọi bản build. Trước khi phát hành (Phase 5.3) phải thay bằng SDK quảng cáo thật.
+- Quảng cáo: Editor / bản Dev dùng `MockAdService`, bản Release dùng `NoAdService` (không có quảng cáo). Gắn SDK thật = viết 1 lớp `IAdService` mới thay `NoAdService` trong `GameBootstrap`.
+- Compile thử chế độ bản phát hành (không có `UNITY_EDITOR`): `dotnet build Tools/UnityCompileCheck -p:DefineConstants=RELEASE_CHECK -o <thư mục tạm>`.
 - Lỗi nhỏ đã biết (ảnh render): da dưới lông đậm hơn lông nên quanh mắt hơi cam. Trong Unity đã dùng shader riêng nên không bị.

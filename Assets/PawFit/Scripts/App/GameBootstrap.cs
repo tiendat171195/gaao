@@ -19,7 +19,9 @@ namespace PawFit.App
         public static ServiceLocator Services { get; private set; }
 
         private PetService _pets;
-        private MockAdService _mockAds;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private MockAdService _mockAds;   // chỉ bản Dev / Editor có quảng cáo giả lập
+#endif
         private float _tickTimer;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -32,6 +34,7 @@ namespace PawFit.App
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
+            Application.targetFrameRate = 60;   // điện thoại mặc định chỉ 30 khung hình / giây: vuốt + hoạt cảnh sẽ giật
             var log = new UnityLog();
             var time = new DebugTimeProvider(new SystemTimeProvider());
             var cfg = GameConfig.CreateDefault();
@@ -74,10 +77,16 @@ namespace PawFit.App
             Services.Register(new PetExpressionService(_pets, brain, exprCfg, new SeededRandom(rng.NextUInt())));
 
             // Kinh tế (Phase 5.1): ví Coin + quảng cáo tự nguyện (5 lần / ngày) + quầy hàng, vẫn là C# thuần.
-            // Quảng cáo đang là bản giả lập; Phase 5.3 thay bằng SDK thật (chỉ đổi dòng này).
+            // Editor / bản Dev: quảng cáo giả lập. Bản phát hành: chưa có SDK quảng cáo thật thì không có quảng cáo
+            // (gắn SDK thật = thay NoAdService bằng 1 lớp IAdService mới, không đổi luật kinh tế).
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             _mockAds = new MockAdService(cfg.Economy.MockAdSeconds);
-            var economy = new EconomyService(_pets, _mockAds, time, bus, cfg, log);
-            Services.Register<IAdService>(_mockAds);
+            IAdService ads = _mockAds;
+#else
+            IAdService ads = new NoAdService();
+#endif
+            var economy = new EconomyService(_pets, ads, time, bus, cfg, log);
+            Services.Register(ads);
             Services.Register(economy);
             Services.Register<ICoinWallet>(economy);   // màn đấu cộng Coin khi thắng Bot qua interface này
             Services.Register(new ShopService(_pets, health, economy, bus, cfg, log));
@@ -110,7 +119,9 @@ namespace PawFit.App
 
         private void Update()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             _mockAds?.Update(Time.unscaledDeltaTime);   // quảng cáo giả lập chạy theo giờ thật
+#endif
             _tickTimer += Time.unscaledDeltaTime;
             if (_tickTimer < 1f) return;
             _tickTimer = 0f;

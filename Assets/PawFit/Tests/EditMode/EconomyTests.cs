@@ -243,6 +243,18 @@ namespace PawFit.Tests
         }
 
         [Test]
+        public void NoAdService_ReleaseBuild_NeverShowsOrRewards()
+        {
+            var eco = new EconomyService(_pets, new NoAdService(), _time, _bus, _cfg, null, Vietnam);
+            Assert.AreEqual(AdRefusal.NotReady, eco.CanWatchAd(AdReward.Coins));
+            AdOutcome? got = null;
+            Assert.IsFalse(eco.WatchAd(AdReward.Coins, o => got = o));
+            Assert.AreEqual(AdRefusal.NotReady, got.Value.Refusal);
+            Assert.AreEqual(200, eco.Coins, "bản phát hành chưa có quảng cáo thật: không thưởng");
+            Assert.AreEqual(5, eco.AdsLeftToday);
+        }
+
+        [Test]
         public void Ad_ResetForDebug_GivesBackAllAds()
         {
             WatchFully(AdReward.Coins);

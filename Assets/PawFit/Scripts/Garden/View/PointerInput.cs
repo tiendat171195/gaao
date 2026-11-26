@@ -19,22 +19,15 @@ namespace PawFit.Garden.View
         PointerSample Read();
     }
 
-    /// <summary>Input Manager cũ: cảm ứng trên điện thoại, chuột trong Editor.</summary>
+    /// <summary>
+    /// Input Manager cũ: cảm ứng trên điện thoại, chuột trong Editor.
+    /// Giữ nguyên "chuột giả từ chạm" của Unity (bảng DEV vẽ bằng IMGUI cần nó để bấm được trên điện thoại);
+    /// trên điện thoại chỉ đọc cảm ứng, không đọc chuột => 1 lần chạm không bị tính 2 lần.
+    /// </summary>
     public sealed class LegacyPointerInput : IPointerInput
     {
+        private readonly bool _touchOnly = Application.isMobilePlatform;
         private bool _failed;
-
-        public LegacyPointerInput()
-        {
-            try
-            {
-                Input.simulateMouseWithTouches = false;   // tránh 1 lần chạm bị tính 2 lần (chạm + chuột giả)
-            }
-            catch (InvalidOperationException)
-            {
-                // Input cũ đang tắt: báo lỗi rõ ở Read()
-            }
-        }
 
         public PointerSample Read()
         {
@@ -55,6 +48,7 @@ namespace PawFit.Garden.View
                     }
                     return s;
                 }
+                if (_touchOnly) return s;   // điện thoại: không có ngón tay trên màn = không có gì
                 s.Position = Input.mousePosition;
                 if (Input.GetMouseButtonDown(0)) s.Phase = PointerPhase.Began;
                 else if (Input.GetMouseButtonUp(0)) s.Phase = PointerPhase.Ended;

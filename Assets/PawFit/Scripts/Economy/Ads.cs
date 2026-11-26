@@ -32,6 +32,17 @@ namespace PawFit.Economy
     }
 
     /// <summary>
+    /// Không có quảng cáo (bản phát hành khi chưa gắn SDK quảng cáo thật): không bao giờ sẵn sàng,
+    /// nên quầy hàng hiện nút quảng cáo xám "(chưa có quảng cáo)" và không ai được thưởng từ quảng cáo giả.
+    /// </summary>
+    public sealed class NoAdService : IAdService
+    {
+        public bool IsReady => false;
+        public bool IsShowing => false;
+        public void ShowRewarded(string placement, Action<AdResult> done) => done?.Invoke(AdResult.Failed);
+    }
+
+    /// <summary>
     /// Quảng cáo giả lập (C# thuần): chiếu "quảng cáo" dài <see cref="Seconds"/> giây, xem hết thì Completed,
     /// bấm bỏ qua thì Skipped. Ai đó (App) phải gọi <see cref="Update"/> mỗi frame để thời gian trôi.
     /// </summary>

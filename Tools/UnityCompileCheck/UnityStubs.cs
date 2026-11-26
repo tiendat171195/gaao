@@ -388,7 +388,12 @@ namespace UnityEngine
         public static ScreenOrientation orientation { get; set; }
     }
 
-    public static class Application { public static string persistentDataPath => ""; public static bool isMobilePlatform => false; }
+    public static class Application
+    {
+        public static string persistentDataPath => "";
+        public static bool isMobilePlatform => false;
+        public static int targetFrameRate { get; set; }
+    }
 
     public enum CameraClearFlags { Skybox, SolidColor, Depth, Nothing }
 
@@ -689,6 +694,40 @@ namespace UnityEditor
     {
         public static void SetDirty(Object target) { }
         public static bool DisplayDialog(string title, string message, string ok) => true;
+        public static void RevealInFinder(string path) { }
+    }
+
+    public enum BuildTarget { StandaloneOSX = 2, StandaloneWindows64 = 19, iOS = 9, Android = 13 }
+    public enum BuildTargetGroup { Unknown = 0, Standalone = 1, iOS = 4, Android = 7 }
+
+    [Flags]
+    public enum BuildOptions { None = 0, Development = 1, AutoRunPlayer = 4 }
+
+    public enum ScriptingImplementation { Mono2x = 0, IL2CPP = 1 }
+
+    [Flags]
+    public enum AndroidArchitecture { None = 0, ARMv7 = 1, ARM64 = 2, X86_64 = 8 }
+
+    public struct BuildPlayerOptions
+    {
+        public string[] scenes { get; set; }
+        public string locationPathName { get; set; }
+        public BuildTarget target { get; set; }
+        public BuildTargetGroup targetGroup { get; set; }
+        public BuildOptions options { get; set; }
+    }
+
+    public static class BuildPipeline
+    {
+        public static UnityEditor.Build.Reporting.BuildReport BuildPlayer(BuildPlayerOptions options) => null;
+        public static bool IsBuildTargetSupported(BuildTargetGroup group, BuildTarget target) => true;
+    }
+
+    public static class EditorUserBuildSettings
+    {
+        public static BuildTarget activeBuildTarget => BuildTarget.Android;
+        public static bool buildAppBundle { get; set; }
+        public static bool SwitchActiveBuildTarget(BuildTargetGroup group, BuildTarget target) => true;
     }
 
     public enum UIOrientation { Portrait, PortraitUpsideDown, LandscapeRight, LandscapeLeft, AutoRotation }
@@ -702,6 +741,15 @@ namespace UnityEditor
         public static bool allowedAutorotateToPortraitUpsideDown { get; set; }
         public static bool allowedAutorotateToLandscapeLeft { get; set; }
         public static bool allowedAutorotateToLandscapeRight { get; set; }
+        public static string bundleVersion { get; set; }
+        public static void SetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget target, string identifier) { }
+        public static void SetScriptingBackend(UnityEditor.Build.NamedBuildTarget target, ScriptingImplementation backend) { }
+
+        public static class Android
+        {
+            public static AndroidArchitecture targetArchitectures { get; set; }
+            public static int bundleVersionCode { get; set; }
+        }
     }
 
     public sealed class SerializedProperty { public int intValue { get; set; } }
@@ -769,4 +817,29 @@ namespace UnityEditor.SceneManagement
         public static Scene NewScene(NewSceneSetup setup, NewSceneMode mode) => default;
         public static bool SaveScene(Scene scene, string dstScenePath) => true;
     }
+}
+
+namespace UnityEditor.Build
+{
+    public struct NamedBuildTarget
+    {
+        public static readonly NamedBuildTarget Android = default;
+        public static readonly NamedBuildTarget iOS = default;
+    }
+}
+
+namespace UnityEditor.Build.Reporting
+{
+    public enum BuildResult { Unknown = 0, Succeeded = 1, Failed = 2, Cancelled = 3 }
+
+    public struct BuildSummary
+    {
+        public BuildResult result { get; set; }
+        public string outputPath { get; set; }
+        public ulong totalSize { get; set; }
+        public System.TimeSpan totalTime { get; set; }
+        public int totalErrors { get; set; }
+    }
+
+    public sealed class BuildReport { public BuildSummary summary { get; set; } }
 }
