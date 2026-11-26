@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using PawFit.Core;
+using PawFit.Garden;
 using PawFit.Pet;
 using UnityEngine;
 
@@ -50,6 +51,21 @@ namespace PawFit.App
 
             _pets.LoadOrCreate("Kem");
             LogPet(time);
+
+            // Vườn (Phase 1.2): luật chăm sóc + "bộ não" thú đều là C# thuần
+            var gardenCfg = new GardenConfig();
+            var layout = GardenLayout.CreateDefault();
+            var care = new CareActionService(_pets, gardenCfg, time, bus, log);
+            var brain = new PetBrain(layout, gardenCfg, new SeededRandom(rng.NextUInt()), _pets, care);
+            Services.Register(gardenCfg);
+            Services.Register(layout);
+            Services.Register(care);
+            Services.Register(brain);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            gameObject.AddComponent<DevHotkeys>();
+#endif
+            SceneFlow.EnterGarden(Services);
         }
 
         private void LogPet(ITimeProvider time)

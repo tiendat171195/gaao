@@ -15,8 +15,9 @@
     <RootNamespace>PawFit.Tests</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../Assets/PawFit/Scripts/Core/**/*.cs" />
+    <Compile Include="../../Assets/PawFit/Scripts/Core/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Core/Unity/**" />
     <Compile Include="../../Assets/PawFit/Scripts/Pet/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Pet/View/**" />
+    <Compile Include="../../Assets/PawFit/Scripts/Garden/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Garden/View/**" />
     <Compile Include="../../Assets/PawFit/Tests/EditMode/**/*.cs" />
   </ItemGroup>
   <ItemGroup>

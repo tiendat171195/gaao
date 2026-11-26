@@ -41,6 +41,9 @@ crashlytics-build.properties
 
 # ---- Test logic C# chạy bằng dotnet (ngoài Unity) ----
 !/Tools/LogicTests/LogicTests.csproj
+!/Tools/UnityCompileCheck/UnityCompileCheck.csproj
+/Tools/UnityCompileCheck/bin/
+/Tools/UnityCompileCheck/obj/
 /Tools/LogicTests/bin/
 /Tools/LogicTests/obj/
 /Tools/LogicTests/TestResults/

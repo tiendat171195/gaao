@@ -1,0 +1,14 @@
+{
+    "name": "PawFit.Garden",
+    "rootNamespace": "PawFit.Garden",
+    "references": ["PawFit.Core", "PawFit.Pet"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

@@ -24,7 +24,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 0.5 | POC hình ảnh thú bằng Blender | ✅ |
 | Gen 1 | 5 dạng Adult (Lửa, Nước, Ánh Sáng, Thép, Bóng Tối) + FBX | ✅ (song song 1.1) |
 | 1.1 | Nền móng Unity 6.3 + Core + Pet DNA (logic + test) | ✅ |
-| 1.2 | Vườn dựng bằng code + camera + điều khiển thú (chạm / kéo) | ⏳ |
+| 1.2 | Vườn dựng bằng code + camera + điều khiển thú (chạm / kéo) | ✅ |
 | 1.3 | Thú Gen 1 trong Unity qua `IPetAvatar` + trạng thái bằng hình + animation code + Debug overlay | ⏳ |
 | 2.1 | Bệnh / chết vĩnh viễn / tưởng niệm / trứng mới (thừa hưởng 1 trait) | ⏳ |
 | 2.2 | Tiến hóa (CareScore, TrainingVector, seed + tính cách) + chỉ số + lực chiến | ⏳ |
@@ -45,13 +45,18 @@ gaao/                            ← gốc repo = gốc project Unity
 ├── Assets/PawFit/
 │   ├── Scripts/
 │   │   ├── Core/   [PawFit.Core, C# thuần]   ServiceLocator, EventBus, Time, Random, Save, Config
-│   │   ├── Pet/    [PawFit.Pet,  C# thuần]   Dna/, Needs/, PetService   (+ View/ ở Phase 1.3)
-│   │   ├── Garden/ Evolution/ Battle/ Network/ Economy/   (các Phase sau)
+│   │   ├── Pet/    [PawFit.Pet,  C# thuần]   Dna/, Needs/, PetService
+│   │   │   └── View/ [Unity]                 IPetAvatar, PlaceholderPetAvatar (thú tạm), DnaVisuals
+│   │   ├── Core/Unity/ [Unity]               MaterialFactory, Prim, VecExt (dùng chung cho View)
+│   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, CareActionService, PointerGestures
+│   │   │   └── View/ [Unity]                 GardenScene, GardenBuilder, GardenCamera, GardenInputRouter, PetController
+│   │   ├── Evolution/ Battle/ Network/ Economy/   (các Phase sau)
 │   │   └── App/    [PawFit.App, Unity]       GameBootstrap (composition root)
 │   ├── Art/Pets/Gen1/                         PawFit_Gen1_PetKit.fbx
 │   ├── Editor/     [PawFit.Editor]           menu PawFit ▸ Setup Project
 │   └── Tests/EditMode/ [NUnit]               chạy được cả Unity Test Runner lẫn dotnet
 ├── Tools/LogicTests/                          dotnet test (ngoài Unity)
+├── Tools/UnityCompileCheck/                   compile thử code Unity bằng stub (ngoài Unity)
 ├── Tools/Blender/                             bộ dựng thú Gen 1
 ├── Docs/                                      PLAN, GDD, PROGRESS, art/
 ├── Packages/manifest.json

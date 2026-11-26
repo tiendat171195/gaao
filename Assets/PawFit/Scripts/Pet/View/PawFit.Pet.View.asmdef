@@ -1,0 +1,14 @@
+{
+    "name": "PawFit.Pet.View",
+    "rootNamespace": "PawFit.Pet.View",
+    "references": ["PawFit.Core", "PawFit.Core.Unity", "PawFit.Pet"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

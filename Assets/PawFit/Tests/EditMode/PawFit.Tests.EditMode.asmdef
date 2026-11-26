@@ -1,14 +1,27 @@
 {
     "name": "PawFit.Tests.EditMode",
     "rootNamespace": "PawFit.Tests",
-    "references": ["PawFit.Core", "PawFit.Pet", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
-    "includePlatforms": ["Editor"],
+    "references": [
+        "PawFit.Core",
+        "PawFit.Pet",
+        "PawFit.Garden",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
-    "precompiledReferences": ["nunit.framework.dll", "Newtonsoft.Json.dll"],
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "Newtonsoft.Json.dll"
+    ],
     "autoReferenced": false,
-    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }

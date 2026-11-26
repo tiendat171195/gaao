@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    KIỂM TRA COMPILE code Unity (View, App, Editor) ngoài Unity, dựa trên stub API ở UnityStubs.cs:
+        dotnet build Tools/UnityCompileCheck
+    Bắt được lỗi gõ sai, sai kiểu, thiếu using, gọi sai hàm của chính code PawFit.
+    KHÔNG thay được bước mở project trong Unity thật (stub có thể khác API thật).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <OutputType>Library</OutputType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>CS0436</NoWarn>
+    <DefineConstants>$(DefineConstants);UNITY_EDITOR</DefineConstants>
+    <RootNamespace>PawFit.CompileCheck</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="UnityStubs.cs" />
+    <Compile Include="../../Assets/PawFit/Scripts/**/*.cs" />
+    <Compile Include="../../Assets/PawFit/Editor/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>
