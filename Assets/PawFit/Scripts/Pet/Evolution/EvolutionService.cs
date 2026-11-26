@@ -117,11 +117,58 @@ namespace PawFit.Pet
             return WorkoutResult.Ok;
         }
 
-        /// <summary>Thuộc thêm 1 chiêu (Phase 3.2 gọi khi vuốt đúng 10 lần). Tối đa 4.</summary>
+        public const int SkillCount = 4;
+
+        /// <summary>Số lần đã vuốt đúng chiêu `skill` (0 = ngang, 1 = lên, 2 = V, 3 = Z).</summary>
+        public int SkillProgress(int skill)
+        {
+            PetGrowth g = Growth;
+            return g?.SkillProgress != null && skill >= 0 && skill < g.SkillProgress.Length ? g.SkillProgress[skill] : 0;
+        }
+
+        public bool IsLearned(int skill) => SkillProgress(skill) >= _cfg.Evolution.PracticeToLearn;
+
+        /// <summary>4 cờ thuộc chiêu (đưa vào BattleSimulation: chiêu chưa thuộc yếu hơn).</summary>
+        public bool[] LearnedMask()
+        {
+            var m = new bool[SkillCount];
+            for (int i = 0; i < SkillCount; i++) m[i] = IsLearned(i);
+            return m;
+        }
+
+        /// <summary>Mode Huấn luyện: vuốt đúng chiêu 1 lần. Trả true nếu lần này làm thú thuộc chiêu.</summary>
+        public bool PracticeSkill(int skill)
+        {
+            PetGrowth g = Growth;
+            if (g == null || skill < 0 || skill >= SkillCount) return false;
+            if (g.SkillProgress == null || g.SkillProgress.Length < SkillCount) g.SkillProgress = new int[SkillCount];
+            bool was = IsLearned(skill);
+            if (!was) g.SkillProgress[skill]++;
+            RecountSkills(g);
+            return !was && IsLearned(skill);
+        }
+
+        /// <summary>CHỈ cho công cụ test: thuộc ngay chiêu chưa thuộc đầu tiên.</summary>
         public void LearnSkill()
         {
             PetGrowth g = Growth;
-            if (g != null && g.LearnedSkills < _cfg.Evolution.UltimateSkillsNeeded) g.LearnedSkills++;
+            if (g == null) return;
+            if (g.SkillProgress == null || g.SkillProgress.Length < SkillCount) g.SkillProgress = new int[SkillCount];
+            for (int i = 0; i < SkillCount; i++)
+                if (!IsLearned(i))
+                {
+                    g.SkillProgress[i] = _cfg.Evolution.PracticeToLearn;
+                    break;
+                }
+            RecountSkills(g);
+        }
+
+        private void RecountSkills(PetGrowth g)
+        {
+            int n = 0;
+            for (int i = 0; i < SkillCount; i++)
+                if (g.SkillProgress[i] >= _cfg.Evolution.PracticeToLearn) n++;
+            g.LearnedSkills = n;
         }
 
         void IPetStepper.Step(PetData pet, double hours, DateTime endUtc)

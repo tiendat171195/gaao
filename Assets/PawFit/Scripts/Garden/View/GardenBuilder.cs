@@ -9,6 +9,12 @@ namespace PawFit.Garden.View
     {
     }
 
+    /// <summary>Hình nộm ở sân tập: chạm vào = vào sân tập (Huấn luyện / Đấu Bot). Level 0 = Dễ, 1 = Thường, 2 = Khó.</summary>
+    public sealed class TrainingDummyView : MonoBehaviour
+    {
+        public int Level;
+    }
+
     public sealed class GardenBuildResult
     {
         public Transform Root;
@@ -156,8 +162,10 @@ namespace PawFit.Garden.View
             for (int i = 0; i < 3; i++)
             {
                 Transform dummy = Prim.Group(obstacles, "Dummy" + i, W(z.Center + spots[i]));
+                dummy.gameObject.AddComponent<TrainingDummyView>().Level = i;
                 Prim.Make(PrimitiveType.Cylinder, dummy, new Vector3(0f, 0.6f, 0f), new Vector3(0.14f, 0.6f, 0.14f), Wood, keepCollider: true);
-                Prim.Make(PrimitiveType.Capsule, dummy, new Vector3(0f, 1.25f, 0f), new Vector3(0.55f, 0.42f, 0.55f), Prim.Hex(colors[i]));
+                Prim.Make(PrimitiveType.Capsule, dummy, new Vector3(0f, 1.25f, 0f), new Vector3(0.55f, 0.42f, 0.55f), Prim.Hex(colors[i]),
+                          keepCollider: true);   // giữ collider để chạm trúng hình nộm
                 Prim.Make(PrimitiveType.Sphere, dummy, new Vector3(0f, 1.85f, 0f), Vector3.one * 0.38f, Prim.Hex("#E8D9C4"));
             }
             // cổng đấu trường (PvP, Phase 4)

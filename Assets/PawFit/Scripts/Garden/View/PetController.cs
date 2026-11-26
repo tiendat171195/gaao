@@ -104,20 +104,7 @@ namespace PawFit.Garden.View
         public void RebuildAvatar(PetDna dna)
         {
             if (_avatar is MonoBehaviour old) Destroy(old);   // OnDestroy của avatar tự xóa phần hình
-            _avatar = null;
-            if (!UsePlaceholder && Gen1PetAvatar.KitAvailable)
-            {
-                var gen1 = gameObject.AddComponent<Gen1PetAvatar>();
-                gen1.Build(dna);
-                if (gen1.IsBuilt) _avatar = gen1;
-                else Destroy(gen1);
-            }
-            if (_avatar == null)
-            {
-                var placeholder = gameObject.AddComponent<PlaceholderPetAvatar>();
-                placeholder.Build(dna);
-                _avatar = placeholder;
-            }
+            _avatar = PetAvatarFactory.Create(gameObject, dna, UsePlaceholder);
             _fx.Init(_avatar);
             _lastActivity = (PetActivity)(-1);
         }
@@ -128,6 +115,24 @@ namespace PawFit.Garden.View
             _createdSub?.Dispose();
             _evolvedSub?.Dispose();
             _dnaSub?.Dispose();
+        }
+
+        /// <summary>Đang ở màn đấu: thú đứng yên trong vườn (bộ não không chạy).</summary>
+        public void SetPaused(bool paused)
+        {
+            if (_dead) return;
+            enabled = !paused;
+            if (_agent != null && _agent.isOnNavMesh)
+            {
+                _agent.isStopped = paused || !_brain.IsMoving;
+                if (paused) _agent.ResetPath();
+                _sentTarget = NoTarget;
+            }
+            if (paused && _avatar != null)
+            {
+                _avatar.SetMoveSpeed(0f);
+                _avatar.SetPose(AvatarPose.Idle);
+            }
         }
 
         /// <summary>Thú đã mất: đứng lại, chạy cảnh chia tay rồi tự biến mất (gọi `done` khi xong).</summary>

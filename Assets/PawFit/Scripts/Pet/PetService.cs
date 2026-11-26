@@ -391,6 +391,12 @@ namespace PawFit.Pet
                 if (gr.Training == null) gr.Training = new TrainingVector();
                 if (gr.TrainedToday == null) gr.TrainedToday = new TrainingVector();
                 if (gr.CareHours == null) gr.CareHours = new List<float>();
+                if (gr.SkillProgress == null || gr.SkillProgress.Length < 4)
+                {
+                    var sp = new int[4];   // file Phase 2.2 chỉ có số chiêu: coi như thuộc các chiêu đầu
+                    for (int i = 0; i < Math.Min(4, gr.LearnedSkills); i++) sp[i] = 10;
+                    gr.SkillProgress = sp;
+                }
             }
             g.Version = GameSave.CurrentVersion;
         }

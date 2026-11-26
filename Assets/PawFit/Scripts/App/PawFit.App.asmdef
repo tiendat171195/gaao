@@ -7,7 +7,9 @@
         "PawFit.Pet",
         "PawFit.Pet.View",
         "PawFit.Garden",
-        "PawFit.Garden.View"
+        "PawFit.Garden.View",
+        "PawFit.Battle",
+        "PawFit.Battle.View"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

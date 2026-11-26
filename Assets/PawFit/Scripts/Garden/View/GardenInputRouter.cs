@@ -23,10 +23,14 @@ namespace PawFit.Garden.View
         public Action<EggView> EggTapped { get; set; }
         public Action<MemorialStone> StoneTapped { get; set; }
 
+        /// <summary>Chạm trúng hình nộm ở sân tập (mức 0..2).</summary>
+        public Action<int> DummyTapped { get; set; }
+
         private Camera _cam;
         private IPointerInput _input;
         private EggView _downEgg;
         private MemorialStone _downStone;
+        private TrainingDummyView _downDummy;
         private PointerGestureClassifier _gestures;
         private GardenCamera _camCtl;
         private PetController _pet;
@@ -85,6 +89,7 @@ namespace PawFit.Garden.View
         {
             _downEgg = null;
             _downStone = null;
+            _downDummy = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -93,6 +98,8 @@ namespace PawFit.Garden.View
                 if (_downEgg != null) return PointerTarget.Egg;
                 _downStone = hit.collider.GetComponentInParent<MemorialStone>();
                 if (_downStone != null) return PointerTarget.Memorial;
+                _downDummy = hit.collider.GetComponentInParent<TrainingDummyView>();
+                if (_downDummy != null) return PointerTarget.Dummy;
             }
             return PointerTarget.Ground;
         }
@@ -113,6 +120,10 @@ namespace PawFit.Garden.View
                     break;
                 case PointerTarget.Memorial:
                     if (e.Kind == GestureKind.Tap && _downStone != null) StoneTapped?.Invoke(_downStone);
+                    else HandleGround(e, screen, onGround, g);
+                    break;
+                case PointerTarget.Dummy:
+                    if (e.Kind == GestureKind.Tap && _downDummy != null) DummyTapped?.Invoke(_downDummy.Level);
                     else HandleGround(e, screen, onGround, g);
                     break;
                 default: HandleGround(e, screen, onGround, g); break;

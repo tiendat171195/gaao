@@ -33,6 +33,18 @@ namespace PawFit.Garden.View
 
         public PetController Pet { get; private set; }
 
+        /// <summary>Chạm hình nộm ở sân tập (App mở màn đấu). Tham số = mức 0..2.</summary>
+        public Action<int> DummyTapped { get; set; }
+
+        /// <summary>Tạm dừng vườn khi đang ở màn đấu: không nhận chạm, camera đứng, thú đứng yên.</summary>
+        public void SetPaused(bool paused)
+        {
+            if (_router != null) _router.enabled = !paused;
+            if (_camCtl != null) _camCtl.enabled = !paused;
+            if (Pet != null) Pet.SetPaused(paused);
+            if (!paused && _camCtl != null) _camCtl.ResumeFollow();
+        }
+
         public static GardenScene Enter(ServiceLocator services)
         {
             var scene = new GameObject("PawFit_Garden").AddComponent<GardenScene>();
@@ -73,6 +85,7 @@ namespace PawFit.Garden.View
             _router.Init(cam, new LegacyPointerInput(), _camCtl, Pet, cfg, _log);
             _router.EggTapped = OnEggTapped;
             _router.StoneTapped = stone => GardenUi.ShowCard(stone.Entry.Name, MemorialView.CardText(stone.Entry));
+            _router.DummyTapped = level => DummyTapped?.Invoke(level);
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
             _subs.Add(bus.Subscribe<PetCreated>(OnPetCreated));

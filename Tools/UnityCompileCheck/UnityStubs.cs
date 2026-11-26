@@ -97,6 +97,9 @@ namespace UnityEngine
         public static Vector2 one => new Vector2(1, 1);
         public static Vector2 operator -(Vector2 a, Vector2 b) => a;
         public static Vector2 operator +(Vector2 a, Vector2 b) => a;
+        public static Vector2 operator *(Vector2 a, float d) => a;
+        public static float Distance(Vector2 a, Vector2 b) => 0f;
+        public static Vector2 Lerp(Vector2 a, Vector2 b, float t) => a;
         public static implicit operator Vector2(Vector3 v) => new Vector2(v.x, v.y);
         public static implicit operator Vector3(Vector2 v) => new Vector3(v.x, v.y, 0f);
     }
@@ -165,6 +168,7 @@ namespace UnityEngine
         public static float Abs(float f) => 0f;
         public static float Exp(float f) => 0f;
         public static float Pow(float f, float p) => 0f;
+        public static float Sqrt(float f) => 0f;
         public static float Max(float a, float b) => a;
         public static float Clamp(float v, float min, float max) => v;
         public static float Clamp01(float v) => v;
@@ -236,6 +240,12 @@ namespace UnityEngine
     {
         public RenderMode renderMode { get; set; }
         public int sortingOrder { get; set; }
+        public float scaleFactor { get; set; }
+    }
+
+    public static class RectTransformUtility
+    {
+        public static bool RectangleContainsScreenPoint(RectTransform rect, Vector2 screenPoint, Camera cam) => false;
     }
 
     public class RectTransform : Transform
@@ -340,6 +350,7 @@ namespace UnityEngine
         public static float deltaTime => 0f;
         public static float unscaledDeltaTime => 0f;
         public static float time => 0f;
+        public static float unscaledTime => 0f;
         public static double unscaledTimeAsDouble => 0.0;
     }
 

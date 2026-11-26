@@ -73,8 +73,11 @@ namespace PawFit.Pet
         public double PartialCare;
         public double PartialHours;
 
-        /// <summary>Số chiêu đã thuộc (Phase 3.2: vuốt đúng 10 lần = thuộc 1 chiêu).</summary>
+        /// <summary>Số chiêu đã thuộc (0..4) — tính lại từ SkillProgress mỗi khi tập.</summary>
         public int LearnedSkills;
+
+        /// <summary>Số lần vuốt đúng của 4 chiêu: 0 = ngang (Nhanh), 1 = lên (Mạnh), 2 = V (Riêng), 3 = Z (Ultimate).</summary>
+        public int[] SkillProgress = new int[4];
 
         /// <summary>Lần gần nhất đang ốm (Ultimate cần 7 ngày không bệnh).</summary>
         public DateTime? LastIllUtc;

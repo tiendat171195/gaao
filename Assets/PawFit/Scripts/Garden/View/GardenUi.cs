@@ -40,6 +40,31 @@ namespace PawFit.Garden.View
             input.ActivateInputField();   // điện thoại: bật bàn phím luôn
         }
 
+        /// <summary>Thẻ có vài lựa chọn (vd chạm hình nộm: Huấn luyện / Đấu / Thôi). `chosen` nhận chỉ số nút.</summary>
+        public static void ShowChoice(string title, string body, string[] options, Action<int> chosen)
+        {
+            Close();
+            RectTransform dim = Panel(Root, "Choice", new Color(0f, 0f, 0f, 0.35f));
+            Stretch(dim);
+            RectTransform card = Panel(dim, "Box", new Color(0.97f, 0.97f, 0.95f, 1f));
+            Place(card, Vector2.zero, new Vector2(900f, 640f));
+            Label(card, title, 58, FontStyle.Bold, new Color(0.22f, 0.2f, 0.22f), new Vector2(0f, 220f), new Vector2(840f, 110f));
+            Label(card, body, 38, FontStyle.Normal, new Color(0.3f, 0.28f, 0.3f), new Vector2(0f, 90f), new Vector2(820f, 150f));
+            Color[] colors = { new Color(0.36f, 0.6f, 0.85f), new Color(0.85f, 0.45f, 0.36f), new Color(0.6f, 0.6f, 0.62f) };
+            for (int i = 0; i < options.Length; i++)
+            {
+                int index = i;
+                Button b = Button(card, options[i], colors[i % colors.Length], new Vector2(0f, -60f - i * 120f), new Vector2(560f, 100f));
+                b.onClick.AddListener(() =>
+                {
+                    Close();
+                    chosen?.Invoke(index);
+                });
+            }
+            card.sizeDelta = new Vector2(900f, 380f + options.Length * 120f);
+            _open = dim.gameObject;
+        }
+
         /// <summary>Thẻ chữ to (vd thông tin bia mộ). Chạm bất kỳ đâu để đóng.</summary>
         public static void ShowCard(string title, string body)
         {

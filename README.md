@@ -103,7 +103,37 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
 
 - **CareScore** = trung bình mức chăm (trung bình 4 nhu cầu) của 7 ngày gần nhất; giờ đang ốm chỉ tính nửa.
 - **Ultimate** cần: CareScore ≥ 80, thuộc đủ 4 chiêu (Phase 3.2), 7 ngày không bệnh. Ultimate to hơn chút và có 3 đốm vàng bay quanh.
-- **Chỉ số + lực chiến** theo GDD G8, giảm khi mệt / ốm. Vườn không hiện số; chỉ xem được trong bảng DEV, sẽ dùng khi đấu từ Phase 3.
+- **Chỉ số + lực chiến** theo GDD G8, giảm khi mệt / ốm. Vườn không hiện số; chỉ xem được trong bảng DEV. Khi đấu, thú dùng đúng chỉ số này.
+
+## Sân tập: Huấn luyện + đấu Bot (Phase 3.1–3.2)
+
+- **Vào sân tập:** chạm 1 trong 3 **hình nộm** ở sân tập (xanh = Dễ, vàng = Thường, đỏ = Khó), chọn **Huấn luyện** hoặc **Đấu**.
+  - Màn hình xoay ngang. Xong bấm **Về vườn** để quay lại màn dọc.
+  - Thú ốm hoặc đang ngủ thì không vào được.
+- **Cách vuốt:**
+
+  | Vuốt | Chiêu |
+  |---|---|
+  | Ngang | Nhanh |
+  | Lên | Mạnh: hất tung, cắt đòn đang vung của đối thủ |
+  | V | Chiêu riêng |
+  | Z | Ultimate |
+  | Xuống | Đỡ. Đỡ sát lúc đòn tới thì phản đòn |
+
+  Vuốt sai (nét không rõ hình hoặc quá chậm) thì bị hở 1 giây. Vuốt càng nhanh, càng đúng hình thì đòn càng đau.
+- **Huấn luyện:**
+  - Có bóng mờ chỉ cách vuốt chiêu đang học. Vuốt đúng 10 lần thì thuộc chiêu (thuộc rồi đánh mạnh hơn). Cần thuộc đủ 4 chiêu mới lên được Ultimate.
+  - Vuốt sai không bị phạt, cứ vuốt lại.
+  - Hình nộm sắp đánh thì trận chậm lại và hiện cách vuốt xuống để đỡ.
+  - Không ai bị hạ gục. Bấm **Xong** để kết thúc.
+- **Đấu:**
+  - Trận thật 90 giây với Bot mức đó, chỉ số Bot theo chỉ số thú (Dễ ×0,7, Thường ×1, Khó ×1,25).
+  - Màn hình chỉ có 2 vạch HP mờ + vạch thời gian mảnh. Hết giờ thì bên còn nhiều %HP hơn thắng.
+  - **Bỏ cuộc** tính là thua.
+- **Điểm tập:**
+  - Mỗi đòn trúng: ngang → Tốc độ; lên → Sức mạnh; V, Z → cả hai. Phản đòn → Tốc độ.
+  - Thắng Bot được thêm điểm.
+  - Mỗi buổi tốn năng lượng + no bụng.
 
 ## Công cụ test (chỉ Editor / bản Development)
 
@@ -114,6 +144,7 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Sức khỏe: **Mệt** / **Ốm** / **Nguy kịch** / **Chết** / **Uống thuốc** / **Khỏi bệnh**. Xem số giờ bỏ bê, đã chăm kỹ mấy việc / 3, % hồi phục.
   - Khi thú đã mất: xem trứng còn bao lâu nở, thừa hưởng trait gì, nút **Trứng nở được ngay**.
   - Tiến hóa: xem giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến. Nút **+1 ngày tuổi**, **Lên giai đoạn**, **Thuộc 1 chiêu**, **+10** từng hướng tập.
+  - Nút **Huấn luyện** / **Đấu Bot Thường**: vào sân tập ngay, không cần đi tới hình nộm.
   - Tua giờ +1 / +6 / +24.
   - **Thú mới** (DNA ngẫu nhiên).
   - Đổi model Gen 1 ↔ thú tạm, LOD0 ↔ LOD1, shader riêng ↔ URP Lit.
@@ -143,7 +174,7 @@ dotnet build Tools/UnityCompileCheck
 | `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ |
 | `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx` |
 | `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn, camera, input, NavMesh, bia mộ, trứng, bảng đặt tên |
-| `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức |
+| `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt |
 | `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow, Debug overlay |
 | `Assets/PawFit/Resources/Pets/Gen1` | Model thú Gen 1 (FBX bản 2: thân LOD0 / LOD1 + blendshape + xương + mọi kiểu bộ phận) + file mốc neo JSON |
 | `Assets/PawFit/Resources/Shaders` | Shader URP `PawFit/Gen1Fur` (lông theo vertex color, bẩn) + `PawFit/Gen1Eye` (mắt vẽ bằng toán) |

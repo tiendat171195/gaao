@@ -98,6 +98,20 @@
   - `BattleBot`: 3 mức Dễ / Thường / Khó, dùng đúng cổng vuốt như người chơi. Mức Khó biết canh phản đòn.
   - Test: 120/120 pass, gồm "Bot Khó thắng Bot Dễ ≥ 75% trận" · compile check: pass
 
+- **Phase 3.2** — Màn đấu ngang + Mode Huấn luyện + đấu Bot:
+  - Logic (C# thuần, có test):
+    - `BattleSession`: Huấn luyện học chiêu (vuốt đúng 10 lần = thuộc chiêu, vuốt sai không phạt, slow-mo khi hình nộm vung đòn, gợi ý đỡ).
+    - `BattleSession`: Đấu Bot 90 giây. Chỉ số từ `EvolutionService.Stats`, chiêu chưa thuộc yếu hơn, điểm tập theo đòn trúng + thưởng thắng, tốn năng lượng, ốm / ngủ không vào được.
+    - `EvolutionService` lưu tiến độ từng chiêu (`SkillProgress`).
+  - View (assembly `PawFit.Battle.View`):
+    - `BattleScene`: màn ngang, đấu trường, thú Gen 1 vs hình nộm 3 màu, camera riêng, đọc nét vuốt.
+    - `FighterRig`: vung đòn, lao tới, giật lùi, khiên, choáng, ngã.
+    - `FxBurst`: tia văng, vòng sáng, chữ nổi.
+    - `BattleHud`: 2 vạch HP mờ, vạch thời gian, vết ngón tay, bóng mờ nét vuốt + chấm chạy theo, 10 chấm tiến độ, thẻ kết quả.
+  - Vườn: chạm hình nộm ở sân tập → thẻ chọn Huấn luyện / Đấu / Thôi (`GardenUi.ShowChoice`). Vườn tạm dừng khi đấu (`GardenScene.SetPaused`).
+  - App: `SceneFlow.EnterBattle` chuyển vườn ⇄ màn đấu. Bảng DEV có nút vào sân tập nhanh.
+  - Test: 128/128 pass · compile check: pass
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -113,7 +127,7 @@
 
 ## Tiếp theo
 
-- **Phase 3.2** — Màn đấu ngang + Mode Huấn luyện vs Bot (bóng mờ gesture, slow-mo, vuốt đúng 10 lần = thuộc chiêu). Chỉ số lấy từ `EvolutionService.Stats` (đổi sang `FighterStats`), ốm thì không cho đấu (`HealthService.CanTrain`).
+- **Phase 4.1** — Firebase Auth + Firestore + giờ server. **Cần bạn:** tạo project Firebase, bật Auth (ẩn danh / Google), Firestore, tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS), và cài Firebase Unity SDK. Trước khi có các thứ đó, tôi chỉ làm được interface + bản giả lập (Mock).
 
 ## Ghi chú cho session sau
 

@@ -103,6 +103,27 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
     - Xác suất đỡ: 15 / 40 / 70%. Mức Khó canh đỡ sát đòn để phản đòn.
     - Nhịp đánh, độ đẹp nét vuốt, tỉ lệ vuốt sai, chiêu hay dùng.
   - Mô phỏng chạy theo bước cố định 1/30 s, random có seed, nên cùng đầu vào thì cùng kết quả (dùng lại được cho PvP).
+- **G9c · Sân tập (Phase 3.2, `BattleSessionConfig`):**
+  - Huấn luyện:
+    - Bài học = chiêu chưa thuộc đầu tiên, theo thứ tự ngang → lên → V → Z.
+    - Mỗi lần vuốt đúng chiêu đang học mà trận nhận đòn thì +1; đủ 10 thì thuộc.
+    - Vuốt sai không bị hở.
+    - Tốc độ trận ×0,75; hình nộm đang vung đòn thì ×0,3 (slow-mo).
+    - Hình nộm đánh nhẹ (×0,5), 2 bên nhiều máu (không ai gục), tối đa 10 phút.
+  - Đấu Bot: hình nộm Dễ / Thường / Khó = chỉ số thú ×0,7 / ×1 / ×1,25, Bot mức tương ứng, 90 giây.
+  - Điểm tập mỗi đòn trúng:
+
+    | Đòn | Điểm |
+    |---|---|
+    | Ngang | Tốc độ +1 |
+    | Lên | Sức mạnh +1,5 |
+    | V | Sức mạnh +1, Tốc độ +1 |
+    | Z | Sức mạnh +2, Tốc độ +1,5 |
+    | Phản đòn | Tốc độ +1,5 |
+
+  - Thắng Dễ / Thường / Khó: Sức mạnh +3 / +5 / +8, Tốc độ +2 / +3 / +5. Vẫn theo giới hạn 30 điểm / hướng / ngày.
+  - Tốn sức: Huấn luyện năng lượng −6, no −4; Đấu năng lượng −10, no −6.
+  - Ốm / đang ngủ: không vào được.
 - **G10 · Rank:** Elo khởi đầu 1000, K = 32. Bronze < 1100 ≤ Silver < 1300 ≤ Gold < 1500 ≤ Diamond < 1700 ≤ Master. Hết mùa reset mềm về 1000 + (Elo − 1000)/2. Tìm 30 giây chưa có trận thì nới khoảng; 60 giây thì gợi ý đấu Bot.
 - **G11 · Kinh tế:**
   - Thức ăn cơ bản miễn phí, khởi đầu 200 Coin, thắng PvP +30, quảng cáo +20 Coin / +20 năng lượng.

@@ -1,0 +1,15 @@
+{
+    "name": "PawFit.Battle.View",
+    "rootNamespace": "PawFit.Battle.View",
+    "references": ["PawFit.Core", "PawFit.Core.Unity", "PawFit.Pet", "PawFit.Pet.View", "PawFit.Battle", "PawFit.Garden.View",
+                   "UnityEngine.UI"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

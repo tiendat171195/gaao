@@ -1,7 +1,10 @@
 {
     "name": "PawFit.Battle",
     "rootNamespace": "PawFit.Battle",
-    "references": ["PawFit.Core"],
+    "references": [
+        "PawFit.Core",
+        "PawFit.Pet"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

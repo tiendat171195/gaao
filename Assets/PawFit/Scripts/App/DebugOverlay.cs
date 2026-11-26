@@ -184,6 +184,10 @@ namespace PawFit.App
             }
             if (GUILayout.Button("Thuộc 1 chiêu", _button)) evo.LearnSkill();
             GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();   // vào sân tập nhanh (giống chạm hình nộm)
+            if (GUILayout.Button("Huấn luyện", _button)) SceneFlow.EnterBattle(PawFit.Battle.BattleMode.Training, PawFit.Battle.BotLevel.Easy);
+            if (GUILayout.Button("Đấu Bot Thường", _button)) SceneFlow.EnterBattle(PawFit.Battle.BattleMode.BotFight, PawFit.Battle.BotLevel.Normal);
+            GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("+10 Sức", _button)) evo.Training.Add(TrainingAxis.Strength, 10f);
             if (GUILayout.Button("+10 Tốc", _button)) evo.Training.Add(TrainingAxis.Speed, 10f);

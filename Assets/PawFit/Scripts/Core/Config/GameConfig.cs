@@ -108,6 +108,9 @@ namespace PawFit.Core
         // ---- Ultimate ----
         public float UltimateMinCareScore = 80f;
         public int UltimateSkillsNeeded = 4;
+
+        /// <summary>Mode Huấn luyện: vuốt đúng chiêu bấy nhiêu lần thì thuộc chiêu đó (GDD).</summary>
+        public int PracticeToLearn = 10;
         public float UltimateHealthyDays = 7f;
 
         // ---- nguồn điểm tập ----
