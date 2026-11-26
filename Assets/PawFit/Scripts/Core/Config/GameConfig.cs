@@ -200,5 +200,12 @@ namespace PawFit.Core
 
         /// <summary>Thắng PvP (Phase 4.2).</summary>
         public int PvpWinCoins = 30;
+
+        // ---- đồ trang trí / phụ kiện (Phase 5.2), chỉ để đẹp ----
+        /// <summary>Giá phụ kiện theo thứ tự AccessoryKind: Nơ, Mũ len, Khăn quàng, Vương miện.</summary>
+        public int[] AccessoryPrices = { 80, 120, 100, 250 };
+
+        /// <summary>Giá trang trí vườn theo thứ tự DecorKind: Đèn lồng, Ghế gỗ, Cối xay gió, Vòm hoa.</summary>
+        public int[] DecorPrices = { 150, 120, 300, 200 };
     }
 }

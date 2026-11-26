@@ -34,7 +34,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 4.2 | PvP real-time Photon Fusion + tìm đối thủ (Elo ±100, lực chiến ±10%) | ⏳ |
 | 4.3 | Ranking Elo + bậc + mùa giải 30 ngày | ⏳ |
 | 5.1 | Kinh tế + shop vườn + quảng cáo mock (tối đa 5 lần/ngày) | ✅ |
-| 5.2 | Trang trí + phụ kiện + polish | ⏳ |
+| 5.2 | Trang trí + phụ kiện + polish | ✅ |
 | 5.3 | Build Android / iOS | ⏳ |
 | 6 | Model thật (Gen 2) + shader lông + LOD mobile | ⏳ (sau gameplay) |
 
@@ -46,16 +46,17 @@ gaao/                            ← gốc repo = gốc project Unity
 │   ├── Scripts/
 │   │   ├── Core/   [PawFit.Core, C# thuần]   ServiceLocator, EventBus, Time, Random, Save, Config
 │   │   ├── Pet/    [PawFit.Pet,  C# thuần]   Dna/, Needs/, Health/, Lifecycle/, Evolution/, PetService
-│   │   │   └── View/ [Unity]                 IPetAvatar, Gen1PetAvatar, PlaceholderPetAvatar (thú tạm), PetMoodFx, DnaVisuals
+│   │   │   └── View/ [Unity]                 IPetAvatar, Gen1PetAvatar, PlaceholderPetAvatar (thú tạm), PetMoodFx, DnaVisuals,
+│   │   │                                     AccessoryView (phụ kiện)
 │   │   ├── Core/Unity/ [Unity]               MaterialFactory, Prim, VecExt (dùng chung cho View)
 │   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, PetExpressionService, CareActionService, PointerGestures
 │   │   │   └── View/ [Unity]                 GardenScene, GardenBuilder, GardenCamera, GardenInputRouter, PetController,
 │   │   │                                     MemorialView, EggView, PetDeathFx, GardenUi (bảng đặt tên / thẻ / toast),
-│   │   │                                     ShopStallView (quầy hàng)
+│   │   │                                     ShopStallView (quầy hàng), DecorBuilder (đồ trang trí)
 │   │   ├── Battle/ [PawFit.Battle, C# thuần] SwipeRecognizer, BattleSimulation, BattleBot, BattleSession
 │   │   │   └── View/ [Unity]                 BattleScene (màn ngang), BattleHud, FighterRig, DummyBuilder
 │   │   ├── Economy/ [PawFit.Economy, C# thuần] EconomyService (ví Coin + quảng cáo 5 lần/ngày), ShopService,
-│   │   │                                     IAdService + MockAdService
+│   │   │                                     CosmeticsService (phụ kiện + trang trí), IAdService + MockAdService
 │   │   ├── Network/                           (Phase 4)
 │   │   └── App/    [PawFit.App, Unity]       GameBootstrap (composition root)
 │   ├── Resources/Pets/Gen1/                   PawFit_Gen1_PetKit.fbx + PawFit_Gen1_Anchors.json

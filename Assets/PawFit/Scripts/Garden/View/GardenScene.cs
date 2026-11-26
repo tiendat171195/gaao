@@ -16,10 +16,15 @@ namespace PawFit.Garden.View
     /// Màn vườn (màn dọc): dựng vườn bằng code, ánh sáng mềm + hậu kỳ URP, NavMesh lúc chạy,
     /// thả thú, camera, input. Lấy service qua ServiceLocator (do App đăng ký).
     /// Phase 2.1: thú mất -> cảnh chia tay -> bia mộ mới -> trứng trong ổ -> chạm trứng nở -> đặt tên -> thú mới.
+    /// Phase 5.2: đồ trang trí đã mua đứng sẵn trong vườn; mua món mới thì camera lia tới, món đó bật lên, NavMesh nướng lại.
     /// </summary>
     public sealed class GardenScene : MonoBehaviour
     {
         private NavMeshDataInstance _navMesh;
+        private NavMeshData _navData;
+        private NavMeshBuildSettings _navSettings;
+        private Bounds _navBounds;
+        private GardenBuildResult _built;
         private ServiceLocator _s;
         private GardenLayout _layout;
         private PetService _pets;
@@ -69,6 +74,10 @@ namespace PawFit.Garden.View
             Camera cam = SetupCamera();
             SetupPostFx(cam);
             GardenBuildResult built = GardenBuilder.Build(_layout, transform);
+            _built = built;
+            CosmeticsData owned = _pets.Cosmetics;   // đồ trang trí đã mua: dựng trước khi nướng NavMesh để thú đi vòng qua
+            if (owned != null)
+                foreach (DecorKind d in owned.Decor) DecorBuilder.Build(d, built.Obstacles);
             BakeNavMesh(built, _layout);
             _memorial = MemorialView.Create(transform, _layout, _pets.Memorials);
             _focus = new GameObject("CameraFocus").transform;
@@ -97,6 +106,11 @@ namespace PawFit.Garden.View
             {
                 if (_egg != null) _egg.SetReady(true);
             }));
+            _subs.Add(bus.Subscribe<AccessoryChanged>(e =>
+            {
+                if (Pet != null) Pet.SetAccessory(e.Equipped, true);
+            }));
+            _subs.Add(bus.Subscribe<DecorAdded>(e => StartCoroutine(ShowNewDecor(e.Kind))));
 
             _log.Info("[PawFit] Vườn sẵn sàng · chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve · " +
                       "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn · " +
@@ -108,6 +122,22 @@ namespace PawFit.Garden.View
             Pet = PetController.Spawn(at, _pets.Current.Dna, _s.Get<PetBrain>(), _s.Get<CareActionService>(),
                                       _s.Get<PetExpressionService>(), _s.Get<EvolutionService>(), _layout, _s.Get<GardenConfig>(),
                                       _s.Get<EventBus>(), transform);
+            Pet.SetAccessory(_pets.Cosmetics?.Equipped ?? AccessoryKind.None);   // phụ kiện là của người chơi: thú mới vẫn đeo
+        }
+
+        /// <summary>Vừa mua đồ trang trí: camera lia tới, món đó bật lên, nướng lại NavMesh, rồi camera về lại thú.</summary>
+        private IEnumerator ShowNewDecor(DecorKind kind)
+        {
+            Transform decor = DecorBuilder.Build(kind, _built.Obstacles, pop: true);
+            if (decor == null) yield break;
+            GardenUi.Close();
+            _focus.position = decor.position;
+            _camCtl.SetFollow(_focus);
+            yield return new WaitForSeconds(PopIn.Seconds + 0.1f);
+            RebakeNavMesh();   // món đã đủ cỡ: thú sẽ đi vòng qua
+            yield return new WaitForSeconds(1.8f);
+            Transform back = Pet != null ? Pet.transform : (_egg != null ? _egg.transform : null);
+            if (back != null) _camCtl.SetFollow(back);
         }
 
         /// <summary>Trứng nằm trong ổ ngủ (giữa vườn).</summary>
@@ -230,21 +260,34 @@ namespace PawFit.Garden.View
         /// <summary>Nướng NavMesh lúc chạy từ collider: mặt đất đi được, nhóm Obstacles không đi được.</summary>
         private void BakeNavMesh(GardenBuildResult built, GardenLayout layout)
         {
+            _navSettings = NavMesh.GetSettingsByID(0);
+            _navSettings.agentRadius = 0.3f;
+            _navSettings.agentHeight = 1f;
+            _navSettings.agentClimb = 0.25f;
+            _navSettings.agentSlope = 35f;
+            NVec2 size = layout.Max - layout.Min, c = (layout.Min + layout.Max) * 0.5f;
+            _navBounds = new Bounds(new Vector3(c.X, 0.5f, c.Y), new Vector3(size.X + 2f, 4f, size.Y + 2f));
+            _navData = NavMeshBuilder.BuildNavMeshData(_navSettings, NavSources(built), _navBounds, Vector3.zero, Quaternion.identity);
+            _navMesh = NavMesh.AddNavMeshData(_navData);
+        }
+
+        /// <summary>Có vật cản mới (đồ trang trí vừa mua): nướng lại ngay trên dữ liệu cũ, thú không bị rơi khỏi NavMesh.</summary>
+        private void RebakeNavMesh()
+        {
+            if (_navData == null || _built == null) return;
+            if (!NavMeshBuilder.UpdateNavMeshData(_navData, _navSettings, NavSources(_built), _navBounds))
+                _log.Warn("[PawFit] Nướng lại NavMesh không được — thú có thể đi xuyên đồ trang trí mới");
+        }
+
+        private static List<NavMeshBuildSource> NavSources(GardenBuildResult built)
+        {
             var sources = new List<NavMeshBuildSource>();
             var markups = new List<NavMeshBuildMarkup>
             {
                 new NavMeshBuildMarkup { root = built.Obstacles, overrideArea = true, area = 1 },   // 1 = Not Walkable
             };
             NavMeshBuilder.CollectSources(built.Root, ~0, NavMeshCollectGeometry.PhysicsColliders, 0, markups, sources);
-            NavMeshBuildSettings settings = NavMesh.GetSettingsByID(0);
-            settings.agentRadius = 0.3f;
-            settings.agentHeight = 1f;
-            settings.agentClimb = 0.25f;
-            settings.agentSlope = 35f;
-            NVec2 size = layout.Max - layout.Min, c = (layout.Min + layout.Max) * 0.5f;
-            var bounds = new Bounds(new Vector3(c.X, 0.5f, c.Y), new Vector3(size.X + 2f, 4f, size.Y + 2f));
-            NavMeshData data = NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
-            _navMesh = NavMesh.AddNavMeshData(data);
+            return sources;
         }
 
         private void OnDestroy()

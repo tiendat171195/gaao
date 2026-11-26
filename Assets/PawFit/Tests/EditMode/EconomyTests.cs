@@ -67,7 +67,7 @@ namespace PawFit.Tests
         public void Wallet_NewPlayer_StartsWith200()
         {
             Assert.AreEqual(200, _eco.Coins);
-            Assert.AreEqual(3, GameSave.CurrentVersion);
+            Assert.GreaterOrEqual(GameSave.CurrentVersion, 3);
         }
 
         [Test]
@@ -136,7 +136,7 @@ namespace PawFit.Tests
             Assert.AreEqual("Cũ", pets.Current.Name, "vẫn là thú cũ");
             Assert.AreEqual(200, pets.Wallet.Coins, "file bản 2 được cấp 200 Coin khởi đầu");
             pets.Save();
-            StringAssert.Contains("\"Version\": 3", store.RawJson(PetService.SaveKey));
+            StringAssert.Contains("\"Version\": " + GameSave.CurrentVersion, store.RawJson(PetService.SaveKey));
             StringAssert.Contains("\"Coins\": 200", store.RawJson(PetService.SaveKey), "lưu lại thì có ví trong file");
         }
 

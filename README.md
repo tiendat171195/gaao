@@ -156,6 +156,36 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Bản dev là **quảng cáo giả lập 3 giây** (màn tối có đếm ngược + nút Bỏ qua). Phase 5.3 thay bằng quảng cáo thật.
 - Số liệu nằm ở `EconomyConfig` trong `GameConfig.cs` (giá thuốc ở `HealthConfig`), chỉnh được không cần sửa luật.
 
+## Phụ kiện + trang trí vườn (Phase 5.2)
+
+Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của người chơi nên thú mất vẫn còn, thú mới nở vẫn đeo được. Chỉ để đẹp, không đổi chỉ số hay luật chăm sóc.
+
+- **Phụ kiện** (nút **Phụ kiện cho bé...** trong quầy):
+
+  | Món | Giá |
+  |---|---|
+  | Nơ hồng (cài lệch 1 bên đầu) | 80 |
+  | Mũ len (có quả bông) | 120 |
+  | Khăn quàng sọc | 100 |
+  | Vương miện vàng | 250 |
+
+  - Mua xong thú đeo luôn và nhảy lên khoe. Mỗi lúc đeo 1 món.
+  - Chạm món đã có để đeo, chạm món đang đeo để tháo.
+  - Ra sân tập thú vẫn đeo.
+- **Trang trí vườn** (nút **Trang trí vườn...**). Mỗi món có chỗ riêng:
+
+  | Món | Giá | Chỗ |
+  |---|---|---|
+  | Dây đèn lồng (3 lồng đung đưa) | 150 | Giữa hồ và sân tập |
+  | Ghế gỗ | 120 | Trước hồ |
+  | Cối xay gió (cánh quay) | 300 | Sau chòi ăn |
+  | Vòm hoa | 200 | Phía trước bên trái |
+
+  - Mua xong camera lia tới, món đó bật lên từ mặt đất, rồi camera quay về thú.
+  - Thú đi vòng qua đồ trang trí, không đi xuyên.
+- **Âm thanh:** "ting-ting" khi nhận Coin, "cạch-ting" khi tiêu Coin. Quầy hàng và hình nộm nảy nhẹ khi chạm.
+- Giá nằm ở `EconomyConfig.AccessoryPrices` / `DecorPrices`.
+
 ## Công cụ test (chỉ Editor / bản Development)
 
 - Nút **DEV** góc trên trái màn hình (hoặc phím `F1`) mở bảng test:
@@ -167,6 +197,7 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Tiến hóa: xem giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến. Nút **+1 ngày tuổi**, **Lên giai đoạn**, **Thuộc 1 chiêu**, **+10** từng hướng tập.
   - Nút **Huấn luyện** / **Đấu Bot Thường**: vào sân tập ngay, không cần đi tới hình nộm.
   - Kinh tế: xem Coin, lượt quảng cáo còn lại, tổng đã nhận / đã tiêu. Nút **+100 Coin** / **-100 Coin** / **Trả lượt QC** / **Mở quầy hàng** / **QC: hết hàng** (giả lập không có quảng cáo).
+  - Phụ kiện / trang trí: xem đang đeo gì, có mấy món. Nút **Có hết đồ (test)** (có hết, không trừ Coin) và **Đổi phụ kiện** (lần lượt từng món).
   - Tua giờ +1 / +6 / +24.
   - **Thú mới** (DNA ngẫu nhiên).
   - Đổi model Gen 1 ↔ thú tạm, LOD0 ↔ LOD1, shader riêng ↔ URP Lit.
@@ -193,12 +224,12 @@ dotnet build Tools/UnityCompileCheck
 | Thư mục | Nội dung |
 |---|---|
 | `Assets/PawFit/Scripts/Core` | Service nền, C# thuần: ServiceLocator, EventBus, thời gian, random có seed, lưu JSON, config |
-| `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ |
-| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx` |
-| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn (có quầy hàng), camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
+| `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ, âm thanh tạo bằng code `SynthAudio` |
+| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx`, phụ kiện `AccessoryView` |
+| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
 | `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt |
-| `Assets/PawFit/Scripts/Economy` | Kinh tế (C# thuần): ví Coin + quảng cáo `EconomyService`, quầy hàng `ShopService`, cổng quảng cáo `IAdService` + bản giả lập `MockAdService` |
-| `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow (chuyển màn, quầy hàng, quảng cáo), Debug overlay |
+| `Assets/PawFit/Scripts/Economy` | Kinh tế (C# thuần): ví Coin + quảng cáo `EconomyService`, quầy hàng `ShopService`, phụ kiện + trang trí `CosmeticsService`, cổng quảng cáo `IAdService` + bản giả lập `MockAdService` |
+| `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow (chuyển màn, quầy hàng, quảng cáo, phụ kiện, trang trí), tiếng Coin `UiSounds`, Debug overlay |
 | `Assets/PawFit/Resources/Pets/Gen1` | Model thú Gen 1 (FBX bản 2: thân LOD0 / LOD1 + blendshape + xương + mọi kiểu bộ phận) + file mốc neo JSON |
 | `Assets/PawFit/Resources/Shaders` | Shader URP `PawFit/Gen1Fur` (lông theo vertex color, bẩn) + `PawFit/Gen1Eye` (mắt vẽ bằng toán) |
 | `Assets/PawFit/Editor` | Menu Setup Project · tự đặt thông số import FBX Gen 1 |

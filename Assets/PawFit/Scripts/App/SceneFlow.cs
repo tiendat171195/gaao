@@ -12,11 +12,14 @@ namespace PawFit.App
 {
     /// <summary>
     /// Chuyển màn: Vườn (dọc) ⇄ Sân tập / Màn đấu (ngang). Phase 5.1: quầy hàng + quảng cáo giả lập trong vườn.
+    /// Phase 5.2: thẻ Phụ kiện / Trang trí trong quầy hàng.
     /// Phase 4.2 thêm PvP ở cổng đấu trường. Chỉ nối UI với service — luật nằm ở BattleSession / ShopService / EconomyService.
     /// </summary>
     public static class SceneFlow
     {
         private static readonly string[] DummyNames = { "Hình nộm Dễ", "Hình nộm Thường", "Hình nộm Khó" };
+        private static readonly string[] AccessoryNames = { "", "Nơ hồng", "Mũ len", "Khăn quàng", "Vương miện" };
+        private static readonly string[] DecorNames = { "", "Dây đèn lồng", "Ghế gỗ", "Cối xay gió", "Vòm hoa" };
         private static ServiceLocator _services;
 
         public static GardenScene Garden { get; private set; }
@@ -74,7 +77,7 @@ namespace PawFit.App
         // Quầy hàng (Phase 5.1)
         // ------------------------------------------------------------------
 
-        /// <summary>Chạm quầy hàng: thẻ có số Coin, 3 món (xám nếu chưa mua được), 2 kiểu quảng cáo, Thôi.</summary>
+        /// <summary>Chạm quầy hàng: thẻ có số Coin, 3 món dùng ngay (xám nếu chưa mua được), Phụ kiện, Trang trí, 2 kiểu quảng cáo, Thôi.</summary>
         public static void OpenShop()
         {
             if (Garden == null || Battle != null) return;
@@ -91,6 +94,12 @@ namespace PawFit.App
                 enabled.Add(r == ShopRefusal.None);
                 actions.Add(() => Buy(item));
             }
+            labels.Add("Phụ kiện cho bé...");
+            enabled.Add(true);
+            actions.Add(OpenAccessories);
+            labels.Add("Trang trí vườn...");
+            enabled.Add(true);
+            actions.Add(OpenDecor);
             AdRefusal coinAd = eco.CanWatchAd(AdReward.Coins);
             labels.Add("Xem quảng cáo: +" + e.AdCoins + " Coin" + AdNote(coinAd));
             enabled.Add(coinAd == AdRefusal.None);
@@ -121,6 +130,87 @@ namespace PawFit.App
             if (pet != null && pet.Avatar != null) pet.Avatar.PlayEat();   // bé ăn bánh / uống nước / uống thuốc ngay
             GardenUi.Toast(ItemName(item) + ": -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin");
         }
+
+        /// <summary>Thẻ Phụ kiện: món chưa có = mua (mua xong đeo luôn); món đã có = chạm để đeo / tháo. Mỗi lúc đeo 1 món.</summary>
+        private static void OpenAccessories()
+        {
+            var cos = _services.Get<CosmeticsService>();
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            var actions = new List<Action>();
+            foreach (AccessoryKind a in CosmeticsService.Accessories)
+            {
+                string name = AccessoryNames[(int)a];
+                if (cos.Owns(a))
+                {
+                    bool wearing = cos.Equipped == a;
+                    labels.Add(name + (wearing ? " · đang đeo (chạm để tháo)" : " · đã có (chạm để đeo)"));
+                    enabled.Add(true);
+                    actions.Add(() =>
+                    {
+                        cos.Toggle(a);
+                        GardenUi.Toast(wearing ? "Đã tháo " + name : "Bé đeo " + name);
+                    });
+                    continue;
+                }
+                CosmeticRefusal r = cos.CheckBuy(a);
+                labels.Add(name + " · " + cos.PriceOf(a) + " Coin" + (r == CosmeticRefusal.NotEnoughCoins ? " (thiếu Coin)" : ""));
+                enabled.Add(r == CosmeticRefusal.None);
+                actions.Add(() => BuyAccessory(a));
+            }
+            labels.Add("Quay lại");
+            enabled.Add(true);
+            actions.Add(OpenShop);
+            string body = "Bạn có " + _services.Get<EconomyService>().Coins + " Coin · mỗi lúc đeo 1 món\nChỉ để đẹp, không đổi chỉ số";
+            if (!_services.Get<PetService>().HasPet) body += " · thú mới nở sẽ đeo";
+            GardenUi.ShowChoice("Phụ kiện", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
+        }
+
+        private static void BuyAccessory(AccessoryKind a)
+        {
+            var cos = _services.Get<CosmeticsService>();
+            int price = cos.PriceOf(a);
+            CosmeticRefusal r = cos.Buy(a);
+            GardenUi.Toast(r == CosmeticRefusal.None
+                               ? "Bé đeo " + AccessoryNames[(int)a] + " · -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin"
+                               : "Chưa mua được: " + Why(r));
+        }
+
+        /// <summary>Thẻ Trang trí: mua 1 lần, món đó đứng luôn ở chỗ của nó trong vườn (camera lia tới cho xem).</summary>
+        private static void OpenDecor()
+        {
+            var cos = _services.Get<CosmeticsService>();
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            var actions = new List<Action>();
+            foreach (DecorKind d in CosmeticsService.Decorations)
+            {
+                string name = DecorNames[(int)d];
+                CosmeticRefusal r = cos.CheckBuy(d);
+                labels.Add(r == CosmeticRefusal.AlreadyOwned ? name + " (đã có trong vườn)"
+                               : name + " · " + cos.PriceOf(d) + " Coin" + (r == CosmeticRefusal.NotEnoughCoins ? " (thiếu Coin)" : ""));
+                enabled.Add(r == CosmeticRefusal.None);
+                actions.Add(() => BuyDecor(d));
+            }
+            labels.Add("Quay lại");
+            enabled.Add(true);
+            actions.Add(OpenShop);
+            string body = "Bạn có " + _services.Get<EconomyService>().Coins + " Coin\nMua 1 lần là có mãi, mỗi món có chỗ riêng trong vườn";
+            GardenUi.ShowChoice("Trang trí vườn", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
+        }
+
+        private static void BuyDecor(DecorKind d)
+        {
+            var cos = _services.Get<CosmeticsService>();
+            int price = cos.PriceOf(d);
+            CosmeticRefusal r = cos.Buy(d);   // vườn nghe DecorAdded: dựng món mới + camera lia tới
+            GardenUi.Toast(r == CosmeticRefusal.None
+                               ? DecorNames[(int)d] + " đã vào vườn · -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin"
+                               : "Chưa mua được: " + Why(r));
+        }
+
+        private static string Why(CosmeticRefusal r) =>
+            r == CosmeticRefusal.NotEnoughCoins ? "thiếu Coin" : r == CosmeticRefusal.AlreadyOwned ? "đã có rồi" : r.ToString();
 
         /// <summary>Quảng cáo tự nguyện: màn giả lập đếm ngược (bản dev), xem hết thì thưởng, xong mở lại quầy.</summary>
         private static void WatchAd(AdReward reward)

@@ -60,6 +60,15 @@ namespace PawFit.Pet.View
 
         /// <summary>Đỉnh đầu (chỗ hiện bong bóng / Zzz).</summary>
         Vector3 HeadTop { get; }
+
+        /// <summary>
+        /// Chỗ gắn phụ kiện (Phase 5.2): nằm ở tâm đầu, xoay / co giãn theo đầu. Trục local: +Y lên trên, +Z hướng mặt.
+        /// null nếu chưa dựng xong.
+        /// </summary>
+        Transform HeadAnchor { get; }
+
+        /// <summary>Bán kính đầu tính theo đơn vị local của <see cref="HeadAnchor"/> (để phụ kiện vừa khít đầu).</summary>
+        float HeadRadius { get; }
     }
 
     /// <summary>Màu thú suy ra từ DNA — dùng chung cho thú tạm và model Gen 1.</summary>
@@ -122,6 +131,8 @@ namespace PawFit.Pet.View
 
         public Vector3 MouthPosition => _head != null ? _head.TransformPoint(new Vector3(0f, -0.15f, 0.45f)) : transform.position;
         public Vector3 HeadTop => _head != null ? _head.position + Vector3.up * 0.45f : transform.position + Vector3.up * 1.2f;
+        public Transform HeadAnchor => _head;
+        public float HeadRadius { get; private set; } = 0.25f;
 
         public void Build(PetDna dna)
         {
@@ -151,6 +162,7 @@ namespace PawFit.Pet.View
 
             // đầu (to / nhỏ theo gene HeadSize)
             float hs = 0.5f + dna.HeadSize / 15f * 0.14f;
+            HeadRadius = hs * 0.5f;
             _head = Prim.Group(_visual, "Head", new Vector3(0f, bodyY + 0.3f, 0.34f));
             Prim.Make(PrimitiveType.Sphere, _head, Vector3.zero, Vector3.one * hs, fur);
             Prim.Make(PrimitiveType.Sphere, _head, new Vector3(0f, -0.07f, 0.2f), new Vector3(0.22f, 0.17f, 0.17f), belly, name: "Muzzle");

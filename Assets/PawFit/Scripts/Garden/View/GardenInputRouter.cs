@@ -35,6 +35,7 @@ namespace PawFit.Garden.View
         private EggView _downEgg;
         private MemorialStone _downStone;
         private TrainingDummyView _downDummy;
+        private ShopStallView _downShop;
         private PointerGestureClassifier _gestures;
         private GardenCamera _camCtl;
         private PetController _pet;
@@ -94,6 +95,7 @@ namespace PawFit.Garden.View
             _downEgg = null;
             _downStone = null;
             _downDummy = null;
+            _downShop = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -104,7 +106,8 @@ namespace PawFit.Garden.View
                 if (_downStone != null) return PointerTarget.Memorial;
                 _downDummy = hit.collider.GetComponentInParent<TrainingDummyView>();
                 if (_downDummy != null) return PointerTarget.Dummy;
-                if (hit.collider.GetComponentInParent<ShopStallView>() != null) return PointerTarget.Shop;
+                _downShop = hit.collider.GetComponentInParent<ShopStallView>();
+                if (_downShop != null) return PointerTarget.Shop;
             }
             return PointerTarget.Ground;
         }
@@ -128,11 +131,19 @@ namespace PawFit.Garden.View
                     else HandleGround(e, screen, onGround, g);
                     break;
                 case PointerTarget.Dummy:
-                    if (e.Kind == GestureKind.Tap && _downDummy != null) DummyTapped?.Invoke(_downDummy.Level);
+                    if (e.Kind == GestureKind.Tap && _downDummy != null)
+                    {
+                        TapBounce.Play(_downDummy);
+                        DummyTapped?.Invoke(_downDummy.Level);
+                    }
                     else HandleGround(e, screen, onGround, g);
                     break;
                 case PointerTarget.Shop:
-                    if (e.Kind == GestureKind.Tap) ShopTapped?.Invoke();
+                    if (e.Kind == GestureKind.Tap)
+                    {
+                        TapBounce.Play(_downShop);
+                        ShopTapped?.Invoke();
+                    }
                     else HandleGround(e, screen, onGround, g);   // kéo từ quầy = kéo camera
                     break;
                 default: HandleGround(e, screen, onGround, g); break;

@@ -67,6 +67,7 @@ namespace PawFit.Battle.View
             host.transform.localRotation = Quaternion.Euler(0f, 65f, 0f);
             IPetAvatar avatar = PetAvatarFactory.Create(host, _pets.Current.Dna, PetController.UsePlaceholder);
             avatar.SetGrowth(_evo.Look);
+            AccessoryView.Attach(avatar, _pets.Cosmetics?.Equipped ?? AccessoryKind.None);   // ra trận vẫn đeo phụ kiện
             _playerFx = host.AddComponent<PetMoodFx>();
             _playerFx.Init(avatar);
             _player = p.gameObject.AddComponent<FighterRig>();

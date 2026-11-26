@@ -35,6 +35,7 @@ namespace PawFit.Garden.View
         private IDisposable _careSub, _createdSub, _evolvedSub, _dnaSub;
         private NVec2 _sentTarget = NoTarget;
         private PetActivity _lastActivity = (PetActivity)(-1);
+        private AccessoryKind _accessory;
         private bool _dead;
 
         public IPetAvatar Avatar => _avatar;
@@ -106,7 +107,17 @@ namespace PawFit.Garden.View
             if (_avatar is MonoBehaviour old) Destroy(old);   // OnDestroy của avatar tự xóa phần hình
             _avatar = PetAvatarFactory.Create(gameObject, dna, UsePlaceholder);
             _fx.Init(_avatar);
+            AccessoryView.Attach(_avatar, _accessory);
             _lastActivity = (PetActivity)(-1);
+        }
+
+        /// <summary>Đeo / tháo phụ kiện (Phase 5.2). `celebrate` = vừa đổi trong quầy: thú nhảy lên khoe.</summary>
+        public void SetAccessory(AccessoryKind kind, bool celebrate = false)
+        {
+            _accessory = kind;
+            if (_dead || _avatar == null) return;
+            AccessoryView.Attach(_avatar, kind);
+            if (celebrate && kind != AccessoryKind.None && !IsIll) _avatar.PlayHop();
         }
 
         private void OnDestroy()

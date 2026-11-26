@@ -144,6 +144,29 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
     - Bản dev dùng `MockAdService` (3 giây). Phase 5.3 thay bằng SDK thật qua `IAdService`.
   - Thắng hình nộm Dễ / Thường / Khó: +5 / +10 / +15 Coin. Bỏ cuộc và Huấn luyện không có Coin.
   - Số tôi điền thêm: thưởng Coin khi thắng Bot (để có nguồn Coin trước khi có PvP), giá + tác dụng của bánh và nước.
+- **G12 · Phụ kiện + trang trí (Phase 5.2, `CosmeticsService`, giá ở `EconomyConfig`):** phần này tôi tự thiết kế vì GDD gốc chưa có, bạn sửa thoải mái.
+  - Chỉ để đẹp: không đổi chỉ số (PvP công bằng), không đổi luật chăm sóc.
+  - Mua 1 lần là có mãi. Đồ là của người chơi: thú mất vẫn còn, thú mới nở vẫn đeo. File lưu bản 4 (`GameSave.Cosmetics`).
+  - Phụ kiện gắn vào tâm đầu (`IPetAvatar.HeadAnchor`), cỡ theo bán kính đầu, nên vừa cả Baby lẫn Adult. Gen 2 chỉ cần cài lại `HeadAnchor`.
+
+    | Phụ kiện | Giá |
+    |---|---|
+    | Nơ | 80 |
+    | Mũ len | 120 |
+    | Khăn quàng | 100 |
+    | Vương miện | 250 |
+
+    - Mỗi lúc đeo 1 món. Mua xong tự đeo; chạm món đã có để đeo / tháo.
+  - Trang trí có chỗ cố định trong vườn và là vật cản (NavMesh nướng lại khi mua):
+
+    | Trang trí | Giá | Chỗ |
+    |---|---|---|
+    | Dây đèn lồng | 150 | Giữa hồ và sân tập |
+    | Ghế gỗ | 120 | Trước hồ |
+    | Cối xay gió | 300 | Sau chòi ăn |
+    | Vòm hoa | 200 | Phía trước bên trái |
+
+  - Mua hết khoảng 1.320 Coin, tức khoảng 2 tuần xem quảng cáo + thắng Bot.
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

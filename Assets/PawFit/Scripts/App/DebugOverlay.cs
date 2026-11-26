@@ -17,6 +17,7 @@ namespace PawFit.App
     ///  * bệnh: Mệt / Ốm / Nguy kịch / Chết ngay, uống thuốc, trứng nở ngay
     ///  * tiến hóa: giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến; thêm tuổi / điểm tập / chiêu
     ///  * kinh tế: số Coin, lượt quảng cáo còn lại; +/- 100 Coin, trả lại lượt quảng cáo, mở quầy hàng, giả lập hết quảng cáo
+    ///  * phụ kiện / trang trí: đang đeo gì, có mấy món; nút có hết đồ (không trừ Coin)
     ///  * thú mới DNA ngẫu nhiên, đổi model Gen 1 / thú tạm, LOD0 / LOD1, shader riêng / URP Lit
     /// Mở / đóng: nút "DEV" góc trên trái, hoặc phím F1. Phím tắt: 1 / 2 / 3 tua +1 / +6 / +24 giờ, N in nhu cầu.
     /// Chỉ GỌI service (logic nằm ở PetService / DebugTimeProvider), không tự sửa luật game.
@@ -215,6 +216,19 @@ namespace PawFit.App
             if (GUILayout.Button("Mở quầy hàng", _button)) SceneFlow.OpenShop();
             if (eco.Ads is MockAdService mock && GUILayout.Button(mock.NoFill ? "QC: có lại" : "QC: hết hàng", _button))
                 mock.NoFill = !mock.NoFill;
+            GUILayout.EndHorizontal();
+            if (!S.TryGet(out CosmeticsService cos)) return;
+            CosmeticsData c = S.Get<PetService>().Cosmetics;
+            if (c == null) return;
+            GUILayout.Label($"Phụ kiện: đang đeo {cos.Equipped} · có {c.Accessories.Count}/{CosmeticsService.Accessories.Length} · " +
+                            $"trang trí {c.Decor.Count}/{CosmeticsService.Decorations.Length}", _label);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Có hết đồ (test)", _button)) cos.GrantAllForDebug();
+            if (GUILayout.Button("Đổi phụ kiện", _button))   // lần lượt: không đeo -> Nơ -> Mũ -> Khăn -> Vương miện -> không đeo
+            {
+                AccessoryKind next = (AccessoryKind)(((int)cos.Equipped + 1) % (CosmeticsService.Accessories.Length + 1));
+                if (cos.Equip(next) == CosmeticRefusal.NotOwned) cos.Equip(AccessoryKind.None);
+            }
             GUILayout.EndHorizontal();
         }
 

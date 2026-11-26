@@ -494,17 +494,8 @@ namespace PawFit.Pet.View
                 return env * 0.4f * (Mathf.Sin(Phase(f, t)) + 0.35f * Mathf.Sin(3f * Phase(f, t)));
             });
 
-        private static float Phase(float freq, float t) => 2f * Mathf.PI * freq * t;
+        private static float Phase(float freq, float t) => SynthAudio.Phase(freq, t);
 
-        private static AudioClip Synth(string name, float seconds, System.Func<float, float> sample)
-        {
-            const int rate = 22050;
-            int n = Mathf.CeilToInt(seconds * rate);
-            var data = new float[n];
-            for (int i = 0; i < n; i++) data[i] = Mathf.Clamp(sample(i / (float)rate), -1f, 1f);
-            AudioClip clip = AudioClip.Create(name, n, 1, rate, false);
-            clip.SetData(data, 0);
-            return clip;
-        }
+        private static AudioClip Synth(string name, float seconds, System.Func<float, float> sample) => SynthAudio.Make(name, seconds, sample);
     }
 }

@@ -87,6 +87,7 @@ namespace UnityEngine
         public Vector3 localScale { get; set; }
         public void SetParent(Transform parent, bool worldPositionStays) { }
         public void SetAsLastSibling() { }
+        public Transform Find(string n) => null;
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation) { }
         public Vector3 TransformPoint(Vector3 position) => position;
     }
@@ -158,6 +159,7 @@ namespace UnityEngine
     public static class Mathf
     {
         public const float PI = 3.14159265f;
+        public const float Deg2Rad = PI / 180f;
         public const float Rad2Deg = 57.29578f;
         public static float Sign(float f) => 1f;
         public static float Atan2(float y, float x) => 0f;
@@ -604,6 +606,8 @@ namespace UnityEngine.AI
                                           List<NavMeshBuildMarkup> markups, List<NavMeshBuildSource> results) { }
         public static NavMeshData BuildNavMeshData(NavMeshBuildSettings buildSettings, List<NavMeshBuildSource> sources,
                                                    Bounds localBounds, Vector3 position, Quaternion rotation) => null;
+        public static bool UpdateNavMeshData(NavMeshData data, NavMeshBuildSettings buildSettings, List<NavMeshBuildSource> sources,
+                                             Bounds localBounds) => true;
     }
 }
 

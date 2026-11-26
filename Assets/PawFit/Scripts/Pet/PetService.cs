@@ -31,8 +31,11 @@ namespace PawFit.Pet
     /// <summary>File lưu game: 1 người = 1 thú (hoặc 1 quả trứng chờ nở) + các bia mộ.</summary>
     public sealed class GameSave
     {
-        /// <summary>2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). 3 = Phase 5.1 (thêm ví Coin). File bản cũ vẫn đọc được.</summary>
-        public const int CurrentVersion = 3;
+        /// <summary>
+        /// 2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). 3 = Phase 5.1 (thêm ví Coin). 4 = Phase 5.2 (thêm phụ kiện + trang trí).
+        /// File bản cũ vẫn đọc được.
+        /// </summary>
+        public const int CurrentVersion = 4;
         public int Version = CurrentVersion;
 
         /// <summary>Thú đang sống. null khi thú đã mất và trứng chưa nở.</summary>
@@ -48,6 +51,9 @@ namespace PawFit.Pet
         /// đọc ra null, lúc đó mới cấp số Coin khởi đầu (xem <see cref="PetService.Wallet"/>).
         /// </summary>
         public WalletData Wallet;
+
+        /// <summary>Phụ kiện + đồ trang trí đã mua (còn nguyên khi thú mất). File cũ chưa có thì tạo rỗng khi cần.</summary>
+        public CosmeticsData Cosmetics;
     }
 
     // ---- Sự kiện (View lắng nghe qua EventBus) ----
@@ -135,6 +141,19 @@ namespace PawFit.Pet
             {
                 if (_game == null) return null;
                 return _game.Wallet ?? (_game.Wallet = new WalletData { Coins = _cfg.Economy.StartCoins });
+            }
+        }
+
+        /// <summary>Phụ kiện + đồ trang trí đã mua (CosmeticsService đọc / ghi qua đây). null nếu chưa nạp file lưu.</summary>
+        public CosmeticsData Cosmetics
+        {
+            get
+            {
+                if (_game == null) return null;
+                CosmeticsData c = _game.Cosmetics ?? (_game.Cosmetics = new CosmeticsData());
+                if (c.Accessories == null) c.Accessories = new List<AccessoryKind>();   // file sửa tay / lỗi: không để null
+                if (c.Decor == null) c.Decor = new List<DecorKind>();
+                return c;
             }
         }
 
@@ -398,7 +417,7 @@ namespace PawFit.Pet
             };
         }
 
-        /// <summary>Đọc file lưu bản cũ: bổ sung phần còn thiếu (bản 1 chưa có sức khỏe / trứng / bia mộ; bản 2 chưa có ví — ví tạo khi cần).</summary>
+        /// <summary>Đọc file lưu bản cũ: bổ sung phần còn thiếu (bản 1 chưa có sức khỏe / trứng / bia mộ; bản 2 chưa có ví, bản 3 chưa có đồ trang trí — tạo khi cần).</summary>
         private static void Upgrade(GameSave g)
         {
             if (g.Memorials == null) g.Memorials = new List<MemorialEntry>();

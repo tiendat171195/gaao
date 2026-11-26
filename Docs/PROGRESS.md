@@ -132,6 +132,27 @@
     - Bảng DEV có mục Kinh tế.
   - Test: 149/149 pass · compile check: pass
 
+- **Phase 5.2** — Phụ kiện + trang trí vườn + polish:
+  - Core: `AccessoryKind` (Nơ, Mũ len, Khăn quàng, Vương miện), `DecorKind` (Dây đèn lồng, Ghế gỗ, Cối xay gió, Vòm hoa), `CosmeticsData`, sự kiện `AccessoryChanged` / `DecorAdded`, giá ở `EconomyConfig` (G12).
+  - File lưu bản 4: `GameSave.Cosmetics`. Đồ là của người chơi, thú mất vẫn còn. File bản 3 đọc ra là chưa có đồ.
+  - Logic (C# thuần, có test): `CosmeticsService`.
+    - Mua bằng Coin, mua 1 lần là có mãi.
+    - Phụ kiện mua xong tự đeo, mỗi lúc 1 món, chạm để đeo / tháo.
+    - Trang trí mua xong báo vườn dựng thêm.
+    - Công cụ test "có hết đồ".
+  - View:
+    - `IPetAvatar` thêm `HeadAnchor` + `HeadRadius` (Gen 1 = tâm đầu con của xương head; thú tạm = khối đầu).
+    - `AccessoryView` dựng 4 phụ kiện bằng khối, cỡ theo bán kính đầu, đeo cả ở vườn lẫn màn đấu.
+    - `DecorBuilder` dựng 4 món trang trí ở chỗ cố định, có vật cản. Cối xay quay, đèn lồng đung đưa (`DecorMotion`), mua xong bật lên (`PopIn`).
+    - `GardenScene` dựng sẵn đồ đã mua trước khi nướng NavMesh. Mua món mới thì camera lia tới rồi nướng lại NavMesh tại chỗ (`NavMeshBuilder.UpdateNavMeshData`).
+    - Ảnh kiểm tra: `Docs/art/09_phu_kien_trang_tri_kiem_tra.jpg`. Phụ kiện đeo trên FBX Gen 1 thật trong Blender; đồ trang trí dựng lại đúng các khối trên bản đồ vườn.
+  - Polish:
+    - `SynthAudio` (Core.Unity) dùng chung việc tạo âm thanh bằng code. `UiSounds` kêu "ting-ting" khi nhận Coin, "cạch-ting" khi tiêu.
+    - `TapBounce`: quầy hàng + hình nộm nảy nhẹ khi chạm.
+    - Thú nhảy lên khoe khi đeo phụ kiện mới.
+  - App: quầy hàng có thêm thẻ **Phụ kiện cho bé...** / **Trang trí vườn...**. Bảng DEV có **Có hết đồ (test)**, **Đổi phụ kiện**.
+  - Test: 157/157 pass · compile check: pass
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -140,6 +161,7 @@
 - Thú trong game Phase 1.3: thân mượt kiểu thú bông (vertex color + viền sáng), chưa có lông. Lông shell làm ở Phase 6.
 - Điện thoại dùng LOD1, PC / Editor dùng LOD0 (đổi được trong bảng DEV).
 - Ốm mà chăm đủ thì bệnh dừng nặng thêm nhưng không tự khỏi; phải chăm kỹ hoặc uống thuốc (G4). Thuốc mua ở quầy hàng bằng Coin (Phase 5.1).
+- Phụ kiện + trang trí chỉ để đẹp, không đổi chỉ số (PvP công bằng). Đồ trang trí có chỗ cố định, không cho tự kéo thả.
 - Phase 5.1 làm trước Phase 4 (bạn chọn). Quầy hàng bán đồ dùng ngay, không có túi đồ. Ví nằm chung file lưu game (Phase 4.1 đồng bộ cùng hồ sơ người chơi).
 - Quảng cáo đếm "ngày" theo giờ trên máy cho tới khi có giờ server (Phase 4.1).
 - Thú mất thì xóa khỏi file lưu (chỉ còn bia mộ + trứng). Công cụ test "Thú mới" vẫn giữ bia mộ cũ.
@@ -149,7 +171,7 @@
 
 ## Tiếp theo
 
-- **Phase 5.2** — Trang trí + phụ kiện + polish (làm tiếp được ngay, không cần tài khoản ngoài).
+- **Phase 5.3** — Build Android / iOS. Tôi chuẩn bị được trong repo: menu build, Player Settings (tên gói, xoay màn hình, icon tạm), tắt quảng cáo giả trong bản phát hành. **Cần bạn:** build và chạy thử trên máy có Unity (iOS cần Mac + Xcode); container không có Unity.
 - **Phase 4.1** — Firebase Auth + Firestore + giờ server. **Cần bạn:** tạo project Firebase, bật Auth (ẩn danh / Google), Firestore, tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS), và cài Firebase Unity SDK. Trước khi có các thứ đó, tôi chỉ làm được interface + bản giả lập (Mock).
 
 ## Ghi chú cho session sau

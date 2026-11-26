@@ -141,6 +141,10 @@ namespace PawFit.Pet.View
             ? _headAnchor.position + Vector3.up * (_headRadius * _headAnchor.lossyScale.y * 1.45f)
             : transform.position + Vector3.up * 1.2f;
 
+        /// <summary>Tâm đầu (con của xương head, tự dời / co giãn theo dáng tiến hóa) — phụ kiện gắn vào đây.</summary>
+        public Transform HeadAnchor => _headAnchor;
+        public float HeadRadius => _headRadius;
+
         private static void LoadKit()
         {
             if (_loadTried) return;

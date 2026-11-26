@@ -20,6 +20,41 @@ namespace PawFit.Garden.View
     {
     }
 
+    /// <summary>Đồ vật nảy nhẹ khi được chạm (quầy hàng, hình nộm): co xuống rồi bật lên, về đúng cỡ sau 0,35 giây.</summary>
+    public sealed class TapBounce : MonoBehaviour
+    {
+        private const float Seconds = 0.35f;
+        private Vector3 _rest;
+        private float _t = -1f;
+
+        /// <summary>Cho `target` nảy (tự gắn TapBounce nếu chưa có).</summary>
+        public static void Play(Component target)
+        {
+            if (target == null) return;
+            TapBounce b = target.GetComponent<TapBounce>();
+            if (b == null) b = target.gameObject.AddComponent<TapBounce>();
+            b.Bounce();
+        }
+
+        public void Bounce()
+        {
+            if (_t < 0f) _rest = transform.localScale;   // đang nảy dở thì giữ cỡ gốc cũ
+            _t = 0f;
+        }
+
+        private void Update()
+        {
+            if (_t < 0f) return;
+            _t += Time.deltaTime / Seconds;
+            float k = Mathf.Clamp01(_t);
+            float wave = -0.1f * Mathf.Sin(k * Mathf.PI * 2f) * (1f - k);   // âm = co xuống, dương = vươn lên
+            transform.localScale = Vector3.Scale(_rest, new Vector3(1f - wave * 0.5f, 1f + wave, 1f - wave * 0.5f));
+            if (k < 1f) return;
+            transform.localScale = _rest;
+            _t = -1f;
+        }
+    }
+
     public sealed class GardenBuildResult
     {
         public Transform Root;
