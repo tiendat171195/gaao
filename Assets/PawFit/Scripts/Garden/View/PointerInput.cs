@@ -58,7 +58,7 @@ namespace PawFit.Garden.View
             catch (InvalidOperationException)
             {
                 _failed = true;
-                Debug.LogError("[PawFit] Input cũ đang tắt. Chạy menu PawFit ▸ Setup Project (tự đặt Active Input Handling = Both) rồi khởi động lại Unity.");
+                Debug.LogError("[PawFit] Input cũ đang tắt. Chạy menu PawFit ▸ Setup Project (tự đặt Active Input Handling = Input Manager (Old)) rồi khởi động lại Unity.");
                 return default;
             }
         }

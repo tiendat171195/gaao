@@ -12,7 +12,9 @@ namespace PawFit.EditorTools
     /// Menu PawFit ▸ Setup Project (chạy lại bao nhiêu lần cũng được):
     ///  1. Tạo + gán URP Asset (kèm dữ liệu hậu kỳ để Bloom / Vignette chạy).
     ///  2. Tạo material gốc Resources/PawFit/LitBase (để bản build có shader URP Lit cho đồ vật dựng bằng code).
-    ///  3. Bật Input cũ (Active Input Handling = Both) — điều khiển chạm / chuột đang dùng Input Manager.
+    ///  3. Đặt Active Input Handling = Input Manager (Old): điều khiển chạm / chuột dùng Input Manager, project KHÔNG cài
+    ///     package Input System. Unity 6.3 báo lỗi "Active Input Handling is invalid" nếu chọn New / Both mà thiếu package đó
+    ///     (đã soát với mã nguồn Unity 6000.3); còn cảnh báo vàng "Input Manager is a legacy feature" thì bỏ qua được.
     ///  4. Cho phép xoay màn dọc + ngang (vườn dọc, đấu ngang — game tự khóa hướng theo từng màn).
     ///  5. Tạo scene Main + đưa vào Build Settings.
     /// </summary>
@@ -40,7 +42,7 @@ namespace PawFit.EditorTools
             AssetDatabase.SaveAssets();
             Debug.Log("[PawFit] Setup xong. Đặt Game view 1080x1920 (dọc), mở scene Main rồi bấm Play.");
             if (needRestart)
-                EditorUtility.DisplayDialog("PawFit", "Đã bật Input cũ (Active Input Handling = Both).\nHãy khởi động lại Unity để áp dụng.", "OK");
+                EditorUtility.DisplayDialog("PawFit", "Đã đặt Active Input Handling = Input Manager (Old).\nHãy khởi động lại Unity để áp dụng.", "OK");
         }
 
         private static void SetupUrp()
@@ -121,8 +123,8 @@ namespace PawFit.EditorTools
             if (settings == null || settings.Length == 0) return false;
             var so = new SerializedObject(settings[0]);
             SerializedProperty p = so.FindProperty("activeInputHandler");   // 0 = cũ, 1 = mới, 2 = cả hai
-            if (p == null || p.intValue != 1) return false;
-            p.intValue = 2;
+            if (p == null || p.intValue == 0) return false;   // không có package Input System => chỉ 0 là hợp lệ
+            p.intValue = 0;
             so.ApplyModifiedProperties();
             return true;
         }

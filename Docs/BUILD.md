@@ -64,6 +64,8 @@ Lỡ cài Unity rồi mà chưa có Android: **Installs** ▸ bấm ⚙ ở bả
    - Mở **Window ▸ General ▸ Console**, chụp hoặc copy các dòng đỏ gửi tôi. Tôi chưa chạy được Unity thật nên có thể lỗi ở chỗ này.
 5. Nếu Package Manager báo lỗi phiên bản: **Window ▸ Package Manager**, chọn package đó ▸ cài bản được gợi ý.
 6. Menu trên cùng ▸ **PawFit ▸ Setup Project**. Nếu hiện hộp thoại bảo khởi động lại Unity thì tắt Unity rồi mở lại project.
+   - Setup đặt **Active Input Handling = Input Manager (Old)**: game dùng Input cũ, không cài package Input System.
+   - Trong Player Settings sẽ có cảnh báo vàng "The Input Manager is a legacy feature..." — bình thường, bỏ qua.
 
 ## 5. Chạy thử trong Unity (nên làm trước khi build)
 
@@ -155,6 +157,7 @@ Nên commit + push các file Unity tự sinh sau lần mở đầu (các file `.
 | Build lỗi Gradle (Could not resolve / timeout) | Kiểm tra mạng (lần đầu Gradle phải tải thư viện) rồi build lại. Vẫn lỗi thì gửi tôi |
 | Điện thoại báo "Không cài được ứng dụng" | Gỡ bản PawFit cũ trên máy rồi cài lại. Máy quá cũ (32-bit) thì không chạy được bản ARM64 |
 | Game mở rồi tắt ngay | Cắm USB, chạy `"$ADB" logcat -s Unity` (xem bước 7, cách 3), mở game lại, copy các dòng in ra gửi tôi |
+| Console đỏ "You are trying to read Input using the UnityEngine.Input class..." hoặc Player Settings đỏ "Active Input Handling is invalid" | Chạy **PawFit ▸ Setup Project** rồi khởi động lại Unity (Setup đặt lại Input Manager (Old)) |
 | Thú là khối vuông tròn | Model Gen 1 chưa nạp được: trong Unity chuột phải `Assets/PawFit/Resources/Pets/Gen1` ▸ **Reimport**, build lại |
 
 ## 11. Gửi lỗi cho tôi thế nào

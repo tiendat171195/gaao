@@ -165,6 +165,12 @@
     - Menu build tự đặt làm icon mặc định (`PlayerSettings.SetIcons`).
     - Script render: Blender + `check_kit.spawn`, camera 85 mm nhìn đầu + ngực, nền gradient xanh vườn.
   - Test: 158/158 pass · compile check: pass (cả chế độ Editor lẫn chế độ bản phát hành không có `UNITY_EDITOR`)
+  - **Soát API với mã nguồn Unity thật** (UnityCsReference, tag `6000.3.29f1`, bạn cho phép đọc). Script: `Tools/ApiAudit/api_audit.py`.
+    - 462 thành viên engine + editor mà code dùng: đều có, đúng namespace. Chữ ký các hàm có tham số đã soát tay, gồm `AudioClip.Create` (bản 5 tham số), `Physics.Raycast(Ray, out hit, float)`, `NavMeshBuilder.CollectSources / BuildNavMeshData / UpdateNavMeshData`, `BuildPipeline.BuildPlayer(BuildPlayerOptions)`, `PlayerSettings.SetIcons / SetApplicationIdentifier / SetScriptingBackend(NamedBuildTarget, ...)`.
+    - `NavMeshBuildMarkup.applyToChildren` mặc định = true, nên đánh dấu vật cản áp dụng cho cả object con.
+    - **Sửa lỗi:** Setup đặt Active Input Handling = Both, nhưng Unity 6.3 coi giá trị này là "invalid" khi không cài package Input System (và build coi như bật Input System mới). Giờ Setup đặt Input Manager (Old) = 0, giá trị hợp lệ duy nhất cho project này.
+    - Stub `Scene` chuyển về đúng `UnityEngine.SceneManagement` (code không gõ tên kiểu này nên trước đó cũng không lỗi).
+    - Chưa soát được (cần repo `Unity-Technologies/Graphics`, chưa được phép đọc): API URP + SRP Core (URP Asset, Volume / Bloom / Tonemapping...) và shader HLSL. Đây là API ổn định từ URP 10+, rủi ro thấp.
 
 ## Quyết định đã chốt
 

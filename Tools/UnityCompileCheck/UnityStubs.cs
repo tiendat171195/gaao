@@ -807,13 +807,18 @@ namespace UnityEditor
     public static class EditorBuildSettings { public static EditorBuildSettingsScene[] scenes { get; set; } }
 }
 
+namespace UnityEngine.SceneManagement
+{
+    public struct Scene { }
+}
+
 namespace UnityEditor.SceneManagement
 {
+    using UnityEngine.SceneManagement;
+
     public enum NewSceneSetup { EmptyScene, DefaultGameObjects }
 
     public enum NewSceneMode { Single, Additive }
-
-    public struct Scene { }
 
     public static class EditorSceneManager
     {

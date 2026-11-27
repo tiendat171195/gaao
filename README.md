@@ -10,7 +10,7 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 4. Menu **PawFit ▸ Setup Project**. Bước này tự làm các việc sau:
    - Tạo + gán URP Asset.
    - Tạo material gốc `Resources/PawFit/LitBase`.
-   - Bật Input cũ.
+   - Đặt Active Input Handling = Input Manager (Old). Project không dùng package Input System. Cảnh báo vàng "Input Manager is a legacy feature" là bình thường.
    - Cho phép xoay dọc / ngang.
    - Tạo scene `Assets/PawFit/Scenes/Main.unity`.
    - Nếu Unity hiện hộp thoại "khởi động lại" thì tắt mở lại Unity.
