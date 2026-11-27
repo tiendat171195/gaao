@@ -31,8 +31,8 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 3.1 | SwipeRecognizer + BattleSimulation + Bot (logic thuần) | ✅ |
 | 3.2 | Màn đấu ngang + Mode Huấn luyện (bóng mờ, slow-mo, 10 lần = thuộc chiêu) | ✅ |
 | 4.1 | Firebase Auth + Firestore + giờ server | ⏳ |
-| 4.2 | PvP real-time Photon Fusion + tìm đối thủ (Elo ±100, lực chiến ±10%) | ⏳ |
-| 4.3 | Ranking Elo + bậc + mùa giải 30 ngày | ⏳ |
+| 4.2 | PvP real-time Photon Fusion + tìm đối thủ (Elo ±100, lực chiến ±10%) | 🔄 Logic ghép trận + `INetworkManager` + bản giả lập xong; Photon chờ tài khoản |
+| 4.3 | Ranking Elo + bậc + mùa giải 30 ngày | 🔄 Logic xong (chạy offline); đồng bộ máy chủ chờ 4.1 |
 | 5.1 | Kinh tế + shop vườn + quảng cáo mock (tối đa 5 lần/ngày) | ✅ |
 | 5.2 | Trang trí + phụ kiện + polish | ✅ |
 | 5.3 | Build Android / iOS | 🔄 Đã có menu build Android + iOS, chờ bạn build thử (`Docs/BUILD.md`) |
@@ -57,7 +57,8 @@ gaao/                            ← gốc repo = gốc project Unity
 │   │   │   └── View/ [Unity]                 BattleScene (màn ngang), BattleHud, FighterRig, DummyBuilder
 │   │   ├── Economy/ [PawFit.Economy, C# thuần] EconomyService (ví Coin + quảng cáo 5 lần/ngày), ShopService,
 │   │   │                                     CosmeticsService (phụ kiện + trang trí), IAdService + MockAdService
-│   │   ├── Network/                           (Phase 4)
+│   │   ├── Online/ [PawFit.Online, C# thuần] RankService (Elo + bậc + mùa), Matchmaker, INetworkManager +
+│   │   │                                     LocalNetworkManager (giả lập)
 │   │   └── App/    [PawFit.App, Unity]       GameBootstrap (composition root)
 │   ├── Resources/Pets/Gen1/                   PawFit_Gen1_PetKit.fbx + PawFit_Gen1_Anchors.json
 │   ├── Resources/Shaders/                     PawFit/Gen1Fur, PawFit/Gen1Eye (URP)

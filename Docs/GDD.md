@@ -125,6 +125,21 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Tốn sức: Huấn luyện năng lượng −6, no −4; Đấu năng lượng −10, no −6.
   - Ốm / đang ngủ: không vào được.
 - **G10 · Rank:** Elo khởi đầu 1000, K = 32. Bronze < 1100 ≤ Silver < 1300 ≤ Gold < 1500 ≤ Diamond < 1700 ≤ Master. Hết mùa reset mềm về 1000 + (Elo − 1000)/2. Tìm 30 giây chưa có trận thì nới khoảng; 60 giây thì gợi ý đấu Bot.
+- **G10b · Cách cài cụ thể (logic Phase 4, chạy offline, `RankService` + `Matchmaker` + `LocalNetworkManager`):**
+  - Elo làm tròn tới số nguyên. Thắng / thua người ngang cơ: ±16.
+  - Bậc cao nhất từng đạt của từng con thú ghi lên bia mộ. Elo là của người chơi, thú mới giữ nguyên Elo.
+  - Thắng PvP +30 Coin. Ốm / đang ngủ không đấu được.
+  - Mùa 1 bắt đầu 01/01/2026 (UTC), mỗi mùa 30 ngày.
+    - Sang mùa được tính khi mở game: vắng nhiều mùa thì reset mềm nhiều lần.
+    - Đồng hồ chỉnh lùi không đổi gì.
+  - Ghép trận:
+    - Lúc đầu Elo ±100 + lực chiến ±10% (so với bên mạnh hơn), tính theo người chờ lâu hơn.
+    - Chờ 30 giây: nới ra ±200 / ±20%. Hai số này tôi tự đặt, GDD chỉ ghi "nới khoảng".
+    - Chờ 60 giây: gợi ý đấu Bot nhưng vẫn tìm tiếp.
+    - Người chờ lâu nhất được ghép trước, với người gần Elo nhất.
+  - Mạng giả lập:
+    - "Người chơi giả" vào hàng chờ cách nhau 2–9 giây, Elo ±250, lực chiến ±30% quanh mình.
+    - Ghép trúng người giả thì máy tự điều khiển đối thủ bằng Bot.
 - **G11 · Kinh tế:**
   - Thức ăn cơ bản miễn phí, khởi đầu 200 Coin, thắng PvP +30, quảng cáo +20 Coin / +20 năng lượng.
   - Không có HUD: shop = quầy hàng trên map; đấu Bot = 3 hình nộm; PvP = cổng đấu trường; cài đặt = hòm thư ở cổng.

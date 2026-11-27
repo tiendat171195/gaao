@@ -1,0 +1,14 @@
+{
+    "name": "PawFit.Online",
+    "rootNamespace": "PawFit.Online",
+    "references": ["PawFit.Core", "PawFit.Pet", "PawFit.Battle"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

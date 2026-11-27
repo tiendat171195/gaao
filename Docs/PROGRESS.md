@@ -181,6 +181,21 @@
   - Test: 160/160 pass · compile check: pass
     - Chưa soát được (cần repo `Unity-Technologies/Graphics`, chưa được phép đọc): API URP + SRP Core (URP Asset, Volume / Bloom / Tonemapping...) và shader HLSL. Đây là API ổn định từ URP 10+, rủi ro thấp.
 
+- **Phase 4 phần không cần tài khoản** (làm trước khi có Firebase / Photon):
+  - Core:
+    - `RankTier`, `RankData`, sự kiện `RankChanged`, `RankConfig` + `MatchmakingConfig` (G10 / G10b).
+    - File lưu bản 5: `GameSave.Rank` (của người chơi), `PetData.BestTier` → bia mộ `BestRank`.
+  - Logic (C# thuần, assembly mới `PawFit.Online`, có test):
+    - `RankRules` + `RankService`: Elo K = 32, 5 bậc, mùa 30 ngày + reset mềm, thắng PvP +30 Coin, ốm cấm Rank.
+    - `MatchmakingRules` + `Matchmaker`: ±100 / ±10%, nới ±200 / ±20% sau 30 giây, gợi ý Bot sau 60 giây.
+    - `INetworkManager` + `LocalNetworkManager`: mạng giả lập ghép với người chơi giả theo đúng luật.
+  - View / App:
+    - Chạm cổng đấu trường → thẻ rank.
+    - Bảng DEV: Thắng / Thua PvP giả.
+    - `RankService` đăng ký trong `GameBootstrap`.
+  - Chưa làm: màn tìm trận + trận PvP với đối thủ (bản giả lập dùng được ngay, không cần tài khoản) — bước tiếp của 4.2.
+  - Test: 173/173 pass · compile check: pass · soát API: 467 thành viên khớp Unity 6000.3.29f1
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -199,6 +214,7 @@
 
 ## Tiếp theo
 
+- **Phase 4.2 (phần không cần tài khoản)** — Màn tìm trận ở cổng đấu trường (đếm giây, nới khoảng, gợi ý Bot), trận PvP 90 giây với đối thủ giả (thú khác, không phải hình nộm), thẻ kết quả có Elo / bậc / Coin. Photon thật thay `LocalNetworkManager` sau.
 - **Phase 5.3** — Bạn build Android theo `Docs/BUILD.md`, gửi lỗi Console / log điện thoại + số fps. Tôi sửa theo kết quả, rồi làm tiếp:
   - icon / tên hiển thị
   - khóa ký phát hành (keystore) + AAB cho Google Play

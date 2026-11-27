@@ -10,7 +10,8 @@
         "PawFit.Garden.View",
         "PawFit.Battle",
         "PawFit.Battle.View",
-        "PawFit.Economy"
+        "PawFit.Economy",
+        "PawFit.Online"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

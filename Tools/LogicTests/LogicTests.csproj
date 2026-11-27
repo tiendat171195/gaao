@@ -2,7 +2,7 @@
   <!--
     Chạy unit test logic C# thuần NGOÀI Unity (trong container / máy không có Unity):
         dotnet test Tools/LogicTests
-    Biên dịch đúng các file nguồn trong Assets (Core, Pet, Garden, Battle, Economy, Tests) — không copy code.
+    Biên dịch đúng các file nguồn trong Assets (Core, Pet, Garden, Battle, Economy, Online, Tests) — không copy code.
     LangVersion 9 = giống Unity 6, lỡ dùng cú pháp C# mới hơn là báo lỗi ngay.
   -->
   <PropertyGroup>
@@ -20,6 +20,7 @@
     <Compile Include="../../Assets/PawFit/Scripts/Garden/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Garden/View/**" />
     <Compile Include="../../Assets/PawFit/Scripts/Battle/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Battle/View/**" />
     <Compile Include="../../Assets/PawFit/Scripts/Economy/**/*.cs" />
+    <Compile Include="../../Assets/PawFit/Scripts/Online/**/*.cs" />
     <Compile Include="../../Assets/PawFit/Tests/EditMode/**/*.cs" />
   </ItemGroup>
   <ItemGroup>

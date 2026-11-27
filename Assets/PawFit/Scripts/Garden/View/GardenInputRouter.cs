@@ -33,6 +33,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm trúng hòm thư (mở cài đặt).</summary>
         public Action MailboxTapped { get; set; }
 
+        /// <summary>Chạm trúng cổng đấu trường (PvP / rank).</summary>
+        public Action ArenaTapped { get; set; }
+
         private Camera _cam;
         private IPointerInput _input;
         private EggView _downEgg;
@@ -40,6 +43,7 @@ namespace PawFit.Garden.View
         private TrainingDummyView _downDummy;
         private ShopStallView _downShop;
         private MailboxView _downMailbox;
+        private ArenaGateView _downArena;
         private PointerGestureClassifier _gestures;
         private GardenCamera _camCtl;
         private PetController _pet;
@@ -101,6 +105,7 @@ namespace PawFit.Garden.View
             _downDummy = null;
             _downShop = null;
             _downMailbox = null;
+            _downArena = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -115,6 +120,8 @@ namespace PawFit.Garden.View
                 if (_downShop != null) return PointerTarget.Shop;
                 _downMailbox = hit.collider.GetComponentInParent<MailboxView>();
                 if (_downMailbox != null) return PointerTarget.Mailbox;
+                _downArena = hit.collider.GetComponentInParent<ArenaGateView>();
+                if (_downArena != null) return PointerTarget.Arena;
             }
             return PointerTarget.Ground;
         }
@@ -158,6 +165,14 @@ namespace PawFit.Garden.View
                     {
                         TapBounce.Play(_downMailbox);
                         MailboxTapped?.Invoke();
+                    }
+                    else HandleGround(e, screen, onGround, g);
+                    break;
+                case PointerTarget.Arena:
+                    if (e.Kind == GestureKind.Tap)
+                    {
+                        TapBounce.Play(_downArena);
+                        ArenaTapped?.Invoke();
                     }
                     else HandleGround(e, screen, onGround, g);
                     break;

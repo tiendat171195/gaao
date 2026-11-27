@@ -25,6 +25,9 @@ namespace PawFit.Pet
         /// <summary>Lớn lên: giai đoạn tiến hóa, dạng Adult, điểm tập, CareScore (Phase 2.2).</summary>
         public PetGrowth Growth = new PetGrowth();
 
+        /// <summary>Bậc rank cao nhất con thú này từng đạt khi đấu PvP (ghi lên bia mộ). None = chưa đấu.</summary>
+        public RankTier BestTier;
+
         public double AgeDays(DateTime nowUtc) => (nowUtc - BornAtUtc).TotalDays;
     }
 
@@ -33,9 +36,9 @@ namespace PawFit.Pet
     {
         /// <summary>
         /// 2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). 3 = Phase 5.1 (thêm ví Coin). 4 = Phase 5.2 (thêm phụ kiện + trang trí).
-        /// File bản cũ vẫn đọc được.
+        /// 5 = Phase 4.3 (thêm rank Elo + mùa giải). File bản cũ vẫn đọc được.
         /// </summary>
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
         public int Version = CurrentVersion;
 
         /// <summary>Thú đang sống. null khi thú đã mất và trứng chưa nở.</summary>
@@ -54,6 +57,9 @@ namespace PawFit.Pet
 
         /// <summary>Phụ kiện + đồ trang trí đã mua (còn nguyên khi thú mất). File cũ chưa có thì tạo rỗng khi cần.</summary>
         public CosmeticsData Cosmetics;
+
+        /// <summary>Rank Elo + mùa giải của người chơi (thú mất vẫn giữ). File cũ chưa có thì tạo khi cần (Elo khởi đầu).</summary>
+        public RankData Rank;
     }
 
     // ---- Sự kiện (View lắng nghe qua EventBus) ----
@@ -141,6 +147,16 @@ namespace PawFit.Pet
             {
                 if (_game == null) return null;
                 return _game.Wallet ?? (_game.Wallet = new WalletData { Coins = _cfg.Economy.StartCoins });
+            }
+        }
+
+        /// <summary>Rank của người chơi (RankService đọc / ghi qua đây). null nếu chưa nạp file lưu.</summary>
+        public RankData Rank
+        {
+            get
+            {
+                if (_game == null) return null;
+                return _game.Rank ?? (_game.Rank = new RankData { Elo = _cfg.Rank.StartElo, SeasonPeakElo = _cfg.Rank.StartElo });
             }
         }
 
@@ -281,6 +297,7 @@ namespace PawFit.Pet
                 DiedAtUtc = died,
                 Stage = pet.Growth?.Stage ?? EvolutionStage.Baby,
                 Form = pet.Growth?.Form ?? AdultForm.None,
+                BestRank = pet.BestTier == RankTier.None ? null : pet.BestTier.ToString(),
             };
             _game.Memorials.Add(memorial);
             _game.Egg = EggFactory.Lay(pet, died, _cfg.Health.EggAfterDeathHours, _rng);

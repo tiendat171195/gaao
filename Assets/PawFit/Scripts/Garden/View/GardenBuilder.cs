@@ -20,6 +20,11 @@ namespace PawFit.Garden.View
     {
     }
 
+    /// <summary>Cổng đấu trường phía sau sân tập (PvP, GDD): chạm vào = thẻ rank / tìm trận.</summary>
+    public sealed class ArenaGateView : MonoBehaviour
+    {
+    }
+
     /// <summary>Hòm thư cạnh cổng đấu trường (GDD: "cài đặt = hòm thư ở cổng"): chạm vào = mở cài đặt.</summary>
     public sealed class MailboxView : MonoBehaviour
     {
@@ -218,6 +223,7 @@ namespace PawFit.Garden.View
             }
             // cổng đấu trường (PvP, Phase 4)
             Transform gate = Prim.Group(obstacles, "ArenaGate", W(z.Center + new NVec2(0f, 3.4f)));
+            gate.gameObject.AddComponent<ArenaGateView>();   // 2 cột có collider => chạm trúng cổng
             foreach (float s in new[] { -1.3f, 1.3f })
                 Prim.Make(PrimitiveType.Cylinder, gate, new Vector3(s, 1.2f, 0f), new Vector3(0.3f, 1.2f, 0.3f), Prim.Hex("#9AA0A6"), keepCollider: true);
             Prim.Make(PrimitiveType.Cube, gate, new Vector3(0f, 2.45f, 0f), new Vector3(3.2f, 0.3f, 0.4f), Prim.Hex("#7E8389"));

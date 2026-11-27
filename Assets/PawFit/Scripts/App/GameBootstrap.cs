@@ -3,6 +3,7 @@ using System.IO;
 using PawFit.Core;
 using PawFit.Economy;
 using PawFit.Garden;
+using PawFit.Online;
 using PawFit.Pet;
 using UnityEngine;
 
@@ -91,6 +92,7 @@ namespace PawFit.App
             Services.Register<ICoinWallet>(economy);   // màn đấu cộng Coin khi thắng Bot qua interface này
             Services.Register(new ShopService(_pets, health, economy, bus, cfg, log));
             Services.Register(new CosmeticsService(_pets, economy, bus, cfg, log));   // phụ kiện + trang trí (Phase 5.2)
+            Services.Register(new RankService(_pets, time, bus, cfg, economy, log));    // rank Elo + mùa giải (Phase 4.3, chạy offline)
             gameObject.AddComponent<UiSounds>().Init(bus);   // tiếng "ting" khi nhận / tiêu Coin
 
             // Cài đặt ở hòm thư: lưu file riêng của máy này. Tắt tiếng = tắt mọi âm thanh của game 1 chỗ.

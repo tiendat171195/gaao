@@ -1,3 +1,5 @@
+using System;
+
 namespace PawFit.Core
 {
     /// <summary>
@@ -11,6 +13,8 @@ namespace PawFit.Core
         public EvolutionConfig Evolution = new EvolutionConfig();
         public StatsConfig Stats = new StatsConfig();
         public EconomyConfig Economy = new EconomyConfig();
+        public RankConfig Rank = new RankConfig();
+        public MatchmakingConfig Matchmaking = new MatchmakingConfig();
 
         public static GameConfig CreateDefault() => new GameConfig();
     }
@@ -207,5 +211,42 @@ namespace PawFit.Core
 
         /// <summary>Giá trang trí vườn theo thứ tự DecorKind: Đèn lồng, Ghế gỗ, Cối xay gió, Vòm hoa.</summary>
         public int[] DecorPrices = { 150, 120, 300, 200 };
+    }
+
+    /// <summary>Rank Elo + bậc + mùa giải — GDD mục G10 (Phase 4.3).</summary>
+    public sealed class RankConfig
+    {
+        public int StartElo = 1000;
+        public int K = 32;
+
+        /// <summary>Bronze &lt; 1100 ≤ Silver &lt; 1300 ≤ Gold &lt; 1500 ≤ Diamond &lt; 1700 ≤ Master.</summary>
+        public int SilverAt = 1100;
+        public int GoldAt = 1300;
+        public int DiamondAt = 1500;
+        public int MasterAt = 1700;
+
+        public int SeasonDays = 30;
+
+        /// <summary>Mùa 1 bắt đầu lúc này (UTC); mùa n bắt đầu sau đó (n - 1) × 30 ngày.</summary>
+        public DateTime SeasonEpochUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        /// <summary>Hết mùa: Elo mới = 1000 + (Elo - 1000) × 0.5 (reset mềm).</summary>
+        public float SoftResetFactor = 0.5f;
+    }
+
+    /// <summary>Ghép trận PvP — GDD mục 1 + G10 (Phase 4.2).</summary>
+    public sealed class MatchmakingConfig
+    {
+        /// <summary>Lúc đầu: chênh Elo tối đa ±100 và lực chiến tối đa ±10%.</summary>
+        public int EloWindow = 100;
+        public float PowerWindow = 0.10f;
+
+        /// <summary>Tìm bấy nhiêu giây chưa có trận thì nới khoảng (tôi tự đặt: ±200 Elo, ±20% lực chiến).</summary>
+        public float WidenAfterSeconds = 30f;
+        public int WidenedEloWindow = 200;
+        public float WidenedPowerWindow = 0.20f;
+
+        /// <summary>Tìm bấy nhiêu giây vẫn chưa có thì gợi ý đấu Bot (vẫn tìm tiếp).</summary>
+        public float SuggestBotAfterSeconds = 60f;
     }
 }

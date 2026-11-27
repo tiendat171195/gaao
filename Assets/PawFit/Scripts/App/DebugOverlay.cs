@@ -4,6 +4,7 @@ using PawFit.Core;
 using PawFit.Economy;
 using PawFit.Garden;
 using PawFit.Garden.View;
+using PawFit.Online;
 using PawFit.Pet;
 using PawFit.Pet.View;
 using UnityEngine;
@@ -222,6 +223,14 @@ namespace PawFit.App
             if (c == null) return;
             GUILayout.Label($"Phụ kiện: đang đeo {cos.Equipped} · có {c.Accessories.Count}/{CosmeticsService.Accessories.Length} · " +
                             $"trang trí {c.Decor.Count}/{CosmeticsService.Decorations.Length}", _label);
+            if (S.TryGet(out RankService rank))
+            {
+                GUILayout.Label($"Rank: {rank.Tier} · Elo {rank.Elo} · mùa {rank.Season}", _label);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Thắng PvP giả", _button)) rank.ApplyMatch(rank.Elo, PawFit.Battle.BattleOutcome.Win0);
+                if (GUILayout.Button("Thua PvP giả", _button)) rank.ApplyMatch(rank.Elo, PawFit.Battle.BattleOutcome.Win1);
+                GUILayout.EndHorizontal();
+            }
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Có hết đồ (test)", _button)) cos.GrantAllForDebug();
             if (GUILayout.Button("Đổi phụ kiện", _button))   // lần lượt: không đeo -> Nơ -> Mũ -> Khăn -> Vương miện -> không đeo

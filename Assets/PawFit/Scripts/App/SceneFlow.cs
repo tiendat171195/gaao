@@ -5,6 +5,7 @@ using PawFit.Battle.View;
 using PawFit.Core;
 using PawFit.Economy;
 using PawFit.Garden.View;
+using PawFit.Online;
 using PawFit.Pet;
 using UnityEngine;
 
@@ -33,6 +34,7 @@ namespace PawFit.App
             Garden.DummyTapped = OnDummyTapped;
             Garden.ShopTapped = OpenShop;
             Garden.MailboxTapped = OpenSettings;
+            Garden.ArenaTapped = OpenArena;
         }
 
         /// <summary>Chạm hình nộm ở sân tập: chọn Huấn luyện (học chiêu) hoặc Đấu (90 giây) với Bot mức đó.</summary>
@@ -130,6 +132,24 @@ namespace PawFit.App
             PetController pet = Garden != null ? Garden.Pet : null;
             if (pet != null && pet.Avatar != null) pet.Avatar.PlayEat();   // bé ăn bánh / uống nước / uống thuốc ngay
             GardenUi.Toast(ItemName(item) + ": -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin");
+        }
+
+        // ------------------------------------------------------------------
+        // Cổng đấu trường = PvP (Phase 4). Logic rank + ghép trận đã có; trận PvP thật chờ máy chủ (Phase 4.1 / 4.2).
+        // ------------------------------------------------------------------
+
+        /// <summary>Chạm cổng đấu trường: thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày).</summary>
+        public static void OpenArena()
+        {
+            if (Garden == null || Battle != null) return;
+            var rank = _services.Get<RankService>();
+            RankData d = rank.Current;
+            int daysLeft = Math.Max(0, (int)Math.Ceiling((rank.SeasonEndsUtc - _services.Get<ITimeProvider>().UtcNow).TotalDays));
+            string body = "Bậc " + rank.Tier + " · Elo " + rank.Elo + " · thắng " + d.Wins + " / thua " + d.Losses + "\n" +
+                          "Mùa " + rank.Season + " còn " + daysLeft + " ngày · PvP thật cần máy chủ (Phase 4.2)";
+            if (!RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out string reason))
+                body += "\nThú " + reason + " nên chưa đấu được";
+            GardenUi.ShowChoice("Đấu trường", body, new[] { "Thôi" }, null);
         }
 
         // ------------------------------------------------------------------

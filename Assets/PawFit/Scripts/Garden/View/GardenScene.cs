@@ -47,6 +47,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm hòm thư cạnh cổng đấu trường (App mở cài đặt).</summary>
         public Action MailboxTapped { get; set; }
 
+        /// <summary>Chạm cổng đấu trường (App mở thẻ rank / PvP).</summary>
+        public Action ArenaTapped { get; set; }
+
         /// <summary>Tạm dừng vườn khi đang ở màn đấu: không nhận chạm, camera đứng, thú đứng yên.</summary>
         public void SetPaused(bool paused)
         {
@@ -103,6 +106,7 @@ namespace PawFit.Garden.View
             _router.DummyTapped = level => DummyTapped?.Invoke(level);
             _router.ShopTapped = () => ShopTapped?.Invoke();
             _router.MailboxTapped = () => MailboxTapped?.Invoke();
+            _router.ArenaTapped = () => ArenaTapped?.Invoke();
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
             _subs.Add(bus.Subscribe<PetCreated>(OnPetCreated));
