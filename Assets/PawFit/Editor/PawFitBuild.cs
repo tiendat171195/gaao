@@ -20,10 +20,10 @@ namespace PawFit.EditorTools
     public static class PawFitBuild
     {
         /// <summary>
-        /// Tên gói: CỐ ĐỊNH VĨNH VIỄN sau lần đầu tải lên Google Play / App Store, và phải chưa ai dùng.
-        /// Muốn tên riêng (vd com.tenban.pawfit) thì đổi TRƯỚC lần tải lên đầu tiên.
+        /// Tên gói (Android) / Bundle ID (iOS) bạn chốt: CỐ ĐỊNH VĨNH VIỄN sau lần đầu tải lên Google Play / App Store.
+        /// Đổi tên gói = điện thoại coi là app khác (phải gỡ bản cũ, dữ liệu bản cũ không sang).
         /// </summary>
-        public const string PackageName = "com.pawfit.game";
+        public const string PackageName = "com.tiedee.pawfit";
         public const string Version = "0.6.0";
 
         /// <summary>

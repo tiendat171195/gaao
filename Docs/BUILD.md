@@ -86,7 +86,7 @@ Menu **PawFit ▸ Build Android ▸ ...**:
 
 - Lệnh tự chuyển project sang Android. Lần đầu Unity import lại toàn bộ cho Android mất khoảng 5–10 phút.
 - Lệnh tự đặt:
-  - Tên gói `com.pawfit.game`, phiên bản `0.5.3`.
+  - Tên gói `com.tiedee.pawfit`, phiên bản `0.6.0`.
   - IL2CPP + ARM64, vì máy Android mới chỉ chạy app 64-bit.
   - Icon app `Assets/PawFit/Art/Icon/PawFit_Icon.png` (thú Gen 1 đeo nơ, render bằng Blender). Muốn đổi icon thì thay file này, giữ nguyên tên, cỡ 1024x1024.
 - Lần build đầu mất khoảng **10–20 phút**: IL2CPP dịch code và Gradle tải thư viện. Các lần sau nhanh hơn nhiều.
@@ -199,7 +199,7 @@ Nên commit + push các file Unity tự sinh sau lần mở đầu (các file `.
 | Lỗi trong Xcode | Cách xử lý |
 |---|---|
 | *Signing for "Unity-iPhone" requires a development team* | Làm bước 3 (chọn Team) |
-| *Failed to register bundle identifier* / *com.pawfit.game is not available* | Tên gói đã có người dùng. Tạm đổi **Bundle Identifier** ở tab Signing, ví dụ `com.<tênbạn>.pawfit`. Muốn đổi hẳn thì báo tôi sửa `PackageName` trong `PawFitBuild.cs` (đổi trong Xcode sẽ mất ở lần build sau) |
+| *Failed to register bundle identifier* / *com.tiedee.pawfit is not available* | Bundle ID đã có người dùng. Tạm đổi **Bundle Identifier** ở tab Signing (đổi trong Xcode sẽ mất ở lần build sau). Muốn đổi hẳn thì báo tôi sửa `PackageName` trong `PawFitBuild.cs` |
 | *Developer Mode disabled* | Bật Chế độ nhà phát triển trên iPhone (phần "Cần thêm" ở trên) |
 | *Could not launch* / *device is locked* | Mở khóa iPhone rồi bấm Run lại |
 
@@ -266,9 +266,9 @@ Làm khi bản APK đã chạy ổn trên điện thoại. Google Play không nh
 
 **Trước lần tải lên đầu tiên:**
 
-- **Tên gói** hiện là `com.pawfit.game` (hằng `PackageName` trong `Assets/PawFit/Editor/PawFitBuild.cs`).
-  - Tên gói cố định vĩnh viễn sau lần tải lên đầu, và phải chưa ai dùng trên Google Play.
-  - Nên đổi sang tên riêng, ví dụ `com.tenban.pawfit`. Báo tôi đổi, hoặc tự sửa hằng đó.
+- **Tên gói** đã chốt là `com.tiedee.pawfit` (hằng `PackageName` trong `Assets/PawFit/Editor/PawFitBuild.cs`).
+  - Tên gói cố định vĩnh viễn sau lần tải lên đầu.
+  - Google Play báo tên đã có người dùng thì báo tôi đổi.
 - **Tài khoản nhà phát triển Google Play:** phí 25 USD một lần, phải xác minh danh tính.
   - Bản thử nội bộ (tối đa 100 người, qua email) dùng được ngay.
   - Tài khoản cá nhân mới: muốn phát hành công khai, Google thường yêu cầu thử kín với ít nhất 12 người trong 14 ngày. Play Console sẽ báo đúng yêu cầu hiện hành.
