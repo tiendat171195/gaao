@@ -93,6 +93,9 @@ namespace PawFit.EditorTools
                 return false;
             }
             PlayerSettings.bundleVersion = Version;
+            // Máy chủ riêng: bản Dev được nối http:// (máy Mac trong nhà, vd http://192.168.1.10:5080);
+            // bản Release bắt buộc https:// (máy chủ thật sau Caddy). Android / iOS mặc định chặn http.
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.DevelopmentOnly;
             var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
             if (icon != null) PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);   // icon mặc định mọi nền tảng
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };

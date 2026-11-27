@@ -4,7 +4,7 @@ using PawFit.Core;
 
 namespace PawFit.Pet
 {
-    /// <summary>Dữ liệu 1 con thú (lưu trên máy; Phase 4.1 đồng bộ thêm lên Firestore).</summary>
+    /// <summary>Dữ liệu 1 con thú (lưu trên máy; có máy chủ riêng thì sao lưu thêm lên máy chủ).</summary>
     public sealed class PetData
     {
         public string Id;

@@ -318,7 +318,7 @@ namespace UnityEngine
         public float fixedHeight { get; set; }
     }
 
-    public sealed class GUISkin : Object { public GUIStyle label => null; public GUIStyle button => null; }
+    public sealed class GUISkin : Object { public GUIStyle label => null; public GUIStyle button => null; public GUIStyle textField => null; }
 
     public sealed class GUIContent { public static GUIContent none => null; }
 
@@ -343,6 +343,7 @@ namespace UnityEngine
         public static void Space(float pixels) { }
         public static void Label(string text, GUIStyle style, params GUILayoutOption[] options) { }
         public static bool Button(string text, GUIStyle style, params GUILayoutOption[] options) => false;
+        public static string TextField(string text, GUIStyle style, params GUILayoutOption[] options) => text;
         public static GUILayoutOption Width(float width) => null;
     }
 
@@ -351,6 +352,7 @@ namespace UnityEngine
         public static void Log(object message) { }
         public static void LogWarning(object message) { }
         public static void LogError(object message) { }
+        public static bool isDebugBuild => true;
     }
 
     public static class Time
@@ -361,6 +363,7 @@ namespace UnityEngine
         public static float unscaledTime => 0f;
         public static double unscaledTimeAsDouble => 0.0;
         public static float timeScale { get; set; }
+        public static float realtimeSinceStartup => 0f;
     }
 
     public enum TouchPhase { Began, Moved, Stationary, Ended, Canceled }
@@ -397,6 +400,12 @@ namespace UnityEngine
         public static bool isMobilePlatform => false;
         public static int targetFrameRate { get; set; }
         public static string version => "";
+        public static void Quit() { }
+    }
+
+    public class AsyncOperation
+    {
+        public event Action<AsyncOperation> completed { add { } remove { } }
     }
 
     public static class GUIUtility { public static string systemCopyBuffer { get; set; } }
@@ -489,6 +498,45 @@ namespace UnityEngine
 
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class RuntimeInitializeOnLoadMethodAttribute : Attribute { public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t) { } }
+}
+
+namespace UnityEngine.Networking
+{
+    public class DownloadHandler : IDisposable
+    {
+        public string text => "";
+        public void Dispose() { }
+    }
+
+    public sealed class DownloadHandlerBuffer : DownloadHandler { }
+
+    public class UploadHandler : IDisposable
+    {
+        public void Dispose() { }
+    }
+
+    public sealed class UploadHandlerRaw : UploadHandler
+    {
+        public UploadHandlerRaw(byte[] data) { }
+    }
+
+    public sealed class UnityWebRequestAsyncOperation : UnityEngine.AsyncOperation { }
+
+    public sealed class UnityWebRequest : IDisposable
+    {
+        public enum Result { InProgress, Success, ConnectionError, ProtocolError, DataProcessingError }
+
+        public UnityWebRequest(string url, string method) { }
+        public DownloadHandler downloadHandler { get; set; }
+        public UploadHandler uploadHandler { get; set; }
+        public int timeout { get; set; }
+        public Result result => Result.Success;
+        public long responseCode => 200;
+        public string error => null;
+        public void SetRequestHeader(string name, string value) { }
+        public UnityWebRequestAsyncOperation SendWebRequest() => new UnityWebRequestAsyncOperation();
+        public void Dispose() { }
+    }
 }
 
 namespace UnityEngine.Events
@@ -739,8 +787,13 @@ namespace UnityEditor
 
     public enum UIOrientation { Portrait, PortraitUpsideDown, LandscapeRight, LandscapeLeft, AutoRotation }
 
+    public enum InsecureHttpOption { NotAllowed = 0, DevelopmentOnly = 1, AlwaysAllowed = 2 }
+
+    public static class EditorApplication { public static bool isPlaying { get; set; } }
+
     public static class PlayerSettings
     {
+        public static InsecureHttpOption insecureHttpOption { get; set; }
         public static string productName { get; set; }
         public static string companyName { get; set; }
         public static UIOrientation defaultInterfaceOrientation { get; set; }

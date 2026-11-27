@@ -30,8 +30,11 @@ namespace PawFit.Garden.View
         /// <summary>Đang có bảng mở (vườn không nhận chạm).</summary>
         public static bool IsOpen => _open != null;
 
-        /// <summary>Hỏi tên thú mới (trứng vừa nở). `done` nhận tên người chơi gõ (logic tự chuẩn hóa).</summary>
-        public static void AskName(string title, Action<string> done)
+        /// <summary>
+        /// Hỏi tên thú mới (trứng vừa nở) — cũng dùng để gõ biệt danh / mã chuyển máy (đổi `placeholder`).
+        /// `done` nhận chữ người chơi gõ (logic tự chuẩn hóa).
+        /// </summary>
+        public static void AskName(string title, Action<string> done, string placeholder = "Tên bé...")
         {
             Close();
             RectTransform dim = Panel(Root, "NamePrompt", new Color(0f, 0f, 0f, 0.45f));
@@ -39,7 +42,7 @@ namespace PawFit.Garden.View
             RectTransform card = Panel(dim, "Card", new Color(1f, 0.98f, 0.95f, 1f));
             Place(card, Vector2.zero, new Vector2(880f, 560f));
             Label(card, title, 50, FontStyle.Bold, new Color(0.25f, 0.2f, 0.2f), new Vector2(0f, 170f), new Vector2(820f, 140f));
-            InputField input = Input(card, "Tên bé...", new Vector2(0f, 10f), new Vector2(720f, 120f));
+            InputField input = Input(card, placeholder, new Vector2(0f, 10f), new Vector2(720f, 120f));
             Button ok = Button(card, "Xong", new Color(0.36f, 0.73f, 0.45f), new Vector2(0f, -165f), new Vector2(380f, 120f));
             ok.onClick.AddListener(() =>
             {

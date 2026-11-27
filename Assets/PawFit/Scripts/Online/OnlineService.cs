@@ -113,6 +113,21 @@ namespace PawFit.Online
         public static AccountData LoadAccount(ISaveService save) =>
             save != null && save.TryLoad(AccountKey, out AccountData a) && a != null ? a : new AccountData();
 
+        /// <summary>Bản Dev: đổi địa chỉ máy chủ (trống = dùng địa chỉ trong bản build). Mở lại app mới dùng.</summary>
+        public void SetServerUrlOverride(string url)
+        {
+            _account.ServerUrlOverride = string.IsNullOrWhiteSpace(url) ? null : url.Trim();
+            SaveAccount();
+        }
+
+        /// <summary>Như trên, lúc chưa có OnlineService (đang chơi offline).</summary>
+        public static void SetServerUrlOverride(ISaveService save, string url)
+        {
+            AccountData a = LoadAccount(save);
+            a.ServerUrlOverride = string.IsNullOrWhiteSpace(url) ? null : url.Trim();
+            save.Save(AccountKey, a);
+        }
+
         /// <summary>
         /// Gọi lúc mở game, TRƯỚC khi PetService đọc file: vừa nhập mã chuyển máy thì thay file game bằng bản đã tải về.
         /// Trả true nếu vừa thay.
@@ -157,6 +172,12 @@ namespace PawFit.Online
                 _resyncIn = _cfg.ResyncEverySeconds;
                 SyncTime();
             }
+        }
+
+        /// <summary>Lấy lại hồ sơ + rank + giờ từ máy chủ (vd sau trận bỏ cuộc, máy chủ đã tính Elo mà máy chưa nhận).</summary>
+        public void Refresh()
+        {
+            if (State == OnlineState.Online && !RestartPending) FetchMe();
         }
 
         /// <summary>Ẩn app: tải file game lên ngay (có thể bị tắt hẳn sau đó).</summary>

@@ -32,7 +32,8 @@ namespace PawFit.App
         private float _scale = 1f;
         private Rect _toggleRect, _panelRect;
         private Vector2 _scroll;
-        private GUIStyle _label, _small, _button, _title;
+        private GUIStyle _label, _small, _button, _title, _field;
+        private string _serverUrl;
         private float _fps = 60f;
 
         private static ServiceLocator S => GameBootstrap.Services;
@@ -94,6 +95,7 @@ namespace PawFit.App
             }
             else DrawEgg();
             DrawEconomy();
+            DrawServer();
             DrawTime();
             DrawAvatar();
             GUILayout.EndScrollView();
@@ -242,6 +244,36 @@ namespace PawFit.App
             GUILayout.EndHorizontal();
         }
 
+        /// <summary>Máy chủ riêng: trạng thái + đổi địa chỉ (vd máy Mac trong nhà http://192.168.1.10:5080), mở lại app mới dùng.</summary>
+        private void DrawServer()
+        {
+            S.TryGet(out OnlineService online);
+            S.TryGet(out ServerNetworkManager net);
+            if (online == null) GUILayout.Label("Máy chủ: chưa cấu hình · offline, PvP với người chơi ảo trên máy", _label);
+            else
+            {
+                string err = online.State != OnlineState.Online && online.LastError != null ? " · " + online.LastError : "";
+                GUILayout.Label($"Máy chủ: {online.Api.BaseUrl} · {online.State}{err}", _small);
+                double offset = S.TryGet(out ServerClock clock) ? clock.OffsetSeconds : 0.0;
+                GUILayout.Label($"Tài khoản {online.PlayerId} · {online.Name} · bản lưu {online.Account.SaveRevision} · lệch giờ {offset:0.0} giây", _small);
+                if (net != null) GUILayout.Label($"PvP: {net.State} · ping {(net.PingMs >= 0 ? net.PingMs + " ms" : "?")}", _small);
+            }
+            if (_serverUrl == null) _serverUrl = OnlineService.LoadAccount(S.Get<ISaveService>()).ServerUrlOverride ?? "";
+            GUILayout.BeginHorizontal();
+            _serverUrl = GUILayout.TextField(_serverUrl, _field, GUILayout.Width(220f));
+            if (GUILayout.Button("Lưu", _button))
+            {
+                string url = ServerUrl.Clean(_serverUrl);
+                if (online != null) online.SetServerUrlOverride(url);
+                else OnlineService.SetServerUrlOverride(S.Get<ISaveService>(), url);
+                _serverUrl = url ?? "";
+                GardenUi.Toast(url == null ? "Bỏ địa chỉ gõ tay: mở lại app để dùng địa chỉ trong bản build"
+                                           : "Đã lưu " + url + ". Tắt hẳn rồi mở lại app để nối");
+            }
+            GUILayout.EndHorizontal();
+            if (online != null && online.State != OnlineState.Online && GUILayout.Button("Nối lại máy chủ", _button)) online.OnResume();
+        }
+
         private void DrawEgg()
         {
             var pets = S.Get<PetService>();
@@ -332,6 +364,7 @@ namespace PawFit.App
             _small = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
             _title = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold };
             _button = new GUIStyle(GUI.skin.button) { fontSize = 14, fixedHeight = 30f };
+            _field = new GUIStyle(GUI.skin.textField) { fontSize = 14, fixedHeight = 30f };
         }
     }
 }

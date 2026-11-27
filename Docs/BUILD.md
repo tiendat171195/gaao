@@ -202,3 +202,42 @@ Nên commit + push các file Unity tự sinh sau lần mở đầu (các file `.
 | *Failed to register bundle identifier* / *com.pawfit.game is not available* | Tên gói đã có người dùng. Tạm đổi **Bundle Identifier** ở tab Signing, ví dụ `com.<tênbạn>.pawfit`. Muốn đổi hẳn thì báo tôi sửa `PackageName` trong `PawFitBuild.cs` (đổi trong Xcode sẽ mất ở lần build sau) |
 | *Developer Mode disabled* | Bật Chế độ nhà phát triển trên iPhone (phần "Cần thêm" ở trên) |
 | *Could not launch* / *device is locked* | Mở khóa iPhone rồi bấm Run lại |
+
+## 13. Máy chủ riêng (không bắt buộc)
+
+Game chưa có địa chỉ máy chủ thì chơi **offline như trước**: PvP với người chơi ảo ngay trên máy, Elo tính trên máy. Muốn có tài khoản + sao lưu + mã chuyển máy + PvP với người thật thì chạy máy chủ riêng. Hướng dẫn đầy đủ: `Server/README.md`.
+
+**Thử nhanh với máy Mac trong nhà** (chỉ bản Dev, điện thoại cùng Wi-Fi với Mac):
+
+1. Cài .NET 8:
+
+   ```bash
+   brew install --cask dotnet-sdk
+   ```
+
+2. Chạy máy chủ:
+
+   ```bash
+   cd gaao/Server/PawFit.Server
+   ```
+
+   ```bash
+   dotnet run
+   ```
+
+3. Xem IP của Mac (ví dụ `192.168.1.10`):
+
+   ```bash
+   ipconfig getifaddr en0
+   ```
+
+4. Trên điện thoại (bản Dev): nút **DEV** ▸ mục **Máy chủ** ▸ gõ `192.168.1.10:5080` ▸ **Lưu**. Tắt hẳn game rồi mở lại.
+5. Chạm **hòm thư**: thấy dòng "Tài khoản: ... · đã nối máy chủ" là được. **Đấu trường ▸ Tìm trận**: 2 máy sẽ tìm thấy nhau; chỉ có 1 máy thì sau vài giây gặp người chơi ảo (chạy trên máy chủ).
+
+**Máy chủ thật** (VPS + tên miền + HTTPS): làm theo `Server/README.md` mục 3. Xong thì ghi `https://tên-miền` vào `Assets/PawFit/Resources/PawFitServer.txt` rồi build lại. Bản Release chỉ nối được `https://`.
+
+| Thấy gì | Cách xử lý |
+|---|---|
+| Hòm thư: "chưa nối được" | Mac và điện thoại phải cùng Wi-Fi, máy chủ phải đang chạy. Thử mở `http://192.168.1.10:5080/` bằng trình duyệt trên điện thoại. Bảng DEV ▸ **Nối lại máy chủ** |
+| macOS hỏi có cho `dotnet` nhận kết nối không | Bấm **Cho phép**. Lỡ từ chối: **Cài đặt hệ thống ▸ Mạng ▸ Tường lửa ▸ Tùy chọn** ▸ cho `dotnet` |
+| "Bản game cũ, hãy cập nhật để đấu PvP" | Máy chủ và game khác phiên bản giao thức: pull code mới cho cả hai, build lại |

@@ -1,6 +1,6 @@
 # PawFit — GDD ngắn
 
-Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G11). Mọi số nằm trong config, chỉnh được.
+Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G13). Mọi số nằm trong config, chỉnh được.
 
 ## 1. Lõi
 
@@ -152,8 +152,36 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
     - Hăng: đánh dồn, ít đỡ. Thủ: đánh thưa, hay đỡ, sớm biết canh phản đòn. Kỹ thuật: hay ra chiêu riêng / Ultimate.
   - Mật độ: cứ 1,5–6 giây có 1 người chơi ảo vào hàng chờ, không gặp lại 12 người gần nhất.
     - Đo 30 lần tìm: ngắn nhất 1,8 giây, ở giữa 10,5 giây, lâu nhất 30 giây.
-  - Khi có máy chủ thật: tìm người thật trước, chờ lâu mới thả người chơi ảo vào. Elo / Coin tính như trận thật.
+  - Khi có máy chủ riêng: tìm người thật trước, chờ 6 giây chưa có ai mới thả người chơi ảo vào (G10d). Elo / Coin tính như trận thật.
   - Lưu ý phát hành: nhiều game có làm vậy. Nên ghi trong điều khoản / mô tả app rằng khi ít người, trận có thể gặp đối thủ do máy điều khiển.
+- **G10d · Máy chủ riêng (bạn chốt: tự host thay Firebase + Photon, Firebase chỉ dùng FCM; `Server/README.md`):**
+  - Tài khoản khách:
+    - Mở game là có, không cần email / mật khẩu.
+    - Máy chủ đặt sẵn biệt danh cùng kiểu với người chơi ảo, đổi ở hòm thư (2–16 ký tự).
+    - Đăng nhập Google / Apple: làm sau.
+  - Mã chuyển máy:
+    - Dạng `XXXX-XXXX-XXXX`, bỏ chữ dễ nhầm I / O / 0 / 1. Dùng 1 lần, hạn 7 ngày.
+    - Máy mới nhập mã thì nhận tài khoản + thú: dữ liệu tải về, đóng game mở lại mới thay.
+    - Máy cũ mất quyền dùng tài khoản, lần nối sau tự thành tài khoản mới.
+  - Giờ máy chủ:
+    - Đồng bộ lúc mở game, lúc quay lại game và mỗi 10 phút.
+    - Lệch dưới 1 giây bỏ qua. Mất mạng thì dùng giờ máy + độ lệch lần trước.
+  - Sao lưu: tải file game lên mỗi 2 phút nếu có đổi + khi ẩn app. Máy đang giữ tài khoản luôn là bản đúng.
+  - Ghép trận:
+    - Người thật được ghép với nhau trước, đúng luật G10b.
+    - Chờ 6 giây chưa có ai thì người chơi ảo (G10c) bắt đầu tới hàng của người đó. Người chơi ảo đánh ngay trên máy chủ.
+    - Máy người chơi không phân biệt được đối thủ ảo: mã người chơi cùng dạng, không có cờ "ảo".
+  - Trận PvP:
+    - Máy chủ chạy trận (30 bước / giây) và quyết định kết quả.
+    - Nét vuốt gửi lên máy chủ. Máy chủ chốt bước nào thì cả 2 máy áp ở đúng bước đó.
+    - Cùng seed + cùng chỉ số tới từng bit nên 2 máy ra y hệt máy chủ (test kiểm cả lúc 2 bên SPD bằng nhau).
+    - Máy chạy chậm hơn máy chủ 2 bước làm đệm, mạng nghẽn thì chạy dồn cho kịp.
+    - Trễ khoảng 0,1–0,2 giây, vẫn kịp đỡ vì đòn vung 0,25–0,9 giây.
+    - Thoát app / mất mạng giữa trận, hoặc rời trận lúc đang hiện thẻ đối thủ = bỏ cuộc = thua (vẫn trừ Elo).
+  - Chống gian lận (giai đoạn thử nghiệm):
+    - Máy chủ tính Elo + Coin thắng PvP, chặn chỉ số thú vượt trần của giai đoạn, tự tính lực chiến.
+    - Coin / đồ / thú vẫn do máy tính, máy chủ chỉ sao lưu.
+  - Không cấu hình máy chủ (file `Resources/PawFitServer.txt` trống): chơi offline như trước (mạng giả lập, Elo tính trên máy).
 - **G11 · Kinh tế:**
   - Thức ăn cơ bản miễn phí, khởi đầu 200 Coin, thắng PvP +30, quảng cáo +20 Coin / +20 năng lượng.
   - Không có HUD: shop = quầy hàng trên map; đấu Bot = 3 hình nộm; PvP = cổng đấu trường; cài đặt = hòm thư ở cổng.
@@ -197,6 +225,7 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
 
   - Mua hết khoảng 1.320 Coin, tức khoảng 2 tuần xem quảng cáo + thắng Bot.
 - **G13 · Hòm thư = cài đặt (đã cài):** hòm thư đứng cạnh cổng đấu trường. Chạm vào để bật / tắt âm thanh, xem + copy mã DNA, xem phiên bản game.
+  - Có máy chủ riêng: thêm biệt danh, mã chuyển máy (máy cũ), nhập mã chuyển máy (máy mới).
   - Cài đặt lưu file riêng của máy (`settings`), không nằm trong file game, không đồng bộ cloud.
   - Sau này thư thông báo (thưởng mùa giải...) cũng gửi về hòm thư này.
 

@@ -18,6 +18,9 @@ namespace PawFit.Battle.View
         public RankedOpponent Opponent;
         public ulong Seed;
 
+        /// <summary>Trận qua máy chủ riêng: nhịp trận máy chủ gửi về (null = người chơi ảo chạy ngay trên máy).</summary>
+        public IMatchFeed Feed;
+
         /// <summary>Tên thú đối thủ, biệt danh người chơi, dòng phụ (vd "Silver · Elo 1180").</summary>
         public string PetName;
         public string PlayerName;
@@ -92,7 +95,9 @@ namespace PawFit.Battle.View
             _log = s.Get<ILog>();
             _onExit = onExit;
             _match = match;
-            if (match != null) _session = new BattleSession(_pets, _evo, match.Opponent, match.Seed);   // PvP: Elo do App tính sau trận
+            if (match != null)   // PvP: Elo do App (mạng giả lập) / máy chủ tính sau trận
+                _session = match.Feed != null ? new BattleSession(_pets, _evo, match.Opponent, match.Feed)
+                                              : new BattleSession(_pets, _evo, match.Opponent, match.Seed);
             else
             {
                 ICoinWallet wallet = s.TryGet(out ICoinWallet w) ? w : null;   // thắng Bot có Coin (Phase 5.1)
@@ -203,6 +208,7 @@ namespace PawFit.Battle.View
             if (_session.Mode == BattleMode.Training)
                 _hud.SetLesson(_session.Lesson, _session.LessonProgress, _pets.Config.Evolution.PracticeToLearn, _session.SlowMo);
             if (_session.SlowMo) _hud.Hint("Hình nộm sắp đánh — vuốt XUỐNG để đỡ!", 0.3f);
+            if (_session.WaitingForServer) _hud.Hint("Chờ đối thủ vào trận...", 0.3f);   // PvP qua máy chủ: đối thủ chưa vào màn đấu
             _player.Avatar?.LookAt(_dummy.Center);
             _player.Avatar?.SetMoveSpeed(0f);
             _dummy.Avatar?.LookAt(_player.Center);   // PvP: thú đối thủ cũng nhìn sang mình

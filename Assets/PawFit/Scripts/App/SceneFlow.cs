@@ -144,7 +144,8 @@ namespace PawFit.App
         }
 
         // ------------------------------------------------------------------
-        // Cổng đấu trường = PvP (Phase 4). Logic rank + ghép trận đã có; trận PvP thật chờ máy chủ (Phase 4.1 / 4.2).
+        // Cổng đấu trường = PvP (Phase 4). Có máy chủ riêng: ghép + chạy trận + tính Elo ở máy chủ.
+        // Chưa cấu hình máy chủ: mạng giả lập trên máy (người chơi ảo, Elo tính trên máy).
         // ------------------------------------------------------------------
 
         /// <summary>Chạm cổng đấu trường: thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút Tìm trận.</summary>
@@ -157,6 +158,9 @@ namespace PawFit.App
             int daysLeft = Math.Max(0, (int)Math.Ceiling((rank.SeasonEndsUtc - _services.Get<ITimeProvider>().UtcNow).TotalDays));
             string body = "Bậc " + rank.Tier + " · Elo " + rank.Elo + " · thắng " + d.Wins + " / thua " + d.Losses + "\n" +
                           "Mùa " + rank.Season + " còn " + daysLeft + " ngày · thắng +" + _services.Get<GameConfig>().Economy.PvpWinCoins + " Coin";
+            if (_services.TryGet(out OnlineService online))
+                body += "\n" + (online.State == OnlineState.Online ? "Máy chủ: đã nối · " + online.Name
+                                 : online.State == OnlineState.Connecting ? "Máy chủ: đang nối..." : "Máy chủ: chưa nối được");
             bool can = RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out string reason);
             GardenUi.ShowChoice("Đấu trường", body,
                                 new[] { can ? "Tìm trận" : "Tìm trận (thú " + reason + ")", "Thôi" },
@@ -171,7 +175,15 @@ namespace PawFit.App
             var pets = _services.Get<PetService>();
             var evo = _services.Get<EvolutionService>();
             var rank = _services.Get<RankService>();
-            if (net.State == NetworkState.Offline) net.Connect("local", null);
+            if (net.State != NetworkState.Online)
+            {
+                if (net is LocalNetworkManager) net.Connect("local", null);   // giả lập: nối ngay
+                else
+                {
+                    ConnectThenSearch(net);
+                    return;
+                }
+            }
             if (net.State != NetworkState.Online) return;
             PetStats ps = evo.Stats;
             bool[] learned = evo.LearnedMask();
@@ -187,11 +199,60 @@ namespace PawFit.App
                 Stage = pets.Current.Growth.Stage,
                 Stats = new FighterStats(ps.Hp, ps.Atk, ps.Def, ps.Spd, ps.Crit),
                 LearnedMask = mask,
+                Form = evo.Stage >= EvolutionStage.Adult ? evo.Form : evo.LeaningForm,   // đối thủ dựng đúng dáng thú mình
+                Accessory = pets.Cosmetics?.Equipped ?? AccessoryKind.None,
             };
             net.MatchFound -= OnMatchFound;
             net.MatchFound += OnMatchFound;
             net.FindMatch(ticket);
             ShowSearching(false);
+        }
+
+        /// <summary>
+        /// Máy chủ riêng: chờ tài khoản đăng nhập xong + nối WebSocket, rồi mới tìm trận.
+        /// Lỗi / quá 12 giây: báo lý do + gợi ý đấu hình nộm ở sân tập.
+        /// </summary>
+        private static void ConnectThenSearch(INetworkManager net)
+        {
+            _services.TryGet(out OnlineService online);
+            if (online != null && online.State == OnlineState.Offline) online.OnResume();   // thử nối lại ngay
+            float started = Time.realtimeSinceStartup;
+            bool asked = false, done = false;
+            GardenUi.ShowLive("Đang nối máy chủ", () =>
+            {
+                if (done) return "";
+                if (!asked && (online == null || online.State == OnlineState.Online))
+                {
+                    asked = true;
+                    net.Connect(null, ok =>
+                    {
+                        if (done || Garden == null || Battle != null || !GardenUi.IsOpen) return;   // đã hủy / đã sang màn khác
+                        done = true;
+                        if (ok) StartSearch();
+                        else ShowConnectFailed(net);
+                    });
+                }
+                if (!done && !asked && Time.realtimeSinceStartup - started > 12f)
+                {
+                    done = true;
+                    ShowConnectFailed(net);
+                    return "";
+                }
+                return "Chờ chút nhé...";
+            }, new[] { "Hủy" }, i =>
+            {
+                done = true;
+                GardenUi.Close();
+            });
+        }
+
+        private static void ShowConnectFailed(INetworkManager net)
+        {
+            string why = net is ServerNetworkManager s && !string.IsNullOrEmpty(s.LastError) ? s.LastError
+                       : _services.TryGet(out OnlineService online) && !string.IsNullOrEmpty(online.LastError) ? online.LastError
+                       : "Không kết nối được máy chủ";
+            GardenUi.ShowChoice("Chưa vào đấu trường được", why + "\nĐấu hình nộm ở sân tập trong lúc chờ nhé?",
+                                new[] { "Đấu hình nộm", "Thôi" }, i => { if (i == 0) EnterBattle(BattleMode.BotFight, BotLevel.Normal); });
         }
 
         private static void ShowSearching(bool suggestBot)
@@ -202,6 +263,13 @@ namespace PawFit.App
             string[] buttons = suggestBot ? new[] { "Đấu hình nộm", "Hủy tìm" } : new[] { "Hủy tìm" };
             GardenUi.ShowLive("Đang tìm đối thủ", () =>
             {
+                // máy chủ rớt giữa lúc tìm, hoặc máy chủ từ chối vé (vd chỉ số thú không hợp lệ)
+                if (net.State != NetworkState.Searching && net.State != NetworkState.InMatch)
+                {
+                    net.MatchFound -= OnMatchFound;
+                    ShowConnectFailed(net);
+                    return "";
+                }
                 double t = net.SearchSeconds;
                 MatchSearchStatus status = net.SearchStatus;
                 if (status == MatchSearchStatus.SuggestBot && !suggestBot && net.State == NetworkState.Searching)
@@ -273,9 +341,11 @@ namespace PawFit.App
             }
             OpponentInfo o = match.Opponent;
             var cfg = _services.Get<GameConfig>();
+            NetMatchFeed feed = match.Feed;   // != null: trận qua máy chủ (máy chủ chạy trận + tính Elo)
             var view = new RankedMatchView
             {
-                Opponent = BotPlayers.ToRanked(o),
+                Opponent = feed != null ? new RankedOpponent { Name = o.PetName, Stats = o.Stats } : BotPlayers.ToRanked(o),
+                Feed = feed,
                 Seed = match.Seed,
                 PetName = o.PetName,
                 PlayerName = o.Name,
@@ -283,7 +353,7 @@ namespace PawFit.App
                 Dna = o.Dna ?? DnaCodec.Decode(o.DnaCode),
                 Look = BotPlayers.LookFor(o.Stage, o.Form, cfg.Evolution),
                 Accessory = o.Accessory,
-                OnResult = r => RankLines(_services.Get<RankService>().ApplyMatch(o.Elo, r.Outcome)),
+                OnResult = r => feed != null ? ServerRankLines(feed) : RankLines(_services.Get<RankService>().ApplyMatch(o.Elo, r.Outcome)),
             };
             GardenUi.Close();
             Garden.SetPaused(true);
@@ -293,6 +363,20 @@ namespace PawFit.App
                 Battle = null;
                 if (Garden != null) Garden.SetPaused(false);
             });
+        }
+
+        /// <summary>Trận qua máy chủ: Elo / Coin theo máy chủ gửi về (bỏ cuộc / mất kết nối: hỏi lại máy chủ sau).</summary>
+        private static List<string> ServerRankLines(NetMatchFeed feed)
+        {
+            EndMsg end = feed.End;
+            if (end == null || end.Rank == null)
+            {
+                if (_services.TryGet(out OnlineService online)) online.Refresh();
+                return new List<string> { feed.Lost ? "Mất kết nối máy chủ: tính là bỏ cuộc" : "Bỏ cuộc", "Elo cập nhật khi nối lại máy chủ" };
+            }
+            List<string> lines = RankLines(_services.Get<RankService>().ApplyServerMatch(end.Rank, end.EloBefore, end.Coins));
+            if (end.Reason == "left" && feed.Won) lines.Insert(0, "Đối thủ đã rời trận");
+            return lines;
         }
 
         private static List<string> RankLines(RankResult r)
@@ -316,7 +400,7 @@ namespace PawFit.App
         // Hòm thư = cài đặt (GDD: "cài đặt = hòm thư ở cổng")
         // ------------------------------------------------------------------
 
-        /// <summary>Chạm hòm thư: bật / tắt âm thanh, xem + copy mã DNA của thú, phiên bản game.</summary>
+        /// <summary>Chạm hòm thư: âm thanh, tài khoản (biệt danh, mã chuyển máy), xem lại hướng dẫn, copy mã DNA, phiên bản game.</summary>
         public static void OpenSettings()
         {
             if (Garden == null || Battle != null) return;
@@ -333,6 +417,21 @@ namespace PawFit.App
                 GardenUi.Toast(settings.SoundOn ? "Đã bật âm thanh" : "Đã tắt âm thanh");
                 OpenSettings();
             } };
+            if (_services.TryGet(out OnlineService online))   // máy chủ riêng: tài khoản + chuyển máy
+            {
+                body += "\nTài khoản: " + (online.Name ?? "chưa có") + " · " +
+                        (online.State == OnlineState.Online ? "đã nối máy chủ" : online.State == OnlineState.Connecting ? "đang nối..." : "chưa nối được");
+                bool on = online.State == OnlineState.Online && !online.RestartPending;
+                labels.Add("Đổi biệt danh");
+                enabled.Add(on);
+                actions.Add(() => AskNickname(online));
+                labels.Add("Mã chuyển máy (sang máy mới)");
+                enabled.Add(on);
+                actions.Add(() => ShowTransferCode(online));
+                labels.Add("Nhập mã chuyển máy");
+                enabled.Add(on);
+                actions.Add(() => AskTransferCode(online));
+            }
             labels.Add("Xem lại hướng dẫn");
             enabled.Add(true);
             actions.Add(() =>
@@ -351,6 +450,72 @@ namespace PawFit.App
             enabled.Add(true);
             actions.Add(null);
             GardenUi.ShowChoice("Hòm thư", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
+        }
+
+        private static void AskNickname(OnlineService online)
+        {
+            GardenUi.AskName("Biệt danh của bạn", name =>
+                online.Rename(name, (ok, msg) => GardenUi.Toast(ok ? "Biệt danh mới: " + msg : "Chưa đổi được: " + msg)), "Biệt danh...");
+        }
+
+        /// <summary>Máy cũ: xin mã chuyển máy (dùng 1 lần, có hạn) để nhập ở máy mới.</summary>
+        private static void ShowTransferCode(OnlineService online)
+        {
+            GardenUi.ShowLive("Mã chuyển máy", () => "Đang lấy mã...", (string[])null, null);
+            online.RequestTransferCode((reply, error) =>
+            {
+                if (Garden == null || Battle != null) return;
+                if (reply == null)
+                {
+                    GardenUi.Close();
+                    GardenUi.Toast("Chưa lấy được mã: " + error);
+                    return;
+                }
+                string until = NetProto.FromMs(reply.ExpiresUtcMs).ToLocalTime().ToString("dd/MM HH:mm");
+                GardenUi.ShowChoice("Mã chuyển máy", reply.Code + "\nDùng 1 lần, hạn tới " + until +
+                                    ".\nỞ máy mới: Hòm thư ▸ Nhập mã chuyển máy. Nhập xong thì thú sang máy mới, máy này thành tài khoản khác.",
+                                    new[] { "Copy mã", "Đóng" }, i =>
+                                    {
+                                        if (i != 0) return;
+                                        GUIUtility.systemCopyBuffer = reply.Code;
+                                        GardenUi.Toast("Đã copy " + reply.Code);
+                                    });
+            });
+        }
+
+        /// <summary>Máy mới: nhập mã → nhận tài khoản + thú (đặt chờ), đóng game mở lại thì thay dữ liệu.</summary>
+        private static void AskTransferCode(OnlineService online)
+        {
+            GardenUi.AskName("Nhập mã chuyển máy", code =>
+                GardenUi.ShowChoice("Chuyển dữ liệu về máy này?",
+                                    "Thú, Coin, đồ và rank trên máy này sẽ bị THAY bằng dữ liệu của mã. Không hoàn tác được.",
+                                    new[] { "Chuyển", "Thôi" }, i =>
+                                    {
+                                        if (i != 0) return;
+                                        GardenUi.ShowLive("Đang chuyển dữ liệu", () => "Chờ chút nhé...", (string[])null, null);
+                                        online.RedeemTransferCode(code, (ok, msg) =>
+                                        {
+                                            GardenUi.Close();
+                                            if (!ok || !online.RestartPending)
+                                            {
+                                                GardenUi.ShowCard(ok ? "Đã nhận tài khoản" : "Chưa chuyển được", msg);
+                                                return;
+                                            }
+                                            GardenUi.ShowChoice("Đã nhận dữ liệu", msg, new[] { "Đóng game" }, _ => QuitGame());
+                                        });
+                                    }), "XXXX-XXXX-XXXX");
+        }
+
+        /// <summary>Đóng game để lần mở sau thay dữ liệu chuyển máy (iOS không cho app tự tắt: nhắc người chơi tự tắt).</summary>
+        private static void QuitGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_IOS
+            GardenUi.ShowCard("Mở lại game", "Vuốt tắt hẳn PawFit (đa nhiệm) rồi mở lại để chơi tiếp với thú vừa chuyển.");
+#else
+            Application.Quit();
+#endif
         }
 
         /// <summary>Thẻ Phụ kiện: món chưa có = mua (mua xong đeo luôn); món đã có = chạm để đeo / tháo. Mỗi lúc đeo 1 món.</summary>

@@ -4,7 +4,7 @@ namespace PawFit.Core
 {
     /// <summary>
     /// Nguồn thời gian (UTC). Mọi luật chạy theo giờ thực (nhu cầu, bệnh, tiến hóa) PHẢI đi qua đây,
-    /// không gọi DateTime.UtcNow trực tiếp — để test tua giờ được và sau này đổi sang giờ server (Phase 4.1).
+    /// không gọi DateTime.UtcNow trực tiếp — để test tua giờ được và dùng giờ máy chủ (<see cref="ServerClock"/>, Phase 4.1).
     /// </summary>
     public interface ITimeProvider
     {

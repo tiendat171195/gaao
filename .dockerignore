@@ -1,0 +1,10 @@
+# Docker chỉ cần code luật game + máy chủ (bỏ model, ảnh, Library của Unity... cho nhẹ)
+*
+!Assets/PawFit/Scripts/Core/**
+!Assets/PawFit/Scripts/Pet/**
+!Assets/PawFit/Scripts/Battle/**
+!Assets/PawFit/Scripts/Online/**
+!Server/PawFit.Server/**
+Server/PawFit.Server/bin
+Server/PawFit.Server/obj
+Server/PawFit.Server/data

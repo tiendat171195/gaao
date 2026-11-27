@@ -218,7 +218,48 @@
     - Rung camera, hạ gục chậm 1 giây (`Time.timeScale`, tính theo giờ thật).
     - Rời màn đấu luôn trả `timeScale = 1`.
   - Test: 185/185 pass · compile check: pass (Editor + Release) · soát API: 468 thành viên khớp
-  - Test: 173/173 pass · compile check: pass · soát API: 467 thành viên khớp Unity 6000.3.29f1
+
+- **Phase 4.1 – 4.3 · Máy chủ riêng** (bạn chọn phương án 1: tự host cho tất cả, Firebase chỉ dùng FCM, Photon để dành khi đông người; G10d):
+  - Logic dùng chung (C# thuần, Unity và máy chủ biên dịch cùng 1 code):
+    - `RankRules.RollSeason / Apply / Copy`: luật mùa + Elo tách khỏi `RankService`, máy chủ dùng y hệt.
+    - `RankService.Adopt` (lúc đăng nhập) + `ApplyServerMatch` (sau trận): chép rank của máy chủ về máy.
+    - `GhostSearch`: hàng người chơi ảo tách từ mạng giả lập (kết quả giả lập không đổi). Máy chủ dùng khi vắng người.
+    - `BattleSimulation(tieFirst)`: 2 bên SPD bằng nhau thì máy của bên 1 tính đúng thứ tự như máy chủ.
+    - `IMatchFeed` + chế độ trận theo nhịp máy chủ trong `BattleSession`:
+      - Nét vuốt của mình gửi lên máy chủ, máy chủ chốt bước nào thì áp ở bước đó.
+      - Máy chạy chậm 2 bước làm đệm, tụt xa thì chạy dồn.
+      - Kết quả theo máy chủ. Mất kết nối = thua.
+    - `ServerMatch`: trận chạy ở máy chủ (nhận vuốt, người chơi ảo nghĩ, chạy bước, ghi nét đã chốt, bỏ cuộc).
+  - Client (C# thuần, Online):
+    - `Protocol`: tin nhắn JSON. Số thực gửi dạng bit nên 3 nơi chạy trận giống hệt.
+    - `ServerApi` + `IHttpTransport` (`DotNetHttpTransport` để test), `ClientWebSocketTransport`, `ServerClock` (Core).
+    - `OnlineService`: tài khoản khách, giờ + rank, sao lưu 2 phút / khi ẩn app, biệt danh, mã chuyển máy (đặt chờ ở khóa `restore`, mở lại game mới thay).
+    - `ServerNetworkManager` + `NetMatchFeed`. `INetworkManager` gọn lại: bỏ `SendSwipe / OpponentSwipe / OpponentLeft`, thêm `Update()` + trạng thái `Connecting`.
+  - Máy chủ `Server/PawFit.Server` (ASP.NET Core .NET 8 + SQLite):
+    - REST: giờ, tài khoản khách (giới hạn theo IP), `/v1/me`, biệt danh, lưu game (409 khi lệch bản), mã chuyển máy (thu hồi máy cũ).
+    - WebSocket `/v1/pvp`: chào bằng mã đăng nhập, mỗi tài khoản 1 kết nối, giới hạn 40 tin / giây.
+    - `MatchService` (1 luồng):
+      - Ghép người thật trước. Chờ 6 giây thì thả người chơi ảo (mã người chơi giả như người thật).
+      - Chạy trận 30 bước / giây, hết trận tính Elo + Coin, ghi lịch sử trận.
+    - Kiểm vé tìm trận: chặn chỉ số vượt trần của giai đoạn, máy chủ tự tính lực chiến.
+    - `Dockerfile` + `docker-compose.yml` + `Caddyfile` (HTTPS tự động), `Server/README.md` (chạy trên Mac / VPS, sao lưu, cấu hình, API, giới hạn).
+  - Unity:
+    - `UnityHttpTransport` (UnityWebRequest). `ServerUrl` đọc `Resources/PawFitServer.txt`; bản Dev ghi đè được ở bảng DEV.
+    - `GameBootstrap`: `ServerClock` + có địa chỉ thì `OnlineService` + `ServerNetworkManager`, không có thì mạng giả lập như cũ. Ẩn app = tải lên, quay lại = đồng bộ giờ.
+    - `SceneFlow`:
+      - Tìm trận chờ nối máy chủ (12 giây; lỗi thì gợi ý đấu hình nộm), rớt mạng lúc tìm thì báo.
+      - Vé gửi kèm dạng thú + phụ kiện. Thẻ kết quả theo Elo máy chủ.
+      - Hòm thư: biệt danh / mã chuyển máy / nhập mã (xong thì đóng game).
+    - `BattleScene`: trận qua máy chủ dùng `IMatchFeed`, hiện "Chờ đối thủ vào trận...".
+    - Bảng DEV: mục Máy chủ (trạng thái, ping, lệch giờ, ô địa chỉ, Nối lại).
+    - Build: `PlayerSettings.insecureHttpOption = DevelopmentOnly` (bản Dev nối được http:// máy Mac, Release bắt buộc https). `link.xml` giữ thêm `PawFit.Battle` + `PawFit.Online` (Newtonsoft đọc tin nhắn khi build IL2CPP).
+  - Test:
+    - 197/197 logic, gồm 2 máy chạy lại khớp máy chủ từng bit, có cả lúc SPD bằng nhau, người chơi ảo trên máy chủ, bỏ cuộc, đệm / chạy dồn.
+    - 8/8 end-to-end máy chủ thật (`dotnet test Server/PawFit.Server.Tests`, khoảng 10 giây).
+  - Kiểm tra: compile check pass (Editor + Release) · `Tools/NetStandardCheck` (biên dịch theo .NET Standard 2.1 như Unity) pass · soát API: 498 thành viên khớp Unity 6000.3.29f1 (UnityWebRequest, InsecureHttpOption, EditorApplication.isPlaying...) · `dotnet publish` + bố cục Docker publish được.
+  - Chưa chạy được ở container:
+    - Docker image (container không có Docker daemon; `docker compose config` hợp lệ).
+    - Unity thật: UnityWebRequest / ClientWebSocket trên điện thoại, bàn phím ô nhập mã.
 
 ## Quyết định đã chốt
 
@@ -230,7 +271,10 @@
 - Ốm mà chăm đủ thì bệnh dừng nặng thêm nhưng không tự khỏi; phải chăm kỹ hoặc uống thuốc (G4). Thuốc mua ở quầy hàng bằng Coin (Phase 5.1).
 - Phụ kiện + trang trí chỉ để đẹp, không đổi chỉ số (PvP công bằng). Đồ trang trí có chỗ cố định, không cho tự kéo thả.
 - Phase 5.1 làm trước Phase 4 (bạn chọn). Quầy hàng bán đồ dùng ngay, không có túi đồ. Ví nằm chung file lưu game (Phase 4.1 đồng bộ cùng hồ sơ người chơi).
-- Quảng cáo đếm "ngày" theo giờ trên máy cho tới khi có giờ server (Phase 4.1).
+- Quảng cáo đếm "ngày" theo `ITimeProvider`. Có máy chủ thì đó là giờ máy chủ (`ServerClock`), offline thì là giờ máy.
+- Máy chủ riêng thay Firebase + Photon (bạn chốt). Firebase chỉ dùng FCM. Photon để dành khi đông người.
+- PvP qua máy chủ: máy chủ chạy trận + quyết định kết quả; 2 máy chạy lại nét vuốt đã chốt. Thoát / mất mạng giữa trận = thua.
+- Giai đoạn thử nghiệm: Coin / đồ / thú do máy tính (máy chủ chỉ sao lưu). Elo, kết quả PvP, Coin thắng PvP do máy chủ quyết định.
 - Thú mất thì xóa khỏi file lưu (chỉ còn bia mộ + trứng). Công cụ test "Thú mới" vẫn giữ bia mộ cũ.
 - Tiến hóa Gen 1 chỉ đổi dáng thân + màu lông / tỉ lệ (DNA trượt); không tự đổi kiểu tai / đuôi / sừng để tránh đổi model đột ngột.
 - Trước Phase 3.2, điểm Sức mạnh chỉ có từ sân tập trong vườn. Phase 3.2 thêm điểm từ Mode Huấn luyện.
@@ -238,18 +282,25 @@
 
 ## Tiếp theo
 
-- **Phase 4.1 / 4.2 phần máy chủ** — Firebase Auth + Firestore + giờ server, Photon Fusion cho người thật. Cần tài khoản của bạn. Người chơi ảo vẫn giữ để lấp chỗ khi vắng người.
+- **Thử máy chủ** — chạy `dotnet run` trên Mac, điện thoại (bản Dev) gõ địa chỉ ở bảng DEV ▸ Máy chủ (`Docs/BUILD.md` mục 13). Gửi tôi:
+  - Console / log nếu không nối được;
+  - cảm giác độ trễ khi đánh PvP.
+- **Phase 4.4** — Đưa máy chủ lên VPS (`Server/README.md` mục 3). **Cần bạn:** thuê VPS (Ubuntu, nên chọn Singapore) + 1 tên miền trỏ về VPS.
+- **Phase 4.5** — Thông báo: cục bộ (bé đói / buồn ngủ, không cần máy chủ) + FCM (từ máy chủ, cần project Firebase + file cấu hình).
 - **Phase 5.3** — Bạn build Android theo `Docs/BUILD.md`, gửi lỗi Console / log điện thoại + số fps. Tôi sửa theo kết quả, rồi làm tiếp:
   - icon / tên hiển thị
   - khóa ký phát hành (keystore) + AAB cho Google Play
   - build iOS (cần Xcode)
-- **Phase 4.1** — Firebase Auth + Firestore + giờ server. **Cần bạn:** tạo project Firebase, bật Auth (ẩn danh / Google), Firestore, tải `google-services.json` (Android) + `GoogleService-Info.plist` (iOS), và cài Firebase Unity SDK. Trước khi có các thứ đó, tôi chỉ làm được interface + bản giả lập (Mock).
 
 ## Ghi chú cho session sau
 
 - Container cloud mới phải cài lại công cụ:
   `apt-get install -y --no-install-recommends blender python3-numpy dotnet-sdk-8.0`
 - Chạy test logic: `dotnet test Tools/LogicTests` (khoảng 30 giây, gồm cả restore NuGet lần đầu).
+- Test máy chủ: `dotnet test Server/PawFit.Server.Tests` (khoảng 10 giây, chạy máy chủ thật ở cổng ngẫu nhiên). Chạy thử máy chủ: `cd Server/PawFit.Server && dotnet run` (cổng 5080).
+- Kiểm tra code logic theo bộ thư viện của Unity: `dotnet build Tools/NetStandardCheck` (.NET Standard 2.1). Code logic dùng API mới của .NET 8 thì bước này báo lỗi.
+- Đổi luật trận / tin nhắn mạng thì tăng `NetProto.Version` (`Online/Protocol.cs`): bản game cũ sẽ được báo "hãy cập nhật".
+- Máy chủ biên dịch chung `Core / Pet / Battle / Online`: thêm file logic mới vào 4 thư mục này là máy chủ có luôn; dùng `using` tới Garden / Economy trong Online sẽ làm hỏng build máy chủ.
 - Compile thử code Unity: `dotnet build Tools/UnityCompileCheck` (stub ở `UnityStubs.cs`; dùng API Unity mới thì thêm stub).
 - Môi trường cloud riêng `gaao` có setup script cài sẵn Blender + .NET + restore NuGet (chưa kiểm chứng ở session mới).
 - `ProjectVersion.txt` đặt `6000.3.0f1`. Mở bằng bản 6.3 khác thì Unity tự cập nhật file này.

@@ -68,3 +68,4 @@ __pycache__/
 # Ảnh render tạm (ảnh demo chính thức nằm ở Docs/art)
 /Tools/Blender/*.png
 /out/
+/api_report.txt

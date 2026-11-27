@@ -1,0 +1,5 @@
+# Caddy: tự xin + gia hạn chứng chỉ HTTPS cho tên miền, chuyển tiếp cả HTTP lẫn WebSocket (PvP) vào máy chủ game.
+{$PAWFIT_DOMAIN} {
+	encode gzip
+	reverse_proxy pawfit:5080
+}

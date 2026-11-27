@@ -2,7 +2,7 @@ namespace PawFit.Core
 {
     /// <summary>
     /// Ví Coin của người chơi (Phase 5.1). Nằm trong file lưu game, KHÔNG mất khi thú mất.
-    /// Phase 4.1 đồng bộ lên Firestore cùng hồ sơ người chơi.
+    /// Có máy chủ riêng thì được sao lưu lên máy chủ cùng file game (Phase 4.1).
     /// </summary>
     public sealed class WalletData
     {

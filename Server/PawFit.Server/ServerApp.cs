@@ -51,6 +51,8 @@ namespace PawFit.Server
     /// <summary>Dựng ứng dụng máy chủ (Program.cs và test cùng gọi).</summary>
     public static class ServerApp
     {
+        public const int DefaultPort = 5080;
+
         public static WebApplication Build(string[] args, Action<ServerOptions> configure = null)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args ?? Array.Empty<string>());
@@ -71,6 +73,8 @@ namespace PawFit.Server
                 o.AddPolicy("redeem", ctx => PerIp(ctx, opt.RedeemPerHourPerIp));
             });
             builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = Math.Max(64 * 1024, opt.MaxSaveBytes * 2 + 4096));
+            // cổng mặc định 5080 (mọi địa chỉ mạng); đổi bằng --urls hoặc biến ASPNETCORE_URLS
+            if (string.IsNullOrWhiteSpace(builder.Configuration["urls"])) builder.WebHost.UseUrls("http://0.0.0.0:" + DefaultPort);
 
             WebApplication app = builder.Build();
             if (opt.BehindProxy)

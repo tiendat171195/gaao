@@ -21,7 +21,8 @@ namespace PawFit.App
         public static ServiceLocator Services { get; private set; }
 
         private PetService _pets;
-        private LocalNetworkManager _localNet;
+        private INetworkManager _net;
+        private OnlineService _online;
         private TipService _tips;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private MockAdService _mockAds;   // chỉ bản Dev / Editor có quảng cáo giả lập
@@ -40,10 +41,15 @@ namespace PawFit.App
             DontDestroyOnLoad(gameObject);
             Application.targetFrameRate = 60;   // điện thoại mặc định chỉ 30 khung hình / giây: vuốt + hoạt cảnh sẽ giật
             var log = new UnityLog();
-            var time = new DebugTimeProvider(new SystemTimeProvider());
             var cfg = GameConfig.CreateDefault();
-            var save = new JsonFileSaveService(Path.Combine(Application.persistentDataPath, "save"),
-                                               new NewtonsoftSerializer());
+            var serializer = new NewtonsoftSerializer();
+            var save = new JsonFileSaveService(Path.Combine(Application.persistentDataPath, "save"), serializer);
+            // vừa nhập mã chuyển máy ở lần mở trước: thay file game bằng bản tải về TRƯỚC khi đọc thú
+            if (OnlineService.ApplyPendingRestore(save)) Debug.Log("[PawFit] Đã nhận dữ liệu từ mã chuyển máy");
+            AccountData account = OnlineService.LoadAccount(save);
+            // giờ theo máy chủ (Phase 4.1): chưa nối được thì giờ máy + độ lệch đo lần trước
+            var clock = new ServerClock(new SystemTimeProvider(), account.ClockOffsetSeconds);
+            var time = new DebugTimeProvider(clock);
             var rng = new SeededRandom((ulong)DateTime.UtcNow.Ticks);
             var bus = new EventBus();
             _pets = new PetService(time, rng, save, bus, cfg, log);
@@ -52,6 +58,7 @@ namespace PawFit.App
             Services.Register<ILog>(log);
             Services.Register<ITimeProvider>(time);
             Services.Register(time);            // DebugTimeProvider: để Debug overlay tua giờ (Phase 1.3)
+            Services.Register(clock);
             Services.Register(cfg);
             Services.Register<ISaveService>(save);
             Services.Register<IRandom>(rng);
@@ -95,11 +102,29 @@ namespace PawFit.App
             Services.Register<ICoinWallet>(economy);   // màn đấu cộng Coin khi thắng Bot qua interface này
             Services.Register(new ShopService(_pets, health, economy, bus, cfg, log));
             Services.Register(new CosmeticsService(_pets, economy, bus, cfg, log));   // phụ kiện + trang trí (Phase 5.2)
-            Services.Register(new RankService(_pets, time, bus, cfg, economy, log));    // rank Elo + mùa giải (Phase 4.3, chạy offline)
-            // PvP (Phase 4.2): chưa có Photon => mạng giả lập ghép với người chơi ảo (đông như có nhiều người đang chơi).
-            // Có Photon: thay bằng lớp INetworkManager thật, người chơi ảo chỉ thả vào khi chờ lâu.
-            _localNet = new LocalNetworkManager(time, new SeededRandom(rng.NextUInt()), cfg);
-            Services.Register<INetworkManager>(_localNet);
+            var rank = new RankService(_pets, time, bus, cfg, economy, log);   // rank Elo + mùa giải (Phase 4.3)
+            Services.Register(rank);
+            // Máy chủ riêng (Phase 4): có địa chỉ máy chủ thì tài khoản khách + giờ + sao lưu + PvP qua máy chủ
+            // (máy chủ ghép người thật trước, vắng người thì thả người chơi ảo, tự tính Elo).
+            // Không có địa chỉ: mạng giả lập trên máy như trước (người chơi ảo, Elo tính trên máy).
+            string url = ServerUrl.Resolve(account);
+            if (url != null)
+            {
+                var api = new ServerApi(url, new UnityHttpTransport());
+                _online = new OnlineService(api, save, serializer, _pets, rank, clock, bus, log);
+                Services.Register(_online);
+                var serverNet = new ServerNetworkManager(api.PvpUrl, () => _online.Account.Token, time, cfg, null, log, Application.version);
+                Services.Register(serverNet);
+                _net = serverNet;
+                _online.Start();
+                Debug.Log("[PawFit] Máy chủ: " + url);
+            }
+            else
+            {
+                _net = new LocalNetworkManager(time, new SeededRandom(rng.NextUInt()), cfg);
+                Debug.Log("[PawFit] Chưa cấu hình máy chủ: chơi offline, PvP với người chơi ảo trên máy");
+            }
+            Services.Register(_net);
             gameObject.AddComponent<UiSounds>().Init(bus);   // tiếng "ting" khi nhận / tiêu Coin
 
             // Cài đặt ở hòm thư: lưu file riêng của máy này. Tắt tiếng = tắt mọi âm thanh của game 1 chỗ.
@@ -141,7 +166,8 @@ namespace PawFit.App
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             _mockAds?.Update(Time.unscaledDeltaTime);   // quảng cáo giả lập chạy theo giờ thật
 #endif
-            _localNet?.Update();   // người chơi ảo vào hàng chờ, ghép trận
+            _online?.Update(Time.unscaledDeltaTime);   // tài khoản, giờ máy chủ, sao lưu
+            _net?.Update();   // tìm trận / nhịp trận PvP (mạng giả lập: người chơi ảo vào hàng chờ)
             if (_tips != null && SceneFlow.Garden != null && SceneFlow.Battle == null && !GardenUi.IsOpen)
             {
                 TipId? tip = _tips.Update(Time.unscaledDeltaTime);
@@ -156,8 +182,16 @@ namespace PawFit.App
         private void OnApplicationPause(bool paused)
         {
             if (_pets == null) return;
-            if (paused) _pets.Save();
-            else _pets.Tick();   // quay lại app: tính bù thời gian vắng mặt
+            if (paused)
+            {
+                _pets.Save();
+                _online?.OnPause();   // tải file game lên máy chủ (có thể bị tắt hẳn sau đó)
+            }
+            else
+            {
+                _pets.Tick();   // quay lại app: tính bù thời gian vắng mặt
+                _online?.OnResume();   // đồng bộ giờ lại / nối lại máy chủ
+            }
         }
 
         private void OnApplicationQuit() => _pets?.Save();

@@ -1,6 +1,6 @@
 # PawFit
 
-Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/PLAN.md` · Thiết kế: `Docs/GDD.md` · Tiến độ: `Docs/PROGRESS.md` · **Cài môi trường + build Android trên Mac: `Docs/BUILD.md`**.
+Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/PLAN.md` · Thiết kế: `Docs/GDD.md` · Tiến độ: `Docs/PROGRESS.md` · **Cài môi trường + build Android trên Mac: `Docs/BUILD.md`** · **Máy chủ riêng (tài khoản, sao lưu, PvP): `Server/README.md`**.
 
 ## Mở project lần đầu
 
@@ -36,7 +36,7 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 | Chạm vào khay đồ ăn | Thú chạy tới chòi ăn |
 | Chạm vào **quầy hàng** (phía trước bên phải, có lối đá dẫn tới) | Mở quầy: mua thuốc / bánh / nước, xem quảng cáo lấy thưởng |
 | Chạm vào **hình nộm** ở sân tập | Vào sân tập: Huấn luyện hoặc Đấu Bot |
-| Chạm vào **hòm thư** (cạnh cổng đấu trường, sau sân tập) | Cài đặt: bật / tắt âm thanh, xem + copy mã DNA của thú, phiên bản game |
+| Chạm vào **hòm thư** (cạnh cổng đấu trường, sau sân tập) | Cài đặt: bật / tắt âm thanh, tài khoản (biệt danh, mã chuyển máy) khi có máy chủ, xem lại hướng dẫn, copy mã DNA, phiên bản game |
 | Chạm vào **cổng đấu trường** (sau sân tập) | Thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút **Tìm trận** PvP |
 
 Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ.
@@ -168,13 +168,22 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Bản dev là **quảng cáo giả lập 3 giây** (màn tối có đếm ngược + nút Bỏ qua). Phase 5.3 thay bằng quảng cáo thật.
 - Số liệu nằm ở `EconomyConfig` trong `GameConfig.cs` (giá thuốc ở `HealthConfig`), chỉnh được không cần sửa luật.
 
-## PvP + rank (Phase 4, chạy được khi chưa có máy chủ)
+## PvP + rank (Phase 4)
+
+Có 2 chế độ, tự chọn theo file `Assets/PawFit/Resources/PawFitServer.txt` (bản Dev đổi được ở bảng DEV ▸ Máy chủ):
+
+- **Chưa có địa chỉ máy chủ:** chơi offline. Đối thủ là người chơi ảo chạy trên máy, Elo tính trên máy.
+- **Có máy chủ riêng** (`Server/README.md`):
+  - Tài khoản khách tự tạo, giờ máy chủ, sao lưu, mã chuyển máy ở hòm thư.
+  - Máy chủ ghép **người thật** trước, chờ 6 giây chưa có ai mới thả người chơi ảo (chạy trên máy chủ).
+  - Máy chủ chạy trận + tính Elo. Thoát app / mất mạng giữa trận = thua.
+
 
 - **Tìm trận:**
   - Chạm cổng đấu trường ▸ **Tìm trận**. Màn tìm hiện số giây đã chờ và khoảng đang tìm.
   - Lúc đầu tìm đối thủ chênh Elo ±100, lực chiến ±10%. Chờ 30 giây thì nới ra ±200 / ±20%.
   - Chờ 60 giây thì có thêm nút **Đấu hình nộm**, vẫn tìm tiếp. Bấm **Hủy tìm** để thôi.
-- **Đối thủ = người chơi ảo** (chưa có máy chủ thật nên chưa có người thật):
+- **Người chơi ảo** (chế độ offline, hoặc máy chủ vắng người):
   - Mỗi người chơi ảo có biệt danh, có thú riêng (DNA, tên, cùng giai đoạn tiến hóa với thú bạn, dạng Adult, có người đeo phụ kiện).
   - Mỗi người có lối đánh riêng: Hăng / Thủ / Kỹ thuật / Cân bằng. Elo càng cao đánh càng giỏi.
   - Họ vuốt chiêu y như người chơi, không ăn gian.

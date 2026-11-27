@@ -28,7 +28,7 @@ namespace PawFit.Core
         public T Deserialize<T>(string text) => JsonConvert.DeserializeObject<T>(text, Settings);
     }
 
-    /// <summary>Lưu / đọc dữ liệu theo khóa. Phase 1: file JSON trên máy. Phase 4.1: thêm bản đồng bộ Firestore.</summary>
+    /// <summary>Lưu / đọc dữ liệu theo khóa: file JSON trên máy. Có máy chủ riêng thì OnlineService sao lưu thêm file game lên máy chủ.</summary>
     public interface ISaveService
     {
         bool Exists(string key);

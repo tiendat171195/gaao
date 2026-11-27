@@ -6,7 +6,12 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 
 - **Unity 6.3 LTS** (thay 2022.3 vì bản này hết hỗ trợ), URP, C#.
 - Android + iOS. Màn vườn để dọc, màn đấu để ngang.
-- Firebase Auth + Firestore (profile, pet, ranking). Photon Fusion 2.1 cho PvP. `INetworkManager` là interface để thay được.
+- **Máy chủ riêng** (bạn chốt, thay Firebase + Photon): .NET 8 (ASP.NET Core) + SQLite, ở `Server/`. Máy chủ dùng lại đúng code luật C# thuần của game.
+  - Tài khoản khách + mã chuyển máy, giờ máy chủ, sao lưu file game, rank: qua REST.
+  - Tìm trận + PvP real-time: qua WebSocket. Máy chủ chạy trận và tính Elo.
+  - Docker + Caddy (HTTPS tự động) để đưa lên VPS.
+- Firebase **chỉ dùng FCM** (thông báo đẩy từ máy chủ), làm sau. Nhắc kiểu "bé đói" dùng thông báo cục bộ trên máy, không cần máy chủ.
+- Photon: để dành khi đông người. `INetworkManager` là interface nên thay được mà không sửa màn tìm trận / màn đấu.
 - **Toàn bộ logic game là C# thuần dạng Service.** Không viết luật game trong MonoBehaviour / UI.
 
 ## Chiến lược model thú: Gen 1 → Gen 2
@@ -30,9 +35,11 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 2.2 | Tiến hóa (CareScore, TrainingVector, seed + tính cách) + chỉ số + lực chiến | ✅ |
 | 3.1 | SwipeRecognizer + BattleSimulation + Bot (logic thuần) | ✅ |
 | 3.2 | Màn đấu ngang + Mode Huấn luyện (bóng mờ, slow-mo, 10 lần = thuộc chiêu) | ✅ |
-| 4.1 | Firebase Auth + Firestore + giờ server | ⏳ |
-| 4.2 | PvP real-time Photon Fusion + tìm đối thủ (Elo ±100, lực chiến ±10%) | 🔄 Màn tìm trận + PvP với người chơi ảo chạy được; Photon (người thật) chờ tài khoản |
-| 4.3 | Ranking Elo + bậc + mùa giải 30 ngày | 🔄 Logic xong (chạy offline); đồng bộ máy chủ chờ 4.1 |
+| 4.1 | Máy chủ riêng: tài khoản khách + mã chuyển máy + sao lưu + giờ máy chủ | ✅ Chạy + test được ở container; chờ bạn thử trên điện thoại |
+| 4.2 | PvP real-time qua máy chủ riêng (WebSocket) + tìm đối thủ (Elo ±100, lực chiến ±10%): người thật trước, vắng người thì người chơi ảo chạy trên máy chủ | ✅ Như trên |
+| 4.3 | Ranking Elo + bậc + mùa giải 30 ngày (máy chủ quyết định) | ✅ Như trên |
+| 4.4 | Đưa máy chủ lên VPS (Docker + HTTPS) | ⏳ Cần VPS + tên miền của bạn (`Server/README.md`) |
+| 4.5 | Thông báo: cục bộ (bé đói / buồn ngủ) + FCM (từ máy chủ) | ⏳ Sau |
 | 5.1 | Kinh tế + shop vườn + quảng cáo mock (tối đa 5 lần/ngày) | ✅ |
 | 5.2 | Trang trí + phụ kiện + polish | ✅ |
 | 5.3 | Build Android / iOS | 🔄 Đã có menu build Android + iOS, chờ bạn build thử (`Docs/BUILD.md`) |
@@ -57,14 +64,19 @@ gaao/                            ← gốc repo = gốc project Unity
 │   │   │   └── View/ [Unity]                 BattleScene (màn ngang), BattleHud, FighterRig, DummyBuilder
 │   │   ├── Economy/ [PawFit.Economy, C# thuần] EconomyService (ví Coin + quảng cáo 5 lần/ngày), ShopService,
 │   │   │                                     CosmeticsService (phụ kiện + trang trí), IAdService + MockAdService
-│   │   ├── Online/ [PawFit.Online, C# thuần] RankService (Elo + bậc + mùa), Matchmaker, INetworkManager +
-│   │   │                                     LocalNetworkManager (giả lập)
+│   │   ├── Online/ [PawFit.Online, C# thuần] RankService (Elo + bậc + mùa), Matchmaker, GhostSearch (người chơi ảo),
+│   │   │                                     INetworkManager: LocalNetworkManager (giả lập) / ServerNetworkManager (máy chủ),
+│   │   │                                     Protocol (tin nhắn), ServerApi + OnlineService (tài khoản, sao lưu, chuyển máy),
+│   │   │                                     ServerMatch (trận chạy ở máy chủ) — máy chủ biên dịch chung các file này
 │   │   └── App/    [PawFit.App, Unity]       GameBootstrap (composition root)
 │   ├── Resources/Pets/Gen1/                   PawFit_Gen1_PetKit.fbx + PawFit_Gen1_Anchors.json
 │   ├── Resources/Shaders/                     PawFit/Gen1Fur, PawFit/Gen1Eye (URP)
 │   ├── Editor/     [PawFit.Editor]           menu PawFit ▸ Setup Project, tự đặt thông số import FBX Gen 1
 │   └── Tests/EditMode/ [NUnit]               chạy được cả Unity Test Runner lẫn dotnet
+├── Server/                                    máy chủ riêng: PawFit.Server (ASP.NET Core + SQLite), PawFit.Server.Tests,
+│                                              Dockerfile + docker-compose + Caddyfile, README (chạy trên Mac / VPS)
 ├── Tools/LogicTests/                          dotnet test (ngoài Unity)
+├── Tools/NetStandardCheck/                    biên dịch code logic theo .NET Standard 2.1 (bộ thư viện Unity dùng)
 ├── Tools/UnityCompileCheck/                   compile thử code Unity bằng stub (ngoài Unity)
 ├── Tools/Blender/                             bộ dựng thú Gen 1
 ├── Docs/                                      PLAN, GDD, PROGRESS, art/
@@ -72,11 +84,11 @@ gaao/                            ← gốc repo = gốc project Unity
 └── ProjectSettings/ProjectVersion.txt
 ```
 
-**Luật:** asmdef logic bật `noEngineReferences` nên compiler cấm `using UnityEngine` trong logic. View chỉ hiển thị và đổi input thành lệnh gọi Service. Service đổi state rồi bắn event qua EventBus. App là nơi duy nhất chọn implementation cụ thể (Mock / Firebase / Photon).
+**Luật:** asmdef logic bật `noEngineReferences` nên compiler cấm `using UnityEngine` trong logic. View chỉ hiển thị và đổi input thành lệnh gọi Service. Service đổi state rồi bắn event qua EventBus. App là nơi duy nhất chọn implementation cụ thể (Mock / mạng giả lập / máy chủ riêng).
 
 ## Quy trình mỗi Phase
 
 1. Bạn gõ `Làm Phase X`, tôi chỉ làm đúng Phase đó.
-2. Logic C# có unit test, tôi chạy `dotnet test` trong container trước khi giao.
+2. Logic C# có unit test, tôi chạy `dotnet test` trong container trước khi giao (máy chủ: `dotnet test Server/PawFit.Server.Tests`).
 3. Commit + push lên nhánh `claude/hopeful-shannon-3602l1`, cập nhật `Docs/PROGRESS.md`.
 4. Bạn pull, mở Unity, test theo checklist, gửi lại lỗi Console / ảnh chụp.

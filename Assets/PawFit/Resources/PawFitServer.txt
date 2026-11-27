@@ -1,0 +1,5 @@
+# Địa chỉ máy chủ riêng của PawFit: dòng đầu tiên KHÔNG bắt đầu bằng dấu # là địa chỉ.
+# Để trống (chỉ có dòng #) = chơi offline: PvP với người chơi ảo ngay trên máy, như trước khi có máy chủ.
+# Ví dụ máy chủ thật (VPS, có HTTPS):         https://pawfit.example.com
+# Ví dụ máy Mac trong nhà (chỉ bản Dev):     http://192.168.1.10:5080
+# Bản Dev còn đổi được địa chỉ ngay trên điện thoại: bảng DEV ▸ Máy chủ.

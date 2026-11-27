@@ -1,0 +1,37 @@
+# Chạy máy chủ PawFit trên VPS (Ubuntu + Docker), có HTTPS tự động (Caddy + Let's Encrypt):
+#     cd Server
+#     cp .env.example .env        # rồi sửa PAWFIT_DOMAIN = tên miền của bạn
+#     docker compose up -d --build
+# Cổng 80 + 443 phải mở. Máy chủ game (cổng 5080) chỉ Caddy gọi được, không lộ ra ngoài.
+services:
+  pawfit:
+    build:
+      context: ..
+      dockerfile: Server/Dockerfile
+    restart: unless-stopped
+    environment:
+      - PawFit__BehindProxy=true
+    volumes:
+      - pawfit-data:/data
+    expose:
+      - "5080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - PAWFIT_DOMAIN=${PAWFIT_DOMAIN:?Chưa đặt PAWFIT_DOMAIN trong file .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - pawfit
+
+volumes:
+  pawfit-data:
+  caddy-data:
+  caddy-config:

@@ -5,7 +5,7 @@ namespace PawFit.Core
 
     /// <summary>
     /// Elo + mùa giải của người chơi (Phase 4.3, trong file lưu game; thú mất vẫn giữ).
-    /// Khi có máy chủ (Phase 4.1 / 4.2), máy chủ mới là nơi quyết định Elo thật; bản trên máy chỉ để hiện và chơi offline.
+    /// Có máy chủ riêng: máy chủ quyết định Elo thật (cùng RankRules), bản trên máy chép từ máy chủ để hiện; không có máy chủ thì tính trên máy.
     /// </summary>
     public sealed class RankData
     {
