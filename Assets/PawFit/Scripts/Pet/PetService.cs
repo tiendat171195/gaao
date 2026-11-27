@@ -120,6 +120,9 @@ namespace PawFit.Pet
             if (stepper != null && !_steppers.Contains(stepper)) _steppers.Add(stepper);
         }
 
+        /// <summary>Lần mở game này, thú đã vắng người chơi bao nhiêu giờ (0 nếu thú mới / không có thú).</summary>
+        public double LastAwayHours { get; private set; }
+
         /// <summary>Thú đang sống (null nếu thú đã mất và trứng chưa nở).</summary>
         public PetData Current => _game?.Pet;
         public bool HasPet => Current != null;
@@ -199,6 +202,7 @@ namespace PawFit.Pet
                 }
                 PetData pet = Current;
                 double hoursAway = Math.Max(0.0, (_time.UtcNow - pet.LastSimulatedUtc).TotalHours);
+                LastAwayHours = hoursAway;
                 Tick();
                 _log.Info("[PawFit] Nạp thú '" + pet.Name + "', vắng " + hoursAway.ToString("0.0") + " giờ");
                 if (HasPet) _bus.Publish(new PetLoaded(Current, hoursAway));

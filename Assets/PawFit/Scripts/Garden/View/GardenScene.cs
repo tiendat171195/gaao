@@ -107,6 +107,7 @@ namespace PawFit.Garden.View
             _router.ShopTapped = () => ShopTapped?.Invoke();
             _router.MailboxTapped = () => MailboxTapped?.Invoke();
             _router.ArenaTapped = () => ArenaTapped?.Invoke();
+            _router.Tips = s.TryGet(out TipService tips) ? tips : null;
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
             _subs.Add(bus.Subscribe<PetCreated>(OnPetCreated));

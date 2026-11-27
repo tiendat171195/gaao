@@ -41,6 +41,14 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 
 Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ.
 
+**Mẹo hướng dẫn:**
+- Khung "Mẹo" nền vàng hiện ở dưới màn hình đúng lúc cần. Mỗi mẹo hiện 1 lần, tự làm trước thì mẹo đó bỏ qua. Các mẹo cách nhau tối thiểu 25 giây.
+  - Mở đầu: chạm đất → vuốt ve → dắt thú.
+  - Khi đói / bẩn / buồn ngủ / ốm.
+  - Sau một lúc chơi: quầy hàng → sân tập → đấu trường.
+- Vào game sau ≥ 1 giờ vắng có dòng "Bạn vắng 6 giờ. Kem đang đói, bẩn."
+- Hòm thư ▸ **Xem lại hướng dẫn** để hiện lại từ đầu.
+
 ## Thú "nói" bằng hình (không có thanh số)
 
 | Trạng thái | Hình |
@@ -173,6 +181,10 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Thường tìm thấy sau khoảng 5–20 giây, như đang có nhiều người chơi.
 - **Trận:**
   - Có thẻ "Tìm thấy đối thủ!", rồi màn xoay ngang: thú bạn vs thú đối thủ, 90 giây.
+  - Cảm giác đánh (mọi trận):
+    - Khựng hình một nhịp khi trúng đòn.
+    - Rung camera khi chí mạng / phản đòn / Ultimate.
+    - Hạ gục thì chậm lại 1 giây.
   - Thẻ kết quả hiện Elo trước → sau, lên / xuống bậc, thắng +30 Coin. **Bỏ cuộc** tính là thua.
 - Thú ốm / đang ngủ không đấu được. Bậc cao nhất của thú được ghi lên bia mộ khi thú mất.
 

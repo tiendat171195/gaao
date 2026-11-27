@@ -3,6 +3,7 @@ using System.IO;
 using PawFit.Core;
 using PawFit.Economy;
 using PawFit.Garden;
+using PawFit.Garden.View;
 using PawFit.Online;
 using PawFit.Pet;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace PawFit.App
 
         private PetService _pets;
         private LocalNetworkManager _localNet;
+        private TipService _tips;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private MockAdService _mockAds;   // chỉ bản Dev / Editor có quảng cáo giả lập
 #endif
@@ -105,6 +107,10 @@ namespace PawFit.App
             Services.Register(settings);
             AudioListener.volume = settings.SoundOn ? 1f : 0f;
             bus.Subscribe<SettingsChanged>(e => AudioListener.volume = e.Settings.SoundOn ? 1f : 0f);
+
+            // Mẹo hướng dẫn theo tình huống (vườn không có nút nên chỉ cho người mới đúng lúc), mỗi mẹo 1 lần
+            _tips = new TipService(settings, _pets, health, evo, exprCfg, bus);
+            Services.Register(_tips);
             Debug.Log("[PawFit] Ví: " + economy.Coins + " Coin · quảng cáo còn " + economy.AdsLeftToday + "/" + economy.MaxAdsPerDay + " lượt hôm nay");
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -136,6 +142,11 @@ namespace PawFit.App
             _mockAds?.Update(Time.unscaledDeltaTime);   // quảng cáo giả lập chạy theo giờ thật
 #endif
             _localNet?.Update();   // người chơi ảo vào hàng chờ, ghép trận
+            if (_tips != null && SceneFlow.Garden != null && SceneFlow.Battle == null && !GardenUi.IsOpen)
+            {
+                TipId? tip = _tips.Update(Time.unscaledDeltaTime);
+                if (tip.HasValue) GardenUi.Tip(TipService.Text(tip.Value));
+            }
             _tickTimer += Time.unscaledDeltaTime;
             if (_tickTimer < 1f) return;
             _tickTimer = 0f;

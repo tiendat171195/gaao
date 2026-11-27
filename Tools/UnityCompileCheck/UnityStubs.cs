@@ -360,6 +360,7 @@ namespace UnityEngine
         public static float time => 0f;
         public static float unscaledTime => 0f;
         public static double unscaledTimeAsDouble => 0.0;
+        public static float timeScale { get; set; }
     }
 
     public enum TouchPhase { Began, Moved, Stationary, Ended, Canceled }

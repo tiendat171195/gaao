@@ -36,6 +36,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm trúng cổng đấu trường (PvP / rank).</summary>
         public Action ArenaTapped { get; set; }
 
+        /// <summary>Mẹo hướng dẫn: báo người chơi đã chạm đất / dắt thú (mẹo đó không hiện nữa). Có thể null.</summary>
+        public TipService Tips { get; set; }
+
         private Camera _cam;
         private IPointerInput _input;
         private EggView _downEgg;
@@ -187,6 +190,7 @@ namespace PawFit.Garden.View
                 case GestureKind.Tap:
                     if (!onGround || _pet == null) break;
                     _pet.MoveTo(g);
+                    Tips?.Done(TipId.Move);
                     _camCtl.ResumeFollow();
                     break;
                 case GestureKind.DragStart:
@@ -220,6 +224,7 @@ namespace PawFit.Garden.View
                     break;
                 case GestureKind.DragEnd:
                     if (onGround) _pet.EndLead(g);
+                    Tips?.Done(TipId.Lead);
                     break;
             }
         }

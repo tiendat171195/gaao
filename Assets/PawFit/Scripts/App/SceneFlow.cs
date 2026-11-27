@@ -4,6 +4,7 @@ using PawFit.Battle;
 using PawFit.Battle.View;
 using PawFit.Core;
 using PawFit.Economy;
+using PawFit.Garden;
 using PawFit.Garden.View;
 using PawFit.Online;
 using PawFit.Pet;
@@ -35,11 +36,17 @@ namespace PawFit.App
             Garden.ShopTapped = OpenShop;
             Garden.MailboxTapped = OpenSettings;
             Garden.ArenaTapped = OpenArena;
+            if (services.TryGet(out TipService tips))   // vào game sau 1 thời gian vắng: "trong lúc bạn vắng..."
+            {
+                string welcome = tips.WelcomeBack(services.Get<PetService>().LastAwayHours);
+                if (welcome != null) GardenUi.Toast(welcome, 5f);
+            }
         }
 
         /// <summary>Chạm hình nộm ở sân tập: chọn Huấn luyện (học chiêu) hoặc Đấu (90 giây) với Bot mức đó.</summary>
         private static void OnDummyTapped(int level)
         {
+            TipDone(TipId.Training);
             var pets = _services.Get<PetService>();
             if (!BattleSession.CanStart(pets, _services.Get<HealthService>(), out string reason))
             {
@@ -85,6 +92,7 @@ namespace PawFit.App
         public static void OpenShop()
         {
             if (Garden == null || Battle != null) return;
+            TipDone(TipId.Shop);
             var shop = _services.Get<ShopService>();
             var eco = _services.Get<EconomyService>();
             EconomyConfig e = eco.Config;
@@ -143,6 +151,7 @@ namespace PawFit.App
         public static void OpenArena()
         {
             if (Garden == null || Battle != null) return;
+            TipDone(TipId.Arena);
             var rank = _services.Get<RankService>();
             RankData d = rank.Current;
             int daysLeft = Math.Max(0, (int)Math.Ceiling((rank.SeasonEndsUtc - _services.Get<ITimeProvider>().UtcNow).TotalDays));
@@ -290,6 +299,11 @@ namespace PawFit.App
             return lines;
         }
 
+        private static void TipDone(TipId id)
+        {
+            if (_services.TryGet(out TipService tips)) tips.Done(id);
+        }
+
         private static string TierName(int elo) => RankRules.TierOf(elo, _services.Get<GameConfig>().Rank).ToString();
 
         // ------------------------------------------------------------------
@@ -313,6 +327,13 @@ namespace PawFit.App
                 GardenUi.Toast(settings.SoundOn ? "Đã bật âm thanh" : "Đã tắt âm thanh");
                 OpenSettings();
             } };
+            labels.Add("Xem lại hướng dẫn");
+            enabled.Add(true);
+            actions.Add(() =>
+            {
+                if (_services.TryGet(out TipService tips)) tips.Restart();
+                GardenUi.Toast("Mẹo hướng dẫn sẽ hiện lại từ đầu");
+            });
             labels.Add("Copy mã DNA");
             enabled.Add(dna != null);
             actions.Add(() =>

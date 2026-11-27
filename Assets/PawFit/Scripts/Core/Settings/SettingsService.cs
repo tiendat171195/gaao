@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace PawFit.Core
 {
@@ -6,6 +7,9 @@ namespace PawFit.Core
     public sealed class GameSettingsData
     {
         public bool SoundOn = true;
+
+        /// <summary>Mẹo hướng dẫn đã hiện / người chơi đã tự làm (mỗi mẹo chỉ hiện 1 lần).</summary>
+        public List<string> SeenTips = new List<string>();
     }
 
     /// <summary>Cài đặt vừa đổi (App bật / tắt âm thanh theo).</summary>
@@ -46,5 +50,22 @@ namespace PawFit.Core
         }
 
         public void ToggleSound() => SetSound(!_data.SoundOn);
+
+        public bool HasSeenTip(string id) => _data.SeenTips != null && _data.SeenTips.Contains(id);
+
+        public void MarkTipSeen(string id)
+        {
+            if (_data.SeenTips == null) _data.SeenTips = new List<string>();
+            if (_data.SeenTips.Contains(id)) return;
+            _data.SeenTips.Add(id);
+            _save.Save(SaveKey, _data);
+        }
+
+        /// <summary>Hòm thư ▸ Xem lại hướng dẫn: hiện lại mọi mẹo.</summary>
+        public void ResetTips()
+        {
+            _data.SeenTips = new List<string>();
+            _save.Save(SaveKey, _data);
+        }
     }
 }

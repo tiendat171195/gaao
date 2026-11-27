@@ -25,6 +25,7 @@ namespace PawFit.Garden.View
         private static Font _font;
         private static GameObject _open;
         private static GameObject _toast;
+        private static GameObject _tip;
 
         /// <summary>Đang có bảng mở (vườn không nhận chạm).</summary>
         public static bool IsOpen => _open != null;
@@ -120,6 +121,32 @@ namespace PawFit.Garden.View
                 b.onClick.AddListener(() => pressed?.Invoke(index));
             }
             _open = self;
+        }
+
+        /// <summary>Mẹo hướng dẫn ở phía dưới màn hình (nền vàng nhạt), hiện dần rồi tự tắt sau `seconds`. Không chặn chạm.</summary>
+        public static void Tip(string text, float seconds = 7f)
+        {
+            if (_tip != null) UnityEngine.Object.Destroy(_tip);
+            RectTransform box = Panel(Root, "Tip", new Color(1f, 0.96f, 0.82f, 0.96f));
+            box.GetComponent<Image>().raycastTarget = false;
+            box.anchorMin = box.anchorMax = box.pivot = new Vector2(0.5f, 0f);
+            box.anchoredPosition = new Vector2(0f, 140f);
+            box.sizeDelta = new Vector2(960f, 180f);
+            Label(box, "Mẹo", 30, FontStyle.Bold, new Color(0.6f, 0.42f, 0.1f), new Vector2(0f, 58f), new Vector2(900f, 40f));
+            Label(box, text, 36, FontStyle.Normal, new Color(0.25f, 0.2f, 0.15f), new Vector2(0f, -16f), new Vector2(900f, 120f));
+            var group = box.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+            group.alpha = 0f;
+            float start = Time.unscaledTime, life = Mathf.Max(1.5f, seconds);
+            GameObject go = box.gameObject;
+            go.AddComponent<UiTicker>().Tick = () =>
+            {
+                float t = Time.unscaledTime - start;
+                group.alpha = Mathf.Min(Mathf.Clamp01(t / 0.35f), Mathf.Clamp01((life - t) / 0.6f));
+                if (t >= life) UnityEngine.Object.Destroy(go);
+            };
+            _tip = go;
         }
 
         /// <summary>Dòng báo nhanh ở phía trên màn hình (vd "-25 Coin"), tự mờ dần rồi tắt. Không chặn chạm.</summary>

@@ -64,6 +64,10 @@ namespace PawFit.Battle.View
         private readonly List<SessionNote> _notes = new List<SessionNote>();
         private RankedMatchView _match;
 
+        // ---- cảm giác đánh (chỉ là hình): khựng hình, chậm lại, rung camera — tính theo giờ thật ----
+        private float _stopLeft, _slowLeft, _shake;
+        private Vector3 _camBase;
+
         public static BattleScene Enter(ServiceLocator s, BattleMode mode, BotLevel level, Action onExit)
         {
             var scene = new GameObject("PawFit_Battle").AddComponent<BattleScene>();
@@ -131,6 +135,7 @@ namespace PawFit.Battle.View
                 _cam.fieldOfView = 38f;
                 Vector3 eye = ArenaPos + new Vector3(0f, 1.25f, -5f);
                 _cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(ArenaPos + new Vector3(0f, 0.75f, 0f) - eye));
+                _camBase = eye;
             }
             bool training = mode == BattleMode.Training;
             string rightName = match != null ? match.PetName + " · " + match.Title : training ? "Hình nộm tập" : LevelNames[(int)level];
@@ -184,6 +189,7 @@ namespace PawFit.Battle.View
         private void Update()
         {
             if (_session == null) return;
+            UpdateJuice();
             ReadSwipes();
             _events.Clear();
             _notes.Clear();
@@ -249,6 +255,35 @@ namespace PawFit.Battle.View
 
         private FighterRig Rig(int side) => side == BattleSession.PlayerSide ? _player : _dummy;
 
+        /// <summary>Khựng hình (gần như dừng) bấy nhiêu giây thật — cảm giác đòn có lực.</summary>
+        private void HitStop(float seconds) => _stopLeft = Mathf.Max(_stopLeft, seconds);
+
+        private void SlowMo(float seconds) => _slowLeft = Mathf.Max(_slowLeft, seconds);
+
+        private void Shake(float amount) => _shake = Mathf.Max(_shake, amount);
+
+        /// <summary>Chạy bằng giờ thật nên vẫn chạy trong lúc khựng hình. Trận + hoạt cảnh chạy theo Time.timeScale.</summary>
+        private void UpdateJuice()
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (_stopLeft > 0f)
+            {
+                _stopLeft -= dt;
+                Time.timeScale = 0.03f;
+            }
+            else if (_slowLeft > 0f)
+            {
+                _slowLeft -= dt;
+                Time.timeScale = 0.3f;
+            }
+            else Time.timeScale = 1f;
+            if (_cam == null) return;
+            _shake = Mathf.MoveTowards(_shake, 0f, dt * 0.5f);
+            Vector3 offset = _shake > 0f ? new Vector3(UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(-1f, 1f), 0f) * _shake
+                                         : Vector3.zero;
+            _cam.transform.position = _camBase + _cam.transform.rotation * offset;
+        }
+
         private void Show(BattleEvent e)
         {
             FighterRig self = Rig(e.Side), other = Rig(1 - e.Side);
@@ -260,6 +295,8 @@ namespace PawFit.Battle.View
                 case BattleEventKind.Hit:
                     self.Strike(e.Move != MoveKind.Quick);
                     other.Flinch(e.Move == MoveKind.Quick ? 0.5f : 1f);
+                    HitStop(e.Crit ? 0.1f : e.Move == MoveKind.Quick ? 0.035f : 0.07f);
+                    if (e.Crit || e.Move == MoveKind.Ultimate) Shake(e.Move == MoveKind.Ultimate ? 0.12f : 0.07f);
                     FxBurst.Spark(transform, other.Center, e.Crit ? new Color(1f, 0.85f, 0.3f) : Color.white, e.Crit ? 16 : 9);
                     if (e.Crit) FxBurst.Popup(transform, other.Center + Vector3.up * 0.6f, "Chí mạng!", new Color(1f, 0.8f, 0.2f));
                     break;
@@ -273,6 +310,8 @@ namespace PawFit.Battle.View
                     other.Dizzy();
                     FxBurst.Spark(transform, other.Center, new Color(1f, 0.85f, 0.3f), 18, 3f);
                     FxBurst.Popup(transform, self.Center + Vector3.up * 0.7f, "Phản đòn!", new Color(1f, 0.85f, 0.3f), 0.3f);
+                    HitStop(0.12f);
+                    Shake(0.09f);
                     break;
                 case BattleEventKind.Interrupted:
                     self.Dizzy();
@@ -287,6 +326,9 @@ namespace PawFit.Battle.View
                 case BattleEventKind.KO:
                     other.Knockout();
                     self.Cheer();
+                    HitStop(0.15f);
+                    SlowMo(1f);   // hạ gục: chậm lại 1 giây cho thấy rõ
+                    Shake(0.15f);
                     break;
             }
         }
@@ -334,8 +376,11 @@ namespace PawFit.Battle.View
             _hud.ShowResult(title, string.Join("\n", lines), Exit);
         }
 
+        private void OnDestroy() => Time.timeScale = 1f;   // rời màn đấu bằng đường nào cũng trả tốc độ game về bình thường
+
         private void Exit()
         {
+            Time.timeScale = 1f;
             if (_cam != null)
             {
                 _cam.transform.SetPositionAndRotation(_camPos, _camRot);

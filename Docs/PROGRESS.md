@@ -206,6 +206,18 @@
       - Thẻ kết quả có Elo trước → sau / lên-xuống bậc / +30 Coin (`RankService.ApplyMatch`).
     - Test: người chơi ảo (cố định theo số hiệu, khớp lực chiến, tay nghề theo Elo), Persona, trận Ranked, test xuyên suốt tìm trận → đấu → rank.
   - Test: 179/179 pass · compile check: pass (Editor + Release) · soát API: 467 thành viên khớp
+
+- **Mẹo hướng dẫn + cảm giác đánh** (làm trong lúc chờ bạn build):
+  - `TipService` (Garden, C# thuần, có test): 10 mẹo theo tình huống, mỗi mẹo 1 lần (lưu `settings`), cách nhau ≥ 25 giây.
+    - Mở đầu theo thứ tự chạm đất → vuốt ve → dắt, chờ người chơi làm theo (hoặc 40 giây).
+    - Ốm được ưu tiên. Người chơi tự làm trước thì bỏ qua mẹo đó.
+    - `WelcomeBack`: "Bạn vắng X giờ. Bé đang đói, bẩn..." lúc vào game (`PetService.LastAwayHours`).
+  - `GardenUi.Tip` (khung vàng dưới màn hình, không chặn chạm). Router báo chạm đất / dắt. SceneFlow báo mở quầy / sân tập / đấu trường. Hòm thư ▸ Xem lại hướng dẫn.
+  - Màn đấu:
+    - Khựng hình 0,035–0,15 giây khi trúng đòn (theo độ mạnh / chí mạng / phản đòn / hạ gục).
+    - Rung camera, hạ gục chậm 1 giây (`Time.timeScale`, tính theo giờ thật).
+    - Rời màn đấu luôn trả `timeScale = 1`.
+  - Test: 185/185 pass · compile check: pass (Editor + Release) · soát API: 468 thành viên khớp
   - Test: 173/173 pass · compile check: pass · soát API: 467 thành viên khớp Unity 6000.3.29f1
 
 ## Quyết định đã chốt
