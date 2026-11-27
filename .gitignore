@@ -72,3 +72,6 @@ __pycache__/
 /Tools/Blender/*.png
 /out/
 /api_report.txt
+!/Tools/BattleBalance/BattleBalance.csproj
+/Tools/BattleBalance/bin/
+/Tools/BattleBalance/obj/

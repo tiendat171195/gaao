@@ -29,6 +29,19 @@ namespace PawFit.Tests
             return pts;
         }
 
+        /// <summary>Nét theo cung tròn tâm (cx, cy), bán kính r, từ góc `fromDeg` tới `toDeg` (như ngón cái quét).</summary>
+        private static List<SwipePoint> Arc(float speed, float cx, float cy, float r, float fromDeg, float toDeg)
+        {
+            var xy = new List<float>();
+            for (int i = 0; i <= 24; i++)
+            {
+                double a = (fromDeg + (toDeg - fromDeg) * i / 24.0) * Math.PI / 180.0;
+                xy.Add(cx + (float)(Math.Cos(a) * r));
+                xy.Add(cy + (float)(Math.Sin(a) * r));
+            }
+            return Stroke(speed, xy.ToArray());
+        }
+
         [Test]
         public void StraightSwipes()
         {
@@ -66,8 +79,62 @@ namespace PawFit.Tests
                 circle.Add((float)(Math.Cos(a) * 120));
                 circle.Add((float)(Math.Sin(a) * 120));
             }
-            Assert.AreEqual(SwipeKind.None, _rec.Recognize(Stroke(1500, circle.ToArray())).Kind, "vẽ vòng tròn");
+            SwipeResult round = _rec.Recognize(Stroke(1500, circle.ToArray()));
+            Assert.AreEqual(SwipeKind.None, round.Kind, "vẽ vòng tròn");
+            Assert.AreEqual(SwipeFail.Unclear, round.Fail);
             Assert.AreEqual(SwipeKind.None, _rec.Recognize(null).Kind);
+        }
+
+        [Test]
+        public void CurvedThumbSwipe_IsStillStraight()
+        {
+            Assert.AreEqual(SwipeKind.Horizontal, _rec.Recognize(Arc(1500, 0, -200, 260, 150, 30)).Kind, "cung 120° quét ngang");
+            Assert.AreEqual(SwipeKind.Up, _rec.Recognize(Arc(1500, 200, 0, 260, 240, 120)).Kind, "cung 120° vuốt lên");
+            Assert.AreEqual(SwipeKind.Down, _rec.Recognize(Arc(1500, -200, 0, 260, 60, -60)).Kind, "cung 120° vuốt xuống");
+        }
+
+        [Test]
+        public void HookAtStartOrEnd_IsIgnored()
+        {
+            Assert.AreEqual(SwipeKind.Horizontal, _rec.Recognize(Stroke(1500, 0, 0, 300, 0, 260, 50)).Kind, "móc lúc nhấc tay");
+            Assert.AreEqual(SwipeKind.Down, _rec.Recognize(Stroke(1500, 0, 300, 0, 0, 25, 60)).Kind, "vuốt xuống, hất lên lúc nhấc tay: vẫn là đỡ");
+            Assert.AreEqual(SwipeKind.Up, _rec.Recognize(Stroke(1500, 60, 30, 0, 0, 0, 300)).Kind, "móc lúc chạm xuống");
+        }
+
+        [Test]
+        public void SloppyV_RoundedOrLopsided_IsStillV()
+        {
+            var xy = new List<float> { 0, 220 };
+            for (int i = 0; i <= 10; i++)   // đáy tròn bán kính 40
+            {
+                double a = Math.PI + i / 10.0 * Math.PI;
+                xy.Add(110 + (float)(Math.Cos(a) * 40));
+                xy.Add(40 + (float)(Math.Sin(a) * 40));
+            }
+            xy.Add(220);
+            xy.Add(220);
+            Assert.AreEqual(SwipeKind.V, _rec.Recognize(Stroke(1500, xy.ToArray())).Kind, "đáy tròn");
+            Assert.AreEqual(SwipeKind.V, _rec.Recognize(Stroke(1500, 0, 120, 60, 0, 260, 300)).Kind, "lệch như dấu ✓");
+            Assert.AreEqual(SwipeKind.Horizontal, _rec.Recognize(Stroke(1500, 0, 60, 150, 0, 300, 60)).Kind, "V nông quá: tính là vuốt ngang");
+        }
+
+        [Test]
+        public void SloppyZ_RoundedCornersOrHook_IsStillZ()
+        {
+            Assert.AreEqual(SwipeKind.Z, _rec.Recognize(Stroke(1500, 0, 220, 200, 215, 220, 200, 20, 15, 0, 0, 220, 5)).Kind, "góc bo tròn");
+            Assert.AreEqual(SwipeKind.Z, _rec.Recognize(Stroke(1500, 0, 220, 220, 220, 0, 0, 220, 0, 200, 30)).Kind, "móc lúc nhấc tay");
+        }
+
+        [Test]
+        public void ShortOrSlowStroke_IsNotPunished_ScribbleIs()
+        {
+            Assert.AreEqual(SwipeFail.TooShort, _rec.Recognize(Stroke(1500, 0, 0, 40, 0)).Fail);
+            Assert.AreEqual(SwipeKind.Horizontal, _rec.Recognize(Stroke(1500, 0, 0, 55, 0)).Kind, "vuốt ngắn ~9 mm vẫn nhận");
+            Assert.AreEqual(SwipeFail.TooSlow, _rec.Recognize(Stroke(100, 0, 0, 300, 0)).Fail);
+            Assert.AreEqual(SwipeKind.Horizontal, _rec.Recognize(Stroke(250, 0, 0, 300, 0)).Kind, "kéo chậm 1,2 giây vẫn nhận");
+            SwipeResult scribble = _rec.Recognize(Stroke(1500, 0, 0, 100, 100, 0, 100, 100, 0, 0, 50, 100, 50));
+            Assert.AreEqual(SwipeKind.None, scribble.Kind);
+            Assert.AreEqual(SwipeFail.Unclear, scribble.Fail, "nguệch ngoạc = vuốt sai (bị hở)");
         }
 
         [Test]
@@ -106,7 +173,8 @@ namespace PawFit.Tests
             var sim = new BattleSimulation(Plain, new FighterStats(100, 10, 100, 10, 0));
             Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Horizontal)));
             Run(sim, 0.3f);
-            Assert.AreEqual(100f - 10f * 1f * 1f * 100f / 200f, sim.Fighters[1].Hp, 1e-3f, "ATK × hệ số chiêu × hệ số vuốt × 100/(100+DEF)");
+            Assert.AreEqual(100f * sim.Config.HpScale, sim.Fighters[1].Stats.Hp, 1e-3f, "máu trong trận = HP × HpScale");
+            Assert.AreEqual(sim.Fighters[1].Stats.Hp - 10f * 1f * 1f * 100f / 200f, sim.Fighters[1].Hp, 1e-3f, "ATK × hệ số chiêu × hệ số vuốt × 100/(100+DEF)");
             Assert.AreEqual(10f * 1.6f * 1.2f * 100f / 200f, sim.BaseDamage(0, MoveKind.Heavy, 1.2f), 1e-3f);
         }
 
@@ -123,51 +191,83 @@ namespace PawFit.Tests
         }
 
         [Test]
-        public void Cooldown_BlocksSpam()
+        public void Cooldown_SwipeNearEnd_IsBuffered_ThenFiresOnTime()
         {
             var sim = new BattleSimulation(Plain, Plain);
+            var ev = new List<BattleEvent>();
             Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Horizontal)));
-            Run(sim, 0.3f);
-            Assert.IsFalse(sim.Submit(0, Swipe(SwipeKind.Horizontal)), "chưa hết 0.8 giây hồi chiêu");
-            Run(sim, 0.55f);
-            Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Horizontal)));
+            Run(sim, 0.1f);
+            Assert.IsFalse(sim.Submit(0, Swipe(SwipeKind.Horizontal)), "còn 0,5 giây hồi chiêu: quá lâu để giữ");
+            Run(sim, 0.2f);   // còn ~0,3 giây
+            Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Up), ev), "sắp hết hồi chiêu: giữ lại");
+            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.Queued && e.Side == 0));
+            Assert.IsFalse(ev.Exists(e => e.Kind == BattleEventKind.AttackStarted), "chưa ra đòn ngay");
+            Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.V), ev), "nét sau thay nét trước");
+            Run(sim, 0.4f, ev);
+            List<BattleEvent> starts = ev.FindAll(e => e.Kind == BattleEventKind.AttackStarted);
+            Assert.AreEqual(1, starts.Count, "chỉ ra 1 đòn: nét cuối cùng");
+            Assert.AreEqual(MoveKind.Special, starts[0].Move);
+            Assert.AreEqual(new BattleConfig().CooldownSeconds, starts[0].Time, 0.04f, "ra đòn ngay lúc hết hồi chiêu");
         }
 
         [Test]
-        public void WrongSwipe_LeavesOpenFor1Second()
+        public void Guard_DuringGuardCooldown_IsBufferedToo()
+        {
+            var sim = new BattleSimulation(Plain, Plain);
+            var ev = new List<BattleEvent>();
+            Assert.IsTrue(sim.Submit(1, Swipe(SwipeKind.Down), ev));
+            Run(sim, 0.3f, ev);
+            Assert.IsTrue(sim.Submit(1, Swipe(SwipeKind.Down), ev), "còn 0,3 giây chờ đỡ: giữ lại");
+            Run(sim, 0.4f, ev);
+            Assert.AreEqual(2, ev.FindAll(e => e.Kind == BattleEventKind.Guard).Count);
+        }
+
+        [Test]
+        public void WrongSwipe_LeavesOpenForHalfSecond_NoExtraPenaltyWhileBusy()
         {
             var sim = new BattleSimulation(Plain, Plain);
             Assert.IsTrue(sim.Submit(1, SwipeResult.Wrong("test")));
-            Run(sim, 0.9f);
+            Run(sim, 0.1f);
             Assert.IsFalse(sim.Submit(1, Swipe(SwipeKind.Down)), "đang hở thì không đỡ được");
-            Run(sim, 0.2f);
+            float open = sim.Fighters[1].Open;
+            Assert.IsFalse(sim.Submit(1, SwipeResult.Wrong("test")), "đang bận: vuốt sai không tính");
+            Assert.AreEqual(open, sim.Fighters[1].Open, 1e-6f, "không bị phạt thêm");
+            Run(sim, 0.45f);
             Assert.IsTrue(sim.Submit(1, Swipe(SwipeKind.Horizontal)));
+            Run(sim, 0.3f);
+            Assert.IsFalse(sim.Submit(1, SwipeResult.Wrong("test")), "đang hồi chiêu: vuốt sai cũng bỏ qua");
+            Assert.AreEqual(0f, sim.Fighters[1].Open);
         }
 
         [Test]
         public void Guard_Blocks_ParryCounters()
         {
-            // đỡ sớm (0.3 giây trước đòn): chỉ chặn, ăn 20% damage
+            // đỡ sớm (~0,3 giây trước đòn): chỉ chặn, ăn 20% damage
             var sim = new BattleSimulation(Plain, Plain);
             var ev = new List<BattleEvent>();
             sim.Submit(0, Swipe(SwipeKind.Up));
-            Run(sim, 0.2f, ev);
-            sim.Submit(1, Swipe(SwipeKind.Down));   // đòn Mạnh vung 0.5s => còn ~0.3s
+            Run(sim, 0.05f, ev);
+            sim.Submit(1, Swipe(SwipeKind.Down));   // đòn Mạnh vung 0,35s => còn ~0,28s
             Run(sim, 0.5f, ev);
             Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.Blocked));
-            Assert.AreEqual(100f - 10f * 1.6f * 0.2f, sim.Fighters[1].Hp, 1e-3f);
+            Assert.AreEqual(sim.Fighters[1].Stats.Hp - 10f * 1.6f * 0.2f, sim.Fighters[1].Hp, 1e-3f);
 
             // đỡ sát đòn (≤ 0.2 giây): phản đòn, bên tấn công mất máu + bị hở
             sim = new BattleSimulation(Plain, Plain);
             ev.Clear();
             sim.Submit(0, Swipe(SwipeKind.Up));
-            Run(sim, 0.4f, ev);
-            sim.Submit(1, Swipe(SwipeKind.Down));   // còn ~0.1s
+            Run(sim, 0.25f, ev);
+            sim.Submit(1, Swipe(SwipeKind.Down));   // còn ~0,08s
             Run(sim, 0.3f, ev);
-            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.Countered && e.Side == 1));
-            Assert.AreEqual(100f, sim.Fighters[1].Hp, 1e-3f);
-            Assert.AreEqual(100f - 10f * 0.8f, sim.Fighters[0].Hp, 1e-3f);
+            BattleEvent counter = ev.Find(e => e.Kind == BattleEventKind.Countered && e.Side == 1);
+            Assert.AreEqual(BattleEventKind.Countered, counter.Kind);
+            Assert.AreEqual(1, counter.Combo, "phản đòn tính là đòn đầu của combo");
+            Assert.AreEqual(sim.Fighters[1].Stats.Hp, sim.Fighters[1].Hp, 1e-3f);
+            Assert.AreEqual(sim.Fighters[0].Stats.Hp - 10f * 0.8f, sim.Fighters[0].Hp, 1e-3f);
             Assert.Greater(sim.Fighters[0].Open, 0f, "bị phản đòn thì hở");
+            BattleConfig c = sim.Config;
+            Assert.AreEqual(c.RageOnCounter, sim.Fighters[1].Rage, 1e-3f, "phản đòn được nhiều Nộ");
+            Assert.AreEqual(c.RageOnHurt, sim.Fighters[0].Rage, 1e-3f);
         }
 
         [Test]
@@ -175,17 +275,17 @@ namespace PawFit.Tests
         {
             var sim = new BattleSimulation(Plain, Plain);
             var ev = new List<BattleEvent>();
-            sim.Submit(0, Swipe(SwipeKind.V));    // chiêu riêng vung 0.6s
-            sim.Submit(1, Swipe(SwipeKind.Up));   // đòn mạnh vung 0.5s => trúng trước, cắt đòn kia
+            sim.Submit(0, Swipe(SwipeKind.V));    // chiêu riêng vung 0,45s
+            sim.Submit(1, Swipe(SwipeKind.Up));   // đòn mạnh vung 0,35s => trúng trước, cắt đòn kia
             Run(sim, 1f, ev);
             Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.Interrupted && e.Side == 0));
-            Assert.AreEqual(100f, sim.Fighters[1].Hp, 1e-3f, "đòn bị cắt thì không trúng");
+            Assert.AreEqual(sim.Fighters[1].Stats.Hp, sim.Fighters[1].Hp, 1e-3f, "đòn bị cắt thì không trúng");
         }
 
         [Test]
         public void KO_EndsBattle()
         {
-            var sim = new BattleSimulation(new FighterStats(100, 200, 0, 10, 0), Plain);
+            var sim = new BattleSimulation(new FighterStats(100, 1000, 0, 10, 0), Plain);
             var ev = new List<BattleEvent>();
             sim.Submit(0, Swipe(SwipeKind.Horizontal));
             Run(sim, 0.5f, ev);
@@ -211,10 +311,116 @@ namespace PawFit.Tests
         public void FasterPet_MovesFirst()
         {
             var sim = new BattleSimulation(new FighterStats(100, 10, 0, 20, 0), Plain);
-            Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Horizontal)), "SPD cao ra đòn ngay");
-            Assert.IsFalse(sim.Submit(1, Swipe(SwipeKind.Horizontal)), "SPD thấp phải chờ");
-            Run(sim, 0.55f);
-            Assert.IsTrue(sim.Submit(1, Swipe(SwipeKind.Horizontal)));
+            var ev = new List<BattleEvent>();
+            Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Horizontal), ev), "SPD cao ra đòn ngay");
+            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.AttackStarted && e.Side == 0));
+            Assert.IsTrue(sim.Submit(1, Swipe(SwipeKind.Horizontal), ev), "SPD thấp: nét được giữ lại");
+            Assert.IsFalse(ev.Exists(e => e.Kind == BattleEventKind.AttackStarted && e.Side == 1), "nhưng phải chờ mới ra đòn");
+            Run(sim, 0.5f, ev);
+            BattleEvent late = ev.Find(e => e.Kind == BattleEventKind.AttackStarted && e.Side == 1);
+            Assert.AreEqual(BattleEventKind.AttackStarted, late.Kind);
+            Assert.AreEqual(new BattleConfig().FirstMoveDelaySeconds, late.Time, 0.04f);
+        }
+
+        private static readonly FighterStats Tough = new FighterStats(1000, 10, 0, 10, 0);
+
+        [Test]
+        public void Combo_ChainedHits_HitHarder_UpTo40Percent()
+        {
+            var sim = new BattleSimulation(Tough, Tough);
+            var ev = new List<BattleEvent>();
+            for (int i = 0; i < 6; i++)
+            {
+                sim.Submit(0, Swipe(SwipeKind.Horizontal));
+                Run(sim, 0.7f, ev);
+            }
+            List<BattleEvent> hits = ev.FindAll(e => e.Kind == BattleEventKind.Hit);
+            Assert.AreEqual(6, hits.Count);
+            for (int i = 0; i < 6; i++)
+            {
+                Assert.AreEqual(i + 1, hits[i].Combo);
+                Assert.AreEqual(10f * (1f + 0.1f * Math.Min(i, 4)), hits[i].Damage, 1e-3f, "đòn " + (i + 1));
+            }
+        }
+
+        [Test]
+        public void Combo_Breaks_WhenHit_TooSlow_OrBlocked()
+        {
+            var sim = new BattleSimulation(Tough, Tough);
+            sim.Submit(0, Swipe(SwipeKind.Horizontal));
+            Run(sim, 0.7f);
+            sim.Submit(0, Swipe(SwipeKind.Horizontal));
+            Run(sim, 0.3f);
+            Assert.AreEqual(2, sim.Fighters[0].Combo);
+            sim.Submit(1, Swipe(SwipeKind.Horizontal));
+            Run(sim, 0.3f);
+            Assert.AreEqual(0, sim.Fighters[0].Combo, "bị trúng đòn: mất combo");
+            Assert.AreEqual(1, sim.Fighters[1].Combo);
+            Run(sim, 1.5f);
+            Assert.AreEqual(0, sim.Fighters[1].Combo, "quá 1,2 giây chưa trúng tiếp: mất combo");
+
+            sim.Submit(1, Swipe(SwipeKind.Horizontal));
+            Run(sim, 0.7f);
+            Assert.AreEqual(1, sim.Fighters[1].Combo);
+            sim.Submit(0, Swipe(SwipeKind.Down));
+            sim.Submit(1, Swipe(SwipeKind.Up));   // trúng lúc đang đỡ (đỡ sớm => chặn)
+            Run(sim, 0.5f);
+            Assert.AreEqual(0, sim.Fighters[1].Combo, "bị đỡ: mất combo");
+        }
+
+        [Test]
+        public void Rage_FillsFromFighting_UltimateNeedsFullRage()
+        {
+            var sim = new BattleSimulation(Tough, Tough);
+            var ev = new List<BattleEvent>();
+            Assert.IsFalse(sim.Submit(0, Swipe(SwipeKind.Z), ev), "chưa có Nộ: không ra được Tuyệt chiêu");
+            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.RageLow && e.Side == 0));
+            Assert.AreEqual(0f, sim.Fighters[0].Open, "vuốt Z lúc chưa đầy Nộ không bị phạt");
+            int hits = 0;
+            for (; hits < 10 && !sim.UltimateReady(0); hits++)
+            {
+                sim.Submit(0, Swipe(SwipeKind.Horizontal));
+                Run(sim, 0.7f, ev);
+            }
+            Assert.AreEqual((int)Math.Ceiling(sim.Config.RageMax / sim.Config.RageOnHit), hits, "12 Nộ mỗi đòn trúng => 9 đòn là đầy 100");
+            Assert.AreEqual(1, ev.FindAll(e => e.Kind == BattleEventKind.RageFull && e.Side == 0).Count);
+            Assert.AreEqual(hits * sim.Config.RageOnHurt, sim.Fighters[1].Rage, 1e-3f, "bị đánh cũng tích Nộ");
+            ev.Clear();
+            Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Z), ev));
+            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.AttackStarted && e.Move == MoveKind.Ultimate));
+            Assert.AreEqual(0f, sim.Fighters[0].Rage, "ra Tuyệt chiêu là dùng hết Nộ");
+        }
+
+        [Test]
+        public void Ultimate_CannotBeInterrupted_ButCanBeParried()
+        {
+            var sim = new BattleSimulation(Tough, Tough);
+            var ev = new List<BattleEvent>();
+            sim.Fighters[0].Rage = sim.Config.RageMax;
+            sim.Submit(0, Swipe(SwipeKind.Z));    // vung 0,7s
+            sim.Submit(1, Swipe(SwipeKind.Up));   // đòn Mạnh trúng trước nhưng không cắt được Tuyệt chiêu
+            Run(sim, 1f, ev);
+            Assert.IsFalse(ev.Exists(e => e.Kind == BattleEventKind.Interrupted));
+            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.Hit && e.Side == 0 && e.Move == MoveKind.Ultimate));
+
+            sim = new BattleSimulation(Tough, Tough);
+            ev.Clear();
+            sim.Fighters[0].Rage = sim.Config.RageMax;
+            sim.Submit(0, Swipe(SwipeKind.Z));
+            Run(sim, 0.6f);
+            sim.Submit(1, Swipe(SwipeKind.Down));   // đỡ sát đòn
+            Run(sim, 0.3f, ev);
+            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.Countered && e.Side == 1), "vẫn bị phản đòn được");
+        }
+
+        [Test]
+        public void UltimateWithoutRage_WhenConfigSaysSo()
+        {
+            var sim = new BattleSimulation(Tough, Tough, new BattleConfig { UltimateNeedsRage = false });
+            Assert.IsTrue(sim.Submit(0, Swipe(SwipeKind.Z)), "Huấn luyện: vuốt Z ra Tuyệt chiêu luôn");
+            Run(sim, 1f);
+            Assert.AreEqual(0f, sim.Fighters[0].Rage, "không tích Nộ");
+            Assert.Less(sim.Fighters[1].Hp, sim.Fighters[1].Stats.Hp);
         }
 
         [Test]

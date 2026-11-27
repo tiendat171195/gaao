@@ -15,8 +15,8 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - MVP: 5 dạng Adult — Lửa, Nước, Ánh Sáng, Thép, Bóng Tối.
 - **Chỉ số:** HP, ATK, DEF, SPD, Crit. Lực chiến = tổng có trọng số. SPD quyết định ai đánh trước.
 - **Chiến đấu:** chỉ vuốt, real-time, không nút.
-  - Vuốt ngang = đánh nhanh; vuốt lên = đánh mạnh / hất tung; vuốt xuống = đỡ / phản đòn; vuốt V hoặc Z = chiêu đặc biệt / Ultimate.
-  - Cooldown 0.8 giây; vuốt sai bị hở 1 giây.
+  - Vuốt ngang = đánh nhanh; vuốt lên = đánh mạnh / hất tung; vuốt xuống = đỡ / phản đòn; vuốt V = chiêu riêng; vuốt Z = Tuyệt chiêu (Ultimate, cần đầy Nộ).
+  - Hồi chiêu 0,6 giây, vuốt sớm thì được giữ lại và ra đòn ngay khi rảnh; vuốt sai bị hở 0,5 giây; trúng liên tiếp thành combo (Phase 7.1, G9d).
   - Mode Huấn luyện có bóng mờ gesture, slow-mo, cho vuốt lại, vuốt đúng 10 lần thì thuộc chiêu.
   - PvP 90 giây, màn hình chỉ có 2 thú + vạch HP mờ.
 - **Ranking:** ghép đối thủ theo Elo ±100 và Lực chiến ±10%. Bậc Bronze → Silver → Gold → Diamond → Master. Mùa giải 30 ngày.
@@ -71,43 +71,71 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Theo dạng: Lửa +25% ATK, Nước +25% SPD, Ánh Sáng +25% HP, Thép +25% DEF, Bóng Tối +10 điểm Crit.
   - Lực chiến = 0.25·HP + 2·ATK + 1.5·DEF + 1.5·SPD + 10·Crit%.
 - **G9 · Chiến đấu:**
-  - Ngang = chiêu hệ 1 · Lên = chiêu hệ 2 · V = chiêu riêng · Z = Ultimate · Xuống = đỡ (≤ 0.2s trước đòn = phản đòn).
-  - Damage = ATK × hệ số chiêu × hệ số vuốt (0.7–1.3) × 100/(100+DEF); crit ×1.5.
-  - Hết 90 giây: bên còn nhiều %HP hơn thắng.
+  - Ngang = chiêu hệ 1 · Lên = chiêu hệ 2 · V = chiêu riêng · Z = Tuyệt chiêu (cần đầy Nộ) · Xuống = đỡ (≤ 0.2s trước đòn = phản đòn).
+  - Damage = ATK × hệ số chiêu × hệ số vuốt (0.7–1.3) × hệ số combo (1–1,4) × 100/(100+DEF); crit ×1.5.
+  - Máu trong trận = HP × 2,5 (chỉ trong trận). Hết 90 giây: bên còn nhiều %HP hơn thắng.
 - **G9b · Cách cài cụ thể (Phase 3.1, `BattleConfig` / `SwipeConfig` / `BotConfig`):**
-  - **Nhận dạng vuốt:**
-    - Nét dài ≥ 60 px (ở 160 dpi), trong ≤ 1,2 giây.
-    - Thẳng (độ thẳng ≥ 0,86) thì xét hướng trội: ngang / lên / xuống.
-    - V = xuống rồi lên. Z = ngang → chéo ngược xuống → ngang, vẽ được cả 2 chiều.
+  - **Nhận dạng vuốt** (nới ở Phase 7.1 cho hợp ngón tay thật):
+    - Nét dài ≥ 45 px (ở 160 dpi, ~7 mm), trong ≤ 1,5 giây. Ngắn / chậm hơn thì chỉ nhắc, **không phạt**.
+    - Thẳng (độ thẳng ≥ 0,78, tức cả cung cong ~130° của ngón cái) thì xét hướng trội: ngang / lên / xuống.
+    - Móc nhỏ lúc chạm xuống / nhấc tay (≤ 25% quãng đường) bị bỏ, rồi xét phần chính.
+    - V = xuống tới điểm thấp nhất rồi lên: mỗi cạnh ≥ 20% quãng đường, 2 đầu cao hơn đáy ≥ 30% cỡ nét. Đáy tròn hay lệch (kiểu dấu ✓) vẫn được; V nông quá tính là vuốt ngang.
+    - Z = ngang → chéo ngược xuống → ngang, vẽ được cả 2 chiều. Thử 3 mức làm gọn nét nên góc bo tròn vẫn nhận.
+    - Chỉ nét nguệch ngoạc / vòng tròn mới là "vuốt sai" (bị hở).
     - Hệ số vuốt 0,7–1,3 = 60% tốc độ + 40% độ đúng hình.
   - **4 chiêu (hệ số damage / thời gian vung đòn):**
 
     | Chiêu | Vuốt | Hệ số | Vung đòn |
     |---|---|---|---|
-    | Nhanh | Ngang | ×1 | 0,25 s |
-    | Mạnh | Lên | ×1,6 | 0,5 s |
-    | Riêng | V | ×2,2 | 0,6 s |
-    | Ultimate | Z | ×3,2 | 0,9 s |
+    | Nhanh | Ngang | ×1 | 0,15 s |
+    | Mạnh | Lên | ×1,6 | 0,35 s |
+    | Riêng | V | ×2,2 | 0,45 s |
+    | Tuyệt chiêu | Z | ×3,2 | 0,7 s, cần đầy Nộ |
 
   - Chiêu chưa thuộc (Mode Huấn luyện) vẫn dùng được nhưng ×0,8.
   - **Đánh:**
-    - Hồi chiêu 0,8 s tính từ lúc ra đòn.
-    - Vuốt sai thì hở 1 s: không đánh, không đỡ được.
-    - Đòn Mạnh / Riêng / Ultimate trúng thì cắt đòn đang vung của đối thủ (hất tung). Đòn Nhanh không cắt.
+    - Hồi chiêu 0,6 s tính từ lúc ra đòn.
+    - **Bộ đệm vuốt:** vuốt lúc còn bận (hồi chiêu / đang vung đòn / đang hở) mà chỉ còn ≤ 0,35 s là rảnh thì nét được giữ lại, rảnh ra là ra đòn ngay. Nét sau thay nét trước. Vuốt sai lúc bận (kể cả lúc hồi chiêu) thì bỏ qua, không phạt.
+    - Vuốt sai lúc rảnh thì hở 0,5 s: không đánh, không đỡ được.
+    - Đòn Mạnh / Riêng trúng thì cắt đòn đang vung của đối thủ (hất tung). Đòn Nhanh không cắt. **Tuyệt chiêu không bị cắt** (vẫn bị đỡ / phản đòn).
+  - **Combo:** đòn trúng cách đòn trúng trước ≤ 1,2 s thì nối combo, mỗi bậc +10% damage, tối đa +40% (từ đòn thứ 5). Bị trúng đòn / bị đỡ / bị phản đòn / để quá giờ thì mất combo. Phản đòn tính là 1 đòn trúng.
+  - **Nộ (0–100):** đánh trúng +12, bị trúng / bị phản đòn +8, đỡ được +8, phản đòn +25. Đầy thì vuốt Z ra Tuyệt chiêu, dùng hết Nộ. Vuốt Z lúc chưa đầy: không ra đòn, không phạt, vạch Nộ chớp đỏ.
   - **Đỡ:**
     - Thế đỡ kéo dài 0,45 s, chỉ chịu 20% damage. Đang hồi chiêu đánh vẫn đỡ được, nhưng giữa 2 lần đỡ phải chờ 0,6 s.
     - Đỡ ≤ 0,2 s trước khi đòn trúng thì phản đòn: bên tấn công ăn ATK × 0,8 của bên đỡ và bị hở 1 s.
-  - **SPD:** bên chậm hơn phải chờ 0,5 s mới ra được đòn đầu. 2 đòn trúng cùng lúc thì bên nhanh tính trước.
+  - **SPD:** bên chậm hơn phải chờ 0,3 s mới ra được đòn đầu. 2 đòn trúng cùng lúc thì bên nhanh tính trước.
   - **Bot 3 mức (3 hình nộm)** khác nhau ở:
     - Tốc độ phản ứng: 0,45 / 0,3 / 0,16 s.
     - Xác suất đỡ: 15 / 40 / 70%. Mức Khó canh đỡ sát đòn để phản đòn.
-    - Nhịp đánh, độ đẹp nét vuốt, tỉ lệ vuốt sai, chiêu hay dùng.
+    - Nhịp đánh (nghỉ 1–2 / 0,6–1,2 / 0,3–0,7 s), độ đẹp nét vuốt, tỉ lệ vuốt sai, chiêu hay dùng.
+    - Đầy Nộ thì xả Tuyệt chiêu với xác suất 0 / 40 / 80% mỗi lần ra đòn (hình nộm Dễ không biết dùng).
   - Mô phỏng chạy theo bước cố định 1/30 s, random có seed, nên cùng đầu vào thì cùng kết quả (dùng lại được cho PvP).
+- **G9d · Phase 7.1 — cảm giác đánh (bạn góp ý: "vuốt đúng nhưng thú cứ đứng yên, không ra chiêu ngay nên thấy không đã, gameplay hơi chậm"):**
+  - Nguyên nhân tìm được:
+    1. **Lỗi màn đấu:** sự kiện của chính nét vừa vuốt (ra đòn / đỡ / vuốt sai) bị xóa trước khi vẽ. Thú không lấy đà, không hiện khiên, không báo vuốt sai; chỉ giật lúc đòn trúng (0,25–0,9 s sau). Đã sửa.
+    2. Vuốt trong lúc hồi chiêu bị bỏ qua mà không báo gì → thêm bộ đệm 0,35 s.
+    3. Bộ nhận dạng quá khắt khe với nét cong / có móc → nét đúng thành "vuốt sai" + bị hở 1 s → đã nới (G9b).
+    4. Nhịp chậm: vung đòn 0,25–0,9 s, hồi chiêu 0,8 s → còn 0,15–0,7 s và 0,6 s.
+  - Hình: vuốt xong là thú chuyển động ngay và tới sát đối thủ đúng lúc đòn trúng:
+    - Nhanh: phóng thẳng. Mạnh: nhún rồi bật nhảy. Riêng: xoay 1 vòng. Tuyệt chiêu: bay lên tụ lực rồi bổ xuống, chữ "TUYỆT CHIÊU!" + chậm lại 0,3 s.
+    - Vệt chém theo màu chiêu, chữ "x3 COMBO", vạch Nộ 2 bên (đầy thì nhấp nháy + vầng cam dưới chân thú), vạch hồi chiêu dưới vạch của mình.
+    - Vết ngón tay đổi màu lúc nhấc tay: vàng = nhận chiêu, đỏ = vuốt sai, xám = không tính / đang bận.
+  - Trận dài vừa đủ: máu trong trận ×2,5. Đo bot đấu bot (400 trận mỗi cặp, chỉ số ngang nhau):
+
+    | Luật | Thường vs Thường | Dễ vs Khó | Adult Thường vs Khó |
+    |---|---|---|---|
+    | Cũ | 12,5 s · 17 đòn trúng | 8,5 s | 16,8 s |
+    | Mới, máu ×1 | 9,9 s · 14 đòn · 1,9 Tuyệt chiêu | 5,2 s | 12,3 s |
+    | **Mới, máu ×2,5 (chọn)** | **24,6 s · 35 đòn · ~5 Tuyệt chiêu** | **11,6 s** | **29,6 s** |
+
+    Trận cũ hết trong 8–17 giây: chưa kịp nối combo, chưa kịp dùng Tuyệt chiêu. Với máu ×2,5, trận ngang sức ~25–30 giây, mỗi bên dùng được 2–3 Tuyệt chiêu, vẫn còn xa mốc 90 giây.
+    Đo lại sau mỗi lần chỉnh số: `cd Tools/BattleBalance && dotnet run -c Release`.
+  - Luật trận đổi nên tăng `NetProto.Version` lên 2: bản game cũ được báo "hãy cập nhật".
 - **G9c · Sân tập (Phase 3.2, `BattleSessionConfig`):**
   - Huấn luyện:
     - Bài học = chiêu chưa thuộc đầu tiên, theo thứ tự ngang → lên → V → Z.
-    - Mỗi lần vuốt đúng chiêu đang học mà trận nhận đòn thì +1; đủ 10 thì thuộc.
-    - Vuốt sai không bị hở.
+    - Mỗi lần thú thật sự ra chiêu đang học thì +1 (kể cả nét lấy từ bộ đệm); đủ 10 thì thuộc.
+    - Vuốt sai không bị hở. Tuyệt chiêu không cần Nộ (để học vuốt Z), thanh Nộ không hiện.
     - Tốc độ trận ×0,75; hình nộm đang vung đòn thì ×0,3 (slow-mo).
     - Hình nộm đánh nhẹ (×0,5), 2 bên nhiều máu (không ai gục), tối đa 10 phút.
   - Đấu Bot: hình nộm Dễ / Thường / Khó = chỉ số thú ×0,7 / ×1 / ×1,25, Bot mức tương ứng, 90 giây.
@@ -176,7 +204,8 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
     - Nét vuốt gửi lên máy chủ. Máy chủ chốt bước nào thì cả 2 máy áp ở đúng bước đó.
     - Cùng seed + cùng chỉ số tới từng bit nên 2 máy ra y hệt máy chủ (test kiểm cả lúc 2 bên SPD bằng nhau).
     - Máy chạy chậm hơn máy chủ 2 bước làm đệm, mạng nghẽn thì chạy dồn cho kịp.
-    - Trễ khoảng 0,1–0,2 giây, vẫn kịp đỡ vì đòn vung 0,25–0,9 giây.
+    - Trễ khoảng 0,1–0,2 giây. Đòn Mạnh / Riêng / Tuyệt chiêu vung 0,35–0,7 giây nên vẫn kịp đỡ; đòn Nhanh (0,15 giây) gần như không đỡ kịp: đòn Nhanh để rỉa máu + nối combo.
+    - Vuốt xong thú trên máy mình nhún lấy đà ngay, trong lúc chờ máy chủ chốt nét (che cảm giác trễ mạng).
     - Thoát app / mất mạng giữa trận, hoặc rời trận lúc đang hiện thẻ đối thủ = bỏ cuộc = thua (vẫn trừ Elo).
   - Chống gian lận (giai đoạn thử nghiệm):
     - Máy chủ tính Elo + Coin thắng PvP, chặn chỉ số thú vượt trần của giai đoạn, tự tính lực chiến.

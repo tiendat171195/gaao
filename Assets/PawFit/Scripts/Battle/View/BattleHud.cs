@@ -5,14 +5,21 @@ using UnityEngine.UI;
 
 namespace PawFit.Battle.View
 {
+    /// <summary>Màu vết ngón tay sau khi nhấc tay: nhận chiêu (vàng) / vuốt sai (đỏ) / không tính (xám).</summary>
+    public enum StrokeTint { Ok, Wrong, Ignored }
+
     /// <summary>
-    /// Giao diện màn đấu (màn ngang, uGUI dựng bằng code). Trận thật chỉ có 2 vạch HP mờ + vạch thời gian mảnh (GDD);
-    /// Mode Huấn luyện thêm: tên chiêu đang học + 10 chấm tiến độ, bóng mờ nét vuốt, gợi ý.
-    /// Thêm vết ngón tay khi vuốt và thẻ kết quả cuối trận.
+    /// Giao diện màn đấu (màn ngang, uGUI dựng bằng code). Trận thật: 2 vạch HP mờ + vạch Nộ + vạch thời gian mảnh,
+    /// vạch hồi chiêu dưới vạch của mình, chữ combo 2 bên;
+    /// Mode Huấn luyện thêm: tên chiêu đang học + 10 chấm tiến độ, bóng mờ nét vuốt, gợi ý (không có Nộ).
+    /// Thêm vết ngón tay khi vuốt (đổi màu báo nhận / sai) và thẻ kết quả cuối trận.
     /// </summary>
     public sealed class BattleHud : MonoBehaviour
     {
-        public static readonly string[] SkillNames = { "Nhanh (vuốt ngang)", "Mạnh (vuốt lên)", "Chiêu riêng (vuốt V)", "Ultimate (vuốt Z)" };
+        public static readonly string[] SkillNames = { "Nhanh (vuốt ngang)", "Mạnh (vuốt lên)", "Chiêu riêng (vuốt V)", "Tuyệt chiêu (vuốt Z)" };
+
+        private static readonly Color RageColor = new Color(1f, 0.62f, 0.2f, 0.8f);
+        private static readonly Color BarBack = new Color(0f, 0f, 0f, 0.3f);
 
         // đường bóng mờ của từng chiêu trong khung 0..1 (y hướng lên); 4 = đỡ (vuốt xuống)
         private static readonly Vector2[][] Ghosts =
@@ -36,6 +43,15 @@ namespace PawFit.Battle.View
         private readonly List<(RectTransform rt, float t)> _trail = new List<(RectTransform, float)>();
         private RectTransform _button;
         private GameObject _result;
+        private RectTransform _rageFill0, _rageFill1, _readyFill;
+        private readonly Image[] _rageBacks = new Image[2];
+        private readonly Image[] _rageImgs = new Image[2];
+        private Image _readyImg;
+        private Text _rageText0, _rageText1;
+        private readonly float[] _rageFlash = new float[2];
+        private readonly bool[] _rageFull = new bool[2];
+        private Text _combo0, _combo1;
+        private float _comboT0, _comboT1;
 
         public bool ResultShown => _result != null;
 
@@ -61,13 +77,31 @@ namespace PawFit.Battle.View
             gameObject.AddComponent<GraphicRaycaster>();
             Transform root = transform;
 
-            // 2 vạch HP mờ trên cùng (trái: thú, phải: hình nộm) + vạch thời gian mảnh ở giữa
+            // 2 vạch HP mờ trên cùng (trái: thú, phải: đối thủ) + vạch Nộ + vạch thời gian mảnh ở giữa
             _hpFill0 = Bar(root, new Vector2(0f, 1f), new Vector2(40f, -40f), new Vector2(620f, 18f), new Color(0.6f, 1f, 0.7f, 0.55f), true);
             _hpFill1 = Bar(root, new Vector2(1f, 1f), new Vector2(-40f, -40f), new Vector2(620f, 18f), new Color(1f, 0.7f, 0.6f, 0.55f), false);
-            Label(root, leftName, 26, new Vector2(0f, 1f), new Vector2(40f, -70f), new Vector2(620f, 36f), TextAnchor.UpperLeft, new Color(1f, 1f, 1f, 0.7f));
-            Label(root, rightName, 26, new Vector2(1f, 1f), new Vector2(-40f, -70f), new Vector2(620f, 36f), TextAnchor.UpperRight, new Color(1f, 1f, 1f, 0.7f));
+            float nameY = -70f;
             if (!training)
+            {
                 _timeFill = Bar(root, new Vector2(0.5f, 1f), new Vector2(-200f, -20f), new Vector2(400f, 6f), new Color(1f, 1f, 1f, 0.4f), true);
+                _rageFill0 = Bar(root, new Vector2(0f, 1f), new Vector2(40f, -64f), new Vector2(420f, 12f), RageColor, true);
+                _rageFill1 = Bar(root, new Vector2(1f, 1f), new Vector2(-40f, -64f), new Vector2(420f, 12f), RageColor, false);
+                _rageBacks[0] = _rageFill0.parent.GetComponent<Image>();
+                _rageBacks[1] = _rageFill1.parent.GetComponent<Image>();
+                _rageImgs[0] = _rageFill0.GetComponent<Image>();
+                _rageImgs[1] = _rageFill1.GetComponent<Image>();
+                _rageText0 = Label(root, "", 24, new Vector2(0f, 1f), new Vector2(475f, -70f), new Vector2(330f, 30f), TextAnchor.UpperLeft, RageColor);
+                _rageText1 = Label(root, "", 24, new Vector2(1f, 1f), new Vector2(-475f, -70f), new Vector2(330f, 30f), TextAnchor.UpperRight, RageColor);
+                _readyFill = Bar(root, new Vector2(0f, 1f), new Vector2(40f, -82f), new Vector2(420f, 6f), new Color(1f, 1f, 1f, 0.35f), true);
+                _readyImg = _readyFill.GetComponent<Image>();
+                SetRage(0f, 0f);
+                nameY = -110f;
+            }
+            Label(root, leftName, 26, new Vector2(0f, 1f), new Vector2(40f, nameY), new Vector2(620f, 36f), TextAnchor.UpperLeft, new Color(1f, 1f, 1f, 0.7f));
+            Label(root, rightName, 26, new Vector2(1f, 1f), new Vector2(-40f, nameY), new Vector2(620f, 36f), TextAnchor.UpperRight, new Color(1f, 1f, 1f, 0.7f));
+            _combo0 = Label(root, "", 58, new Vector2(0f, 1f), new Vector2(60f, -190f), new Vector2(560f, 80f), TextAnchor.UpperLeft, new Color(1f, 0.85f, 0.3f));
+            _combo1 = Label(root, "", 58, new Vector2(1f, 1f), new Vector2(-60f, -190f), new Vector2(560f, 80f), TextAnchor.UpperRight, new Color(1f, 0.6f, 0.5f));
+            _combo0.fontStyle = _combo1.fontStyle = FontStyle.Bold;
 
             _hint = Label(root, "", 40, new Vector2(0.5f, 0.5f), new Vector2(0f, 300f), new Vector2(1400f, 60f), TextAnchor.MiddleCenter, Color.white);
             _big = Label(root, "", 72, new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1600f, 110f), TextAnchor.MiddleCenter, new Color(1f, 0.92f, 0.45f));
@@ -99,6 +133,56 @@ namespace PawFit.Battle.View
         public void SetTime(float left01)
         {
             if (_timeFill != null) SetFill(_timeFill, left01);
+        }
+
+        /// <summary>Vạch Nộ 2 bên (0..1). Đầy thì vạch sáng nhấp nháy + chữ "NỘ ĐẦY".</summary>
+        public void SetRage(float left01, float right01)
+        {
+            if (_rageFill0 == null) return;
+            SetFill(_rageFill0, left01);
+            SetFill(_rageFill1, right01);
+            _rageFull[0] = left01 >= 0.999f;
+            _rageFull[1] = right01 >= 0.999f;
+            _rageText0.text = _rageFull[0] ? "NỘ ĐẦY · vuốt Z!" : "";
+            _rageText1.text = _rageFull[1] ? "NỘ ĐẦY" : "";
+        }
+
+        /// <summary>Vuốt Z lúc chưa đầy Nộ: vạch Nộ của bên đó chớp đỏ.</summary>
+        public void FlashRage(int side)
+        {
+            if (side == 0 || side == 1) _rageFlash[side] = 0.45f;
+        }
+
+        /// <summary>Vạch hồi chiêu dưới vạch Nộ của mình: đầy + sáng = đánh được ngay.</summary>
+        public void SetReady(float ready01)
+        {
+            if (_readyFill == null) return;
+            SetFill(_readyFill, ready01);
+            _readyImg.color = ready01 >= 0.999f ? new Color(1f, 1f, 1f, 0.85f) : new Color(1f, 1f, 1f, 0.3f);
+        }
+
+        /// <summary>Chữ combo bên trái (mình) / phải (đối thủ), nảy to lên mỗi đòn nối.</summary>
+        public void Combo(int side, int count)
+        {
+            if (count < 2) return;
+            Text t = side == 0 ? _combo0 : _combo1;
+            t.text = "x" + count + " COMBO";
+            t.transform.localScale = Vector3.one * 1.45f;
+            if (side == 0) _comboT0 = 1.2f;
+            else _comboT1 = 1.2f;
+        }
+
+        /// <summary>Nhấc tay xong: đổi màu cả vết vuốt (và giữ lâu hơn chút) để thấy nét đã được nhận hay chưa.</summary>
+        public void TintTrail(StrokeTint tint)
+        {
+            Color c = tint == StrokeTint.Ok ? new Color(1f, 0.85f, 0.3f, 0.95f)
+                    : tint == StrokeTint.Wrong ? new Color(1f, 0.35f, 0.3f, 0.95f) : new Color(0.7f, 0.7f, 0.7f, 0.6f);
+            for (int i = 0; i < _trail.Count; i++)
+            {
+                (RectTransform rt, float t) = _trail[i];
+                rt.GetComponent<Image>().color = c;
+                _trail[i] = (rt, Mathf.Max(t, 0.3f));
+            }
         }
 
         /// <summary>Huấn luyện: chiêu đang học + tiến độ. skill = -1: đã thuộc cả 4 (tập tự do).</summary>
@@ -156,6 +240,20 @@ namespace PawFit.Battle.View
             float dt = Time.unscaledDeltaTime;
             if (_hintT > 0f && (_hintT -= dt) <= 0f) _hint.text = "";
             if (_bigT > 0f && (_bigT -= dt) <= 0f) _big.text = "";
+            if (_comboT0 > 0f && (_comboT0 -= dt) <= 0f) _combo0.text = "";
+            if (_comboT1 > 0f && (_comboT1 -= dt) <= 0f) _combo1.text = "";
+            _combo0.transform.localScale = Vector3.MoveTowards(_combo0.transform.localScale, Vector3.one, dt * 4f);
+            _combo1.transform.localScale = Vector3.MoveTowards(_combo1.transform.localScale, Vector3.one, dt * 4f);
+            if (_rageFill0 != null)
+            {
+                float glow = 0.65f + 0.35f * Mathf.Sin(Time.unscaledTime * 9f);   // đầy Nộ: nhấp nháy
+                for (int i = 0; i < 2; i++)
+                {
+                    _rageFlash[i] = Mathf.Max(0f, _rageFlash[i] - dt);
+                    _rageBacks[i].color = _rageFlash[i] > 0f ? new Color(0.9f, 0.15f, 0.1f, 0.75f) : BarBack;
+                    _rageImgs[i].color = _rageFull[i] ? new Color(1f, 0.75f + 0.2f * glow, 0.3f, glow) : RageColor;
+                }
+            }
             for (int i = _trail.Count - 1; i >= 0; i--)
             {
                 (RectTransform rt, float t) = _trail[i];

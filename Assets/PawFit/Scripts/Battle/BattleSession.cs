@@ -145,6 +145,7 @@ namespace PawFit.Battle
             if (mode == BattleMode.Training)
             {
                 bc.DurationSeconds = _sc.TrainingDurationSeconds;
+                bc.UltimateNeedsRage = false;   // học vuốt Z không phải chờ đầy Nộ
                 me.Hp = bot.Hp = _sc.TrainingHp;
                 bot.Atk *= _sc.TrainingBotAtkFactor;
             }
@@ -244,10 +245,18 @@ namespace PawFit.Battle
         public static int SkillOf(SwipeKind k) =>
             k == SwipeKind.Horizontal ? 0 : k == SwipeKind.Up ? 1 : k == SwipeKind.V ? 2 : k == SwipeKind.Z ? 3 : -1;
 
-        /// <summary>Người chơi vuốt xong 1 nét. Trả true nếu trận nhận nét đó.</summary>
+        /// <summary>
+        /// Người chơi vuốt xong 1 nét. Trả true nếu trận nhận nét đó (ra đòn ngay, hoặc giữ trong bộ đệm rồi ra đòn khi rảnh).
+        /// Vuốt Z lúc chưa đầy Nộ: báo RageLow ngay trên máy này, kể cả khi đấu qua máy chủ (không gửi đi).
+        /// </summary>
         public bool PlayerSwipe(SwipeResult swipe, List<BattleEvent> events = null, List<SessionNote> notes = null)
         {
             if (_finished) return false;
+            if (swipe.IsValid && swipe.Kind == SwipeKind.Z && !Sim.UltimateReady(PlayerSide))
+            {
+                events?.Add(new BattleEvent { Kind = BattleEventKind.RageLow, Side = PlayerSide, Move = MoveKind.Ultimate, Time = Sim.Time });
+                return false;
+            }
             if (_feed != null)   // qua máy chủ: gửi lên, máy chủ chốt bước rồi cả 2 máy cùng áp
             {
                 if (!_feed.Started) return false;
@@ -259,21 +268,29 @@ namespace PawFit.Battle
                 notes?.Add(new SessionNote { Kind = SessionNoteKind.Retry, Skill = Lesson, Text = swipe.Reason });
                 return false;
             }
-            int lesson = Lesson;
-            bool ok = Sim.Submit(PlayerSide, swipe, events);
-            if (ok && Mode == BattleMode.Training && lesson >= 0 && SkillOf(swipe.Kind) == lesson)
+            var local = new List<BattleEvent>();
+            bool ok = Sim.Submit(PlayerSide, swipe, local);
+            foreach (BattleEvent e in local)
             {
-                bool learned = _evo.PracticeSkill(lesson);
-                notes?.Add(new SessionNote { Kind = SessionNoteKind.Practiced, Skill = lesson, Progress = _evo.SkillProgress(lesson) });
-                if (learned)
-                {
-                    Sim.Fighters[PlayerSide].Learned[lesson] = true;
-                    Result.Learned.Add(lesson);
-                    notes?.Add(new SessionNote { Kind = SessionNoteKind.Learned, Skill = lesson, Progress = _evo.SkillProgress(lesson) });
-                    if (Lesson < 0) notes?.Add(new SessionNote { Kind = SessionNoteKind.AllLearned, Skill = -1 });
-                }
+                Practice(e, notes);
+                events?.Add(e);
             }
             return ok;
+        }
+
+        /// <summary>Huấn luyện: mỗi lần thú thật sự ra chiêu đang học (kể cả nét lấy từ bộ đệm) tính 1 lần tập; đủ 10 lần thì thuộc.</summary>
+        private void Practice(BattleEvent e, List<SessionNote> notes)
+        {
+            if (Mode != BattleMode.Training || e.Kind != BattleEventKind.AttackStarted || e.Side != PlayerSide) return;
+            int lesson = Lesson;
+            if (lesson < 0 || (int)e.Move != lesson) return;
+            bool learned = _evo.PracticeSkill(lesson);
+            notes?.Add(new SessionNote { Kind = SessionNoteKind.Practiced, Skill = lesson, Progress = _evo.SkillProgress(lesson) });
+            if (!learned) return;
+            Sim.Fighters[PlayerSide].Learned[lesson] = true;
+            Result.Learned.Add(lesson);
+            notes?.Add(new SessionNote { Kind = SessionNoteKind.Learned, Skill = lesson, Progress = _evo.SkillProgress(lesson) });
+            if (Lesson < 0) notes?.Add(new SessionNote { Kind = SessionNoteKind.AllLearned, Skill = -1 });
         }
 
         /// <summary>Chạy phiên theo thời gian thật (View gọi mỗi frame). Mô phỏng vẫn theo bước cố định bên trong.</summary>
@@ -302,6 +319,7 @@ namespace PawFit.Battle
             }
             foreach (BattleEvent e in local)
             {
+                Practice(e, notes);
                 Reward(e);
                 events?.Add(e);
             }

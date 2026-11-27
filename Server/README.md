@@ -35,7 +35,7 @@ Kiểm tra máy chủ:
 curl http://localhost:5080/
 ```
 
-Phải ra `PawFit server OK · proto 1`.
+Phải ra `PawFit server OK · proto 2`.
 
 **Nối điện thoại vào máy Mac** (cùng Wi-Fi, chỉ áp dụng cho bản **Dev**):
 

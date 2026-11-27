@@ -311,6 +311,27 @@
   - Vườn: đúng tọa độ và tên từng khu theo `GardenLayout`, chỗ đặt đồ trang trí, ngân sách ≤ 120k tam giác / 80 draw call, màn đấu.
   - Đợt giao đầu nên là 1 model Adult để ghép thử trước.
 
+- **Phase 7.1 · Cảm giác đánh** (bạn góp ý: "vuốt đúng nhưng thú cứ đứng yên, không ra chiêu ngay, gameplay hơi chậm"; chi tiết + lý do ở GDD G9d):
+  - **Sửa lỗi màn đấu:** sự kiện của chính nét vừa vuốt bị xóa trước khi vẽ, nên thú của bạn không lấy đà, không hiện khiên khi đỡ, không báo vuốt sai. Đây là lý do chính khiến thú "đứng yên".
+  - **Luật trận** (`BattleSimulation`, máy chủ dùng chung):
+    - bộ đệm vuốt 0,35 s;
+    - hồi chiêu 0,8 → 0,6 s; vung đòn 0,25–0,9 → 0,15–0,7 s; vuốt sai hở 1 → 0,5 s; SPD chậm chờ 0,5 → 0,3 s;
+    - combo +10% / bậc (tối đa +40%);
+    - thanh Nộ: đầy mới ra Tuyệt chiêu (Z), Tuyệt chiêu không bị cắt ngang;
+    - máu trong trận ×2,5 để trận ngang sức ~25 giây thay vì ~10 giây.
+  - **Bot:** đầy Nộ thì xả Tuyệt chiêu (Dễ 0% / Thường 40% / Khó 80%), nhịp đánh nhanh hơn chút. Huấn luyện: Z không cần Nộ.
+  - **Nhận dạng vuốt** (`SwipeRecognizer`):
+    - nét cong theo ngón cái, móc lúc nhấc tay, V đáy tròn / lệch, Z bo góc đều nhận;
+    - nét quá ngắn / quá chậm chỉ nhắc, không bị phạt. Chỉ nét nguệch ngoạc mới là vuốt sai.
+  - **Hình:**
+    - ra đòn thấy ngay (Nhanh phóng, Mạnh bật nhảy, Riêng xoay, Tuyệt chiêu bay lên bổ xuống), tới sát đối thủ đúng lúc đòn trúng;
+    - vệt chém, chữ combo, vạch Nộ 2 bên + vầng cam dưới chân khi đầy, vạch hồi chiêu;
+    - vết vuốt đổi màu (vàng nhận / đỏ sai / xám không tính);
+    - PvP: thú nhún ngay lúc vuốt trong khi chờ máy chủ.
+  - `NetProto.Version` = 2 (máy chủ từ chối bản game cũ, báo cập nhật).
+  - Công cụ đo nhịp trận: `Tools/BattleBalance` (bot đấu bot 400 trận / cặp).
+  - Test: 218 test logic (thêm 15: bộ đệm, combo, Nộ, giáp Tuyệt chiêu, 6 kiểu vuốt "thật tay") + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 519 thành viên khớp Unity.
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -332,6 +353,8 @@
 
 ## Tiếp theo
 
+- **Đánh thử Phase 7.1 trên điện thoại** — pull code, build Dev, vào sân tập ▸ Đấu hình nộm + Đấu trường. Gửi tôi cảm nhận: ra đòn đã đủ nhanh chưa, vuốt có còn hay bị "sai" không, trận dài / ngắn thế nào. Số chỉnh ở `BattleConfig` / `SwipeConfig`.
+- **Phase 7.2 / 7.3** — Thám hiểm (PvE) + nhiệm vụ ngày + đào kho báu (tôi làm tiếp).
 - **Thử máy chủ** — chạy `dotnet run` trên Mac, điện thoại (bản Dev) gõ địa chỉ ở bảng DEV ▸ Máy chủ (`Docs/BUILD.md` mục 14). Gửi tôi:
   - Console / log nếu không nối được;
   - cảm giác độ trễ khi đánh PvP.
@@ -353,7 +376,8 @@
 - Soát API package thông báo:
   - Tải tarball `com.unity.mobile.notifications-2.5.0.tgz` từ download.packages.unity.com (môi trường `gaao` đã mở packages.unity.com + cdn.packages.unity.com), giải nén vào thư mục tạm.
   - Chạy `python3 Tools/ApiAudit/api_audit.py Tools/UnityCompileCheck/UnityStubs.cs <thư mục>/package Unity.Notifications`.
-- Đổi luật trận / tin nhắn mạng thì tăng `NetProto.Version` (`Online/Protocol.cs`): bản game cũ sẽ được báo "hãy cập nhật".
+- Đổi luật trận / tin nhắn mạng thì tăng `NetProto.Version` (`Online/Protocol.cs`): bản game cũ sẽ được báo "hãy cập nhật". Đang là 2 (Phase 7.1).
+- Đo nhịp trận sau khi chỉnh số: `cd Tools/BattleBalance && dotnet run -c Release` (trận ngang sức nên ~25–30 giây).
 - Máy chủ biên dịch chung `Core / Pet / Battle / Online`: thêm file logic mới vào 4 thư mục này là máy chủ có luôn; dùng `using` tới Garden / Economy trong Online sẽ làm hỏng build máy chủ.
 - Compile thử code Unity: `dotnet build Tools/UnityCompileCheck` (stub ở `UnityStubs.cs`; dùng API Unity mới thì thêm stub).
 - Môi trường cloud riêng `gaao` có setup script cài sẵn Blender + .NET + restore NuGet (chưa kiểm chứng ở session mới).

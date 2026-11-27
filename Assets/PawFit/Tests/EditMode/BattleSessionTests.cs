@@ -112,6 +112,31 @@ namespace PawFit.Tests
         }
 
         [Test]
+        public void Ultimate_NeedsRage_InRealFight_ButNotInTraining()
+        {
+            var fight = new BattleSession(BattleMode.BotFight, BotLevel.Easy, _pets, _evo, 4);
+            var ev = new List<BattleEvent>();
+            Assert.IsFalse(fight.PlayerSwipe(S(SwipeKind.Z), ev));
+            Assert.IsTrue(ev.Exists(e => e.Kind == BattleEventKind.RageLow), "báo chưa đầy Nộ");
+            Assert.IsTrue(Training().PlayerSwipe(S(SwipeKind.Z)), "huấn luyện: Z không cần Nộ");
+        }
+
+        [Test]
+        public void Training_BufferedSwipe_CountsAsPractice()
+        {
+            BattleSession s = Training();
+            Assert.IsTrue(s.PlayerSwipe(S(SwipeKind.Horizontal)));
+            Assert.AreEqual(1, _evo.SkillProgress(0));
+            s.Advance(0.4f);   // huấn luyện chạy 0,75× => ~0,3 giây trận: còn ~0,3 giây hồi chiêu
+            var notes = new List<SessionNote>();
+            Assert.IsTrue(s.PlayerSwipe(S(SwipeKind.Horizontal), null, notes), "giữ trong bộ đệm");
+            Assert.AreEqual(1, _evo.SkillProgress(0), "chưa ra đòn thì chưa tính");
+            s.Advance(1f, null, notes);
+            Assert.AreEqual(2, _evo.SkillProgress(0), "ra đòn từ bộ đệm vẫn tính 1 lần tập");
+            Assert.IsTrue(notes.Exists(n => n.Kind == SessionNoteKind.Practiced));
+        }
+
+        [Test]
         public void BotFight_Quit_IsALoss()
         {
             var s = new BattleSession(BattleMode.BotFight, BotLevel.Hard, _pets, _evo, 2);
@@ -138,7 +163,7 @@ namespace PawFit.Tests
             var hard = new BattleSession(BattleMode.BotFight, BotLevel.Hard, _pets, _evo, 1);
             Assert.AreEqual(me.Atk * 0.7f, easy.Sim.Fighters[1].Stats.Atk, 1e-3f);
             Assert.AreEqual(me.Atk * 1.25f, hard.Sim.Fighters[1].Stats.Atk, 1e-3f);
-            Assert.AreEqual(me.Hp, easy.Sim.Fighters[0].Stats.Hp, 1e-3f, "thú đấu bằng chỉ số thật");
+            Assert.AreEqual(me.Hp * new BattleConfig().HpScale, easy.Sim.Fighters[0].Stats.Hp, 1e-3f, "thú đấu bằng chỉ số thật (máu trong trận × HpScale)");
         }
     }
 }

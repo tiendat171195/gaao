@@ -123,6 +123,7 @@ namespace UnityEngine
         public float magnitude => 0f;
         public float sqrMagnitude => 0f;
         public static Vector3 Lerp(Vector3 a, Vector3 b, float t) => a;
+        public static Vector3 MoveTowards(Vector3 current, Vector3 target, float maxDistanceDelta) => target;
         public static Vector3 Scale(Vector3 a, Vector3 b) => a;
         public static float Distance(Vector3 a, Vector3 b) => 0f;
         public static Vector3 operator +(Vector3 a, Vector3 b) => a;
@@ -181,6 +182,7 @@ namespace UnityEngine
         public static float Clamp(float v, float min, float max) => v;
         public static float Clamp01(float v) => v;
         public static float Lerp(float a, float b, float t) => a;
+        public static float LerpAngle(float a, float b, float t) => a;
         public static int RoundToInt(float f) => 0;
     }
 

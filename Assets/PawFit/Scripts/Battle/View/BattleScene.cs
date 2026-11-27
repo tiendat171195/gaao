@@ -66,6 +66,7 @@ namespace PawFit.Battle.View
         private readonly List<BattleEvent> _events = new List<BattleEvent>();
         private readonly List<SessionNote> _notes = new List<SessionNote>();
         private RankedMatchView _match;
+        private string _lastFail;
 
         // ---- cảm giác đánh (chỉ là hình): khựng hình, chậm lại, rung camera — tính theo giờ thật ----
         private float _stopLeft, _slowLeft, _shake;
@@ -149,6 +150,7 @@ namespace PawFit.Battle.View
             _dpi = Screen.dpi > 0 ? Mathf.Max(1f, Screen.dpi / 160f) : 1f;
             _recognizer = new SwipeRecognizer(new SwipeConfig(), _dpi);
             if (training) _hud.Hint("Vuốt theo bóng mờ để học chiêu. Vuốt xuống để đỡ.", 3f);
+            else if (match == null) _hud.Hint("Đánh trúng liên tục để nối combo · đầy Nộ thì vuốt Z", 3f);
             if (match != null)
             {
                 _hud.Big(_pets.Current.Name + "   VS   " + match.PetName, 2.2f);
@@ -194,17 +196,28 @@ namespace PawFit.Battle.View
         private void Update()
         {
             if (_session == null) return;
-            UpdateJuice();
-            ReadSwipes();
+            // xóa TRƯỚC khi đọc nét vuốt: sự kiện của chính nét vừa vuốt (ra đòn / đỡ / vuốt sai) phải được vẽ ngay frame này
             _events.Clear();
             _notes.Clear();
+            UpdateJuice();
+            ReadSwipes();
             _session.Advance(Time.deltaTime, _events, _notes);
             foreach (BattleEvent e in _events) Show(e);
             foreach (SessionNote n in _notes) Show(n);
 
-            Fighter me = _session.Sim.Fighters[BattleSession.PlayerSide], foe = _session.Sim.Fighters[BattleSession.BotSide];
+            BattleSimulation sim = _session.Sim;
+            BattleConfig cfg = sim.Config;
+            Fighter me = sim.Fighters[BattleSession.PlayerSide], foe = sim.Fighters[BattleSession.BotSide];
             _hud.SetHp(me.HpPercent, foe.HpPercent);
-            _hud.SetTime(_session.Sim.TimeLeft / _session.Sim.Config.DurationSeconds);
+            _hud.SetTime(sim.TimeLeft / cfg.DurationSeconds);
+            if (cfg.UltimateNeedsRage)
+            {
+                _hud.SetRage(me.Rage / cfg.RageMax, foe.Rage / cfg.RageMax);
+                _player.SetRageAura(sim.UltimateReady(BattleSession.PlayerSide));
+                _dummy.SetRageAura(sim.UltimateReady(BattleSession.BotSide));
+            }
+            _hud.SetReady(1f - Mathf.Clamp01(sim.AttackReadyIn(BattleSession.PlayerSide) / Mathf.Max(0.01f, cfg.CooldownSeconds)));
+            _player.Speed = _dummy.Speed = _session.TimeScale;
             if (_session.Mode == BattleMode.Training)
                 _hud.SetLesson(_session.Lesson, _session.LessonProgress, _pets.Config.Evolution.PracticeToLearn, _session.SlowMo);
             if (_session.SlowMo) _hud.Hint("Hình nộm sắp đánh — vuốt XUỐNG để đỡ!", 0.3f);
@@ -244,10 +257,27 @@ namespace PawFit.Battle.View
                     _stroking = false;
                     _stroke.Add(new SwipePoint(s.Position.x, s.Position.y, s.Time));
                     if (StrokeLength() < 25f * _dpi) break;   // chạm nhẹ: không tính là vuốt sai
-                    SwipeResult r = _recognizer.Recognize(_stroke);
-                    _session.PlayerSwipe(r, _events, _notes);
+                    OnStroke(_recognizer.Recognize(_stroke));
                     break;
             }
+        }
+
+        /// <summary>
+        /// 1 nét vuốt xong: quá ngắn / quá chậm thì chỉ nhắc (không phạt); còn lại gửi vào trận.
+        /// Vết vuốt đổi màu ngay: vàng = nhận chiêu, đỏ = vuốt sai, xám = không tính / đang bận.
+        /// </summary>
+        private void OnStroke(SwipeResult r)
+        {
+            if (!r.IsValid && r.Fail != SwipeFail.Unclear && _session.Mode != BattleMode.Training)
+            {
+                _hud.TintTrail(StrokeTint.Ignored);
+                _hud.Hint(r.Fail == SwipeFail.TooShort ? "Vuốt dài hơn chút nhé" : "Vuốt nhanh, dứt khoát hơn nhé", 1.2f);
+                return;
+            }
+            _lastFail = r.Reason;
+            bool ok = _session.PlayerSwipe(r, _events, _notes);
+            _hud.TintTrail(!r.IsValid ? StrokeTint.Wrong : ok ? StrokeTint.Ok : StrokeTint.Ignored);
+            if (ok && r.IsValid && _session.Networked) _player.Anticipate();   // qua máy chủ: nhún ngay trong lúc chờ máy chủ chốt
         }
 
         private float StrokeLength()
@@ -290,41 +320,86 @@ namespace PawFit.Battle.View
             _cam.transform.position = _camBase + _cam.transform.rotation * offset;
         }
 
+        private static readonly Color Gold = new Color(1f, 0.85f, 0.3f);
+        private static readonly Color GuardBlue = new Color(0.55f, 0.8f, 1f);
+        private static readonly Color RageOrange = new Color(1f, 0.62f, 0.2f);
+
+        private static Color SlashColor(MoveKind m, bool crit) =>
+            crit || m == MoveKind.Ultimate ? Gold : m == MoveKind.Heavy ? new Color(1f, 0.6f, 0.25f)
+          : m == MoveKind.Special ? new Color(0.5f, 0.85f, 1f) : Color.white;
+
+        /// <summary>Góc vệt chém theo chiêu (bên phải đánh sang thì lật ngược).</summary>
+        private static float SlashAngle(MoveKind m, int side)
+        {
+            float a = m == MoveKind.Quick ? -12f : m == MoveKind.Heavy ? 55f : m == MoveKind.Special ? -40f : 30f;
+            return side == BattleSession.PlayerSide ? a : -a;
+        }
+
+        private static Color ComboColor(int n) =>
+            n >= 5 ? new Color(1f, 0.35f, 0.25f) : n == 4 ? new Color(1f, 0.55f, 0.2f) : n == 3 ? Gold : new Color(1f, 0.95f, 0.7f);
+
         private void Show(BattleEvent e)
         {
             FighterRig self = Rig(e.Side), other = Rig(1 - e.Side);
+            bool mine = e.Side == BattleSession.PlayerSide;
             switch (e.Kind)
             {
-                case BattleEventKind.AttackStarted:
-                    self.WindUp(_session.Sim.Config.WindupSeconds[(int)e.Move]);
+                case BattleEventKind.AttackStarted:   // thấy chuyển động ngay lúc vuốt xong
+                    self.Attack(e.Move, _session.Sim.Config.WindupSeconds[(int)e.Move]);
+                    if (e.Move == MoveKind.Special)
+                        FxBurst.Popup(transform, self.Center + Vector3.up * 0.75f, "Chiêu riêng!", new Color(0.75f, 0.9f, 1f), 0.2f);
+                    else if (e.Move == MoveKind.Ultimate)
+                    {
+                        _hud.Big((mine ? "" : "Đối thủ: ") + "TUYỆT CHIÊU!", 1f);
+                        FxBurst.Ring(transform, self.Center, RageOrange);
+                        FxBurst.Spark(transform, self.Center, RageOrange, 14, 1.6f);
+                        SlowMo(0.3f);
+                        Shake(0.04f);
+                    }
                     break;
                 case BattleEventKind.Hit:
                     self.Strike(e.Move != MoveKind.Quick);
-                    other.Flinch(e.Move == MoveKind.Quick ? 0.5f : 1f);
-                    HitStop(e.Crit ? 0.1f : e.Move == MoveKind.Quick ? 0.035f : 0.07f);
-                    if (e.Crit || e.Move == MoveKind.Ultimate) Shake(e.Move == MoveKind.Ultimate ? 0.12f : 0.07f);
-                    FxBurst.Spark(transform, other.Center, e.Crit ? new Color(1f, 0.85f, 0.3f) : Color.white, e.Crit ? 16 : 9);
+                    other.Flinch(e.Move == MoveKind.Quick ? 0.5f : e.Move == MoveKind.Ultimate ? 1.5f : 1f);
+                    HitStop(e.Crit || e.Move == MoveKind.Ultimate ? 0.1f : e.Move == MoveKind.Quick ? 0.035f : 0.07f);
+                    if (e.Crit || e.Move == MoveKind.Ultimate) Shake(e.Move == MoveKind.Ultimate ? 0.14f : 0.07f);
+                    FxBurst.Slash(transform, other.Center, SlashColor(e.Move, e.Crit), SlashAngle(e.Move, e.Side),
+                                  e.Move == MoveKind.Ultimate ? 1.5f : 0.9f, e.Move == MoveKind.Quick ? 0.06f : 0.1f);
+                    FxBurst.Spark(transform, other.Center, e.Crit ? Gold : Color.white, e.Crit || e.Move == MoveKind.Ultimate ? 16 : 9);
                     if (e.Crit) FxBurst.Popup(transform, other.Center + Vector3.up * 0.6f, "Chí mạng!", new Color(1f, 0.8f, 0.2f));
+                    if (e.Combo >= 2)
+                    {
+                        _hud.Combo(e.Side, e.Combo);
+                        FxBurst.Popup(transform, other.Center + Vector3.up * 0.4f, "x" + e.Combo, ComboColor(e.Combo),
+                                      0.16f + 0.02f * Mathf.Min(e.Combo, 5));
+                    }
                     break;
                 case BattleEventKind.Blocked:
                     self.Strike(false);
-                    FxBurst.Ring(transform, other.Center, new Color(0.55f, 0.8f, 1f));
+                    FxBurst.Ring(transform, other.Center, GuardBlue);
+                    FxBurst.Popup(transform, other.Center + Vector3.up * 0.6f, "Đỡ!", GuardBlue, 0.18f);
                     break;
                 case BattleEventKind.Countered:
                     self.Strike(true);
+                    other.CancelAttack();   // đòn đâm vào thế đỡ: thôi lao, bị hất lùi
                     other.Flinch(1.3f);
                     other.Dizzy();
-                    FxBurst.Spark(transform, other.Center, new Color(1f, 0.85f, 0.3f), 18, 3f);
-                    FxBurst.Popup(transform, self.Center + Vector3.up * 0.7f, "Phản đòn!", new Color(1f, 0.85f, 0.3f), 0.3f);
+                    FxBurst.Spark(transform, other.Center, Gold, 18, 3f);
+                    FxBurst.Popup(transform, self.Center + Vector3.up * 0.7f, "Phản đòn!", Gold, 0.3f);
+                    if (e.Combo >= 2) _hud.Combo(e.Side, e.Combo);
                     HitStop(0.12f);
                     Shake(0.09f);
                     break;
                 case BattleEventKind.Interrupted:
+                    self.CancelAttack();
                     self.Dizzy();
+                    FxBurst.Popup(transform, self.Center + Vector3.up * 0.7f, "Bị cắt đòn!", new Color(1f, 0.6f, 0.5f), 0.18f);
                     break;
                 case BattleEventKind.WrongSwipe:
                     self.Dizzy();
                     FxBurst.Popup(transform, self.Center + Vector3.up * 0.7f, "Vuốt sai!", new Color(1f, 0.45f, 0.4f));
+                    if (mine)
+                        _hud.Hint("Vuốt sai" + (string.IsNullOrEmpty(_lastFail) ? "" : " (" + _lastFail + ")") +
+                                  " — hở 0,5 giây. Vuốt thẳng, hoặc V / Z rõ góc", 1.8f);
                     break;
                 case BattleEventKind.Guard:
                     self.Guard();
@@ -335,6 +410,15 @@ namespace PawFit.Battle.View
                     HitStop(0.15f);
                     SlowMo(1f);   // hạ gục: chậm lại 1 giây cho thấy rõ
                     Shake(0.15f);
+                    break;
+                case BattleEventKind.RageFull:
+                    FxBurst.Spark(transform, self.Center, RageOrange, 12, 1.4f);
+                    if (mine) _hud.Hint("Nộ đầy! Vuốt Z để ra Tuyệt chiêu", 2f);
+                    break;
+                case BattleEventKind.RageLow:
+                    if (!mine) break;
+                    _hud.FlashRage(BattleSession.PlayerSide);
+                    _hud.Hint("Nộ chưa đầy — đánh trúng, đỡ, phản đòn để tích Nộ", 1.6f);
                     break;
             }
         }
@@ -349,6 +433,7 @@ namespace PawFit.Battle.View
                 case SessionNoteKind.Learned:
                     _hud.Big("Thuộc chiêu " + BattleHud.SkillNames[n.Skill] + "!", 2.2f);
                     _playerFx.Evolve(false);   // quầng sáng + tiếng chuông
+                    if (n.Skill == 3) _hud.Hint("Đấu thật: thanh Nộ đầy mới ra được Tuyệt chiêu", 3f);
                     break;
                 case SessionNoteKind.AllLearned:
                     _hud.Hint("Đã thuộc cả 4 chiêu!", 3f);

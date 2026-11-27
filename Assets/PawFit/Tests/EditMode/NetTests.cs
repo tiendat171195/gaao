@@ -194,9 +194,11 @@ namespace PawFit.Tests
                 var mirror = new BattleSimulation(b, a, null, seed, null, null, 1);
                 for (int tick = 0; tick < 3000 && !server.IsOver; tick++)
                 {
-                    if (tick % 25 == 0)   // 2 bên ra đòn cùng bước => trúng cùng bước
+                    // 2 bên ra đòn cùng bước => trúng cùng bước; nhịp 13 rơi vào lúc hồi chiêu => vào bộ đệm; Z khi đầy Nộ
+                    if (tick % 25 == 0 || tick % 13 == 7 || tick % 40 == 20)
                     {
-                        var s = new SwipeResult { Kind = tick % 50 == 0 ? SwipeKind.Horizontal : SwipeKind.Up, Quality = 1.1f };
+                        SwipeKind k = tick % 40 == 20 ? SwipeKind.Z : tick % 50 == 0 ? SwipeKind.Horizontal : SwipeKind.Up;
+                        var s = new SwipeResult { Kind = k, Quality = 1.1f };
                         server.Submit(0, s);
                         server.Submit(1, s);
                         mirror.Submit(1, s);
@@ -244,7 +246,7 @@ namespace PawFit.Tests
             fb = new NetMatchFeed(Found(a, b, 1, seed, 20000, 15, 7), null, Wire(server, 1));
             var sa = new BattleSession(ca.Pets, ca.Evo, new RankedOpponent { Name = "Bơ" }, fa);
             var sb = new BattleSession(cb.Pets, cb.Evo, new RankedOpponent { Name = "Mun" }, fb);
-            Assert.AreEqual(NetProto.Bits(b.Hp), NetProto.Bits(sb.Sim.Fighters[0].Hp), "máy bên 1: mình (B) đứng bên 0 trên màn hình");
+            Assert.AreEqual(NetProto.Bits(b.Hp * new BattleConfig().HpScale), NetProto.Bits(sb.Sim.Fighters[0].Hp), "máy bên 1: mình (B) đứng bên 0 trên màn hình");
             Assert.AreEqual(20f, sb.Sim.Config.DurationSeconds, "thời lượng theo máy chủ");
 
             Deliver(fa, new MatchMsg { T = MsgType.Start });

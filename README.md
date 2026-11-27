@@ -131,18 +131,23 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   | Ngang | Nhanh |
   | Lên | Mạnh: hất tung, cắt đòn đang vung của đối thủ |
   | V | Chiêu riêng |
-  | Z | Ultimate |
+  | Z | Tuyệt chiêu (Ultimate): cần **đầy Nộ**, không bị cắt ngang |
   | Xuống | Đỡ. Đỡ sát lúc đòn tới thì phản đòn |
 
-  Vuốt sai (nét không rõ hình hoặc quá chậm) thì bị hở 1 giây. Vuốt càng nhanh, càng đúng hình thì đòn càng đau.
+  - Vuốt xong là thú ra đòn ngay. Vuốt sớm lúc thú còn đang hồi chiêu (0,6 giây) cũng được: nét được giữ lại, rảnh ra là đánh.
+  - Đánh trúng liên tục thì thành **combo** (mỗi bậc +10% damage, tối đa +40%). Bị trúng đòn / bị đỡ thì mất combo.
+  - **Nộ** tăng khi đánh trúng, bị đánh, đỡ được, phản đòn. Đầy thì vạch Nộ nhấp nháy + vầng cam dưới chân thú: vuốt Z.
+  - Vết ngón tay đổi màu lúc nhấc tay: vàng = nhận chiêu, đỏ = vuốt sai, xám = không tính.
+  - Chỉ nét nguệch ngoạc mới là vuốt sai (bị hở 0,5 giây). Nét cong, nét hơi ngắn / hơi chậm không bị phạt. Vuốt càng nhanh, càng đúng hình thì đòn càng đau.
 - **Huấn luyện:**
   - Có bóng mờ chỉ cách vuốt chiêu đang học. Vuốt đúng 10 lần thì thuộc chiêu (thuộc rồi đánh mạnh hơn). Cần thuộc đủ 4 chiêu mới lên được Ultimate.
+  - Huấn luyện không có Nộ: vuốt Z là ra Tuyệt chiêu luôn, để tập.
   - Vuốt sai không bị phạt, cứ vuốt lại.
   - Hình nộm sắp đánh thì trận chậm lại và hiện cách vuốt xuống để đỡ.
   - Không ai bị hạ gục. Bấm **Xong** để kết thúc.
 - **Đấu:**
   - Trận thật 90 giây với Bot mức đó, chỉ số Bot theo chỉ số thú (Dễ ×0,7, Thường ×1, Khó ×1,25).
-  - Màn hình chỉ có 2 vạch HP mờ + vạch thời gian mảnh. Hết giờ thì bên còn nhiều %HP hơn thắng.
+  - Màn hình có 2 vạch HP mờ + vạch Nộ + vạch thời gian mảnh. Trận ngang sức thường hết trong khoảng 25–30 giây; hết 90 giây thì bên còn nhiều %HP hơn thắng.
   - **Bỏ cuộc** tính là thua.
 - **Điểm tập:**
   - Mỗi đòn trúng: ngang → Tốc độ; lên → Sức mạnh; V, Z → cả hai. Phản đòn → Tốc độ.

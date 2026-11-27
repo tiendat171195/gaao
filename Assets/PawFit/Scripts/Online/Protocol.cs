@@ -16,8 +16,11 @@ namespace PawFit.Online
     /// </summary>
     public static class NetProto
     {
-        /// <summary>Đổi luật trận / tin nhắn thì tăng số này: máy chủ từ chối bản game cũ (báo cập nhật).</summary>
-        public const int Version = 1;
+        /// <summary>
+        /// Đổi luật trận / tin nhắn thì tăng số này: máy chủ từ chối bản game cũ (báo cập nhật).
+        /// 2 = Phase 7.1: bộ đệm vuốt, nhịp nhanh hơn, combo, thanh Nộ cho Tuyệt chiêu.
+        /// </summary>
+        public const int Version = 2;
 
         /// <summary>Tin nhắn WebSocket dài nhất (byte). Dài hơn = hỏng / phá, cắt kết nối.</summary>
         public const int MaxMessageBytes = 16 * 1024;

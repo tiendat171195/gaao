@@ -18,24 +18,27 @@ namespace PawFit.Battle
         /// <summary>Xác suất chịu đỡ khi thấy đòn tới.</summary>
         public float[] GuardChance = { 0.15f, 0.4f, 0.7f };
 
-        /// <summary>Nghỉ bao lâu giữa 2 đòn (khoảng ngẫu nhiên, giây).</summary>
-        public float[] AttackGapMin = { 1.2f, 0.7f, 0.35f };
-        public float[] AttackGapMax = { 2.4f, 1.4f, 0.8f };
+        /// <summary>Nghỉ bao lâu giữa 2 đòn (khoảng ngẫu nhiên, giây). Không nhanh hơn hồi chiêu được.</summary>
+        public float[] AttackGapMin = { 1f, 0.6f, 0.3f };
+        public float[] AttackGapMax = { 2f, 1.2f, 0.7f };
 
         /// <summary>Hệ số vuốt của Bot (khoảng ngẫu nhiên).</summary>
         public float[] QualityMin = { 0.75f, 0.85f, 0.95f };
         public float[] QualityMax = { 0.95f, 1.1f, 1.25f };
 
-        /// <summary>Xác suất Bot vuốt sai (bị hở 1 giây).</summary>
+        /// <summary>Xác suất Bot vuốt sai (bị hở 0,5 giây).</summary>
         public float[] WrongChance = { 0.1f, 0.05f, 0.02f };
 
-        /// <summary>Trọng số chọn chiêu Nhanh / Mạnh / Riêng / Ultimate.</summary>
+        /// <summary>Trọng số chọn chiêu Nhanh / Mạnh / Riêng. Tuyệt chiêu không chọn theo trọng số mà theo Nộ (UltimateChance).</summary>
         public float[][] MoveWeights =
         {
-            new[] { 0.75f, 0.25f, 0f, 0f },
-            new[] { 0.55f, 0.3f, 0.15f, 0f },
-            new[] { 0.45f, 0.3f, 0.17f, 0.08f },
+            new[] { 0.75f, 0.25f, 0f },
+            new[] { 0.55f, 0.3f, 0.15f },
+            new[] { 0.45f, 0.3f, 0.17f },
         };
+
+        /// <summary>Thanh Nộ đầy thì mỗi lần ra đòn có bấy nhiêu xác suất dùng Tuyệt chiêu (Dễ: không biết dùng).</summary>
+        public float[] UltimateChance = { 0f, 0.4f, 0.8f };
 
         /// <summary>Có canh đỡ sát đòn để phản đòn không (mặc định chỉ mức Khó).</summary>
         public bool[] AimParry = { false, false, true };
@@ -50,17 +53,18 @@ namespace PawFit.Battle
             float k = skill < 0f ? 0f : (skill > 1f ? 1f : skill);
             float P(float[] a) => k < 0.5f ? a[0] + (a[1] - a[0]) * (k * 2f) : a[1] + (a[2] - a[1]) * ((k - 0.5f) * 2f);
             float react = P(d.ReactionSeconds), guard = P(d.GuardChance), gapMin = P(d.AttackGapMin), gapMax = P(d.AttackGapMax);
-            float qMin = P(d.QualityMin), qMax = P(d.QualityMax), wrong = P(d.WrongChance);
-            var w = new float[4];
-            for (int i = 0; i < 4; i++) w[i] = P(new[] { d.MoveWeights[0][i], d.MoveWeights[1][i], d.MoveWeights[2][i] });
+            float qMin = P(d.QualityMin), qMax = P(d.QualityMax), wrong = P(d.WrongChance), ult = P(d.UltimateChance);
+            var w = new float[3];
+            for (int i = 0; i < 3; i++) w[i] = P(new[] { d.MoveWeights[0][i], d.MoveWeights[1][i], d.MoveWeights[2][i] });
             bool aim = k > 0.6f;
             switch (style)
             {
-                case BotStyle.Aggressive:   // đánh dồn, ít đỡ, hay đánh mạnh
+                case BotStyle.Aggressive:   // đánh dồn, ít đỡ, hay đánh mạnh, đầy Nộ là xả
                     gapMin *= 0.75f;
                     gapMax *= 0.75f;
                     guard *= 0.6f;
                     w[1] += 0.15f;
+                    ult = Math.Min(1f, ult + 0.1f);
                     break;
                 case BotStyle.Defensive:    // đánh thưa, hay đỡ, sớm biết canh phản đòn
                     gapMin *= 1.3f;
@@ -68,9 +72,9 @@ namespace PawFit.Battle
                     guard = Math.Min(0.9f, guard * 1.35f);
                     aim = k > 0.35f;
                     break;
-                case BotStyle.Technical:    // hay ra chiêu riêng / Ultimate, vuốt đẹp hơn
+                case BotStyle.Technical:    // hay ra chiêu riêng / Tuyệt chiêu, vuốt đẹp hơn
                     w[2] += 0.12f;
-                    if (k > 0.5f) w[3] += 0.06f;
+                    if (k > 0.3f) ult = Math.Min(1f, ult + 0.15f);
                     qMin += 0.05f;
                     qMax += 0.05f;
                     break;
@@ -85,6 +89,7 @@ namespace PawFit.Battle
                 QualityMax = new[] { qMax, qMax, qMax },
                 WrongChance = new[] { wrong, wrong, wrong },
                 MoveWeights = new[] { w, w, w },
+                UltimateChance = new[] { ult, ult, ult },
                 AimParry = new[] { aim, aim, aim },
             };
         }
@@ -92,7 +97,8 @@ namespace PawFit.Battle
 
     /// <summary>
     /// Bot đấu (C# thuần, có seed): dùng đúng cổng Submit như người chơi nên không ăn gian.
-    /// Mức càng cao: phản ứng nhanh hơn, hay đỡ hơn (mức Khó canh để phản đòn), đánh dồn hơn, vuốt đẹp hơn.
+    /// Mức càng cao: phản ứng nhanh hơn, hay đỡ hơn (mức Khó canh để phản đòn), đánh dồn hơn, vuốt đẹp hơn,
+    /// biết dùng Tuyệt chiêu khi đầy Nộ.
     /// </summary>
     public sealed class BattleBot
     {
@@ -153,19 +159,22 @@ namespace PawFit.Battle
             _attackIn = Gap();
             if (_rng.NextDouble() < _cfg.WrongChance[_lv]) return SwipeResult.Wrong("bot vuốt sai");
             float q = Lerp(_cfg.QualityMin[_lv], _cfg.QualityMax[_lv], (float)_rng.NextDouble());
-            return new SwipeResult { Kind = PickMove(), Quality = q, Direction = _side == 0 ? 1 : -1 };
+            return new SwipeResult { Kind = PickMove(sim, me), Quality = q, Direction = _side == 0 ? 1 : -1 };
         }
 
-        private SwipeKind PickMove()
+        private SwipeKind PickMove(BattleSimulation sim, Fighter me)
         {
+            // đầy Nộ (trận thật) thì có xác suất xả Tuyệt chiêu; Huấn luyện không tích Nộ nên hình nộm không dùng
+            if (sim.Config.UltimateNeedsRage && me.Rage >= sim.Config.RageMax - 1e-3f && _cfg.UltimateChance != null &&
+                _rng.NextDouble() < _cfg.UltimateChance[Math.Min(_lv, _cfg.UltimateChance.Length - 1)])
+                return SwipeKind.Z;
             float[] w = _cfg.MoveWeights[_lv];
             float total = 0f;
             foreach (float x in w) total += x;
             float r = (float)_rng.NextDouble() * total;
-            for (int i = 0; i < w.Length; i++)
+            for (int i = 0; i < w.Length && i < 3; i++)
             {
-                if (r < w[i])
-                    return i == 0 ? SwipeKind.Horizontal : i == 1 ? SwipeKind.Up : i == 2 ? SwipeKind.V : SwipeKind.Z;
+                if (r < w[i]) return i == 0 ? SwipeKind.Horizontal : i == 1 ? SwipeKind.Up : SwipeKind.V;
                 r -= w[i];
             }
             return SwipeKind.Horizontal;
