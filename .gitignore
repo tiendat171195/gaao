@@ -35,6 +35,9 @@ sysinfo.txt
 mono_crash*
 *.apk
 *.aab
+# khóa ký phát hành: KHÔNG BAO GIỜ đưa lên git (giữ file + mật khẩu ở chỗ an toàn, có bản sao lưu)
+*.keystore
+*.jks
 *.unitypackage
 *.app
 crashlytics-build.properties

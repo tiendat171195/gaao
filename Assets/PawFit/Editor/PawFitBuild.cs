@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
@@ -11,15 +12,25 @@ namespace PawFit.EditorTools
     /// Menu PawFit ▸ Build Android / Build iOS (Phase 5.3): đặt Player Settings rồi build vào thư mục Builds/.
     ///  * Dev: có bảng DEV + quảng cáo giả lập (để test trên điện thoại).
     ///  * Release: không có bảng DEV, không có quảng cáo (chưa có SDK quảng cáo thật).
-    /// Android ra file APK ký bằng debug keystore (cài thẳng vào máy được, chưa lên Google Play được).
+    /// Android:
+    ///  * APK (Dev / Release): cài thẳng vào máy. Chưa đặt khóa ký riêng thì Unity ký bằng debug keystore.
+    ///  * AAB (Google Play): bắt buộc khóa ký riêng (upload key) — tạo 1 lần ở Publishing Settings, xem Docs/BUILD.md mục 15.
     /// iOS ra project Xcode: mở bằng Xcode, chọn Team (Apple ID) rồi bấm Run để cài vào iPhone (xem Docs/BUILD.md).
     /// </summary>
     public static class PawFitBuild
     {
-        /// <summary>Tên gói tạm (gần như cố định sau khi lên store — đổi trước khi phát hành nếu có tên riêng).</summary>
+        /// <summary>
+        /// Tên gói: CỐ ĐỊNH VĨNH VIỄN sau lần đầu tải lên Google Play / App Store, và phải chưa ai dùng.
+        /// Muốn tên riêng (vd com.tenban.pawfit) thì đổi TRƯỚC lần tải lên đầu tiên.
+        /// </summary>
         public const string PackageName = "com.pawfit.game";
-        public const string Version = "0.5.3";
-        public const int VersionCode = 53;
+        public const string Version = "0.6.0";
+
+        /// <summary>
+        /// Số bản build (Android versionCode / iOS build number) = số phút từ 01/01/2026 (UTC): lần build sau luôn lớn hơn
+        /// lần trước. Google Play / TestFlight bắt buộc số này tăng mỗi lần tải lên, cài đè bản cũ cũng không bị lỗi hạ phiên bản.
+        /// </summary>
+        public static int BuildNumber() => (int)Math.Floor((DateTime.UtcNow - new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMinutes);
 
         private const string ScenePath = "Assets/PawFit/Scenes/Main.unity";
         private const string LitBasePath = "Assets/PawFit/Resources/PawFit/LitBase.mat";
@@ -38,20 +49,50 @@ namespace PawFit.EditorTools
         [MenuItem("PawFit/Build Android/Release (APK)")]
         public static void BuildAndroidRelease() => BuildAndroid(false, false);
 
-        private static void BuildAndroid(bool dev, bool run)
+        [MenuItem("PawFit/Build Android/Release (AAB, Google Play)")]
+        public static void BuildAndroidStore() => BuildAndroid(false, false, true);
+
+        private static void BuildAndroid(bool dev, bool run, bool appBundle = false)
         {
+            if (appBundle && !CheckUploadKey()) return;
             if (!Prepare(BuildTargetGroup.Android, BuildTarget.Android, "Android Build Support (kèm OpenJDK + Android SDK & NDK Tools)"))
                 return;
             NamedBuildTarget android = NamedBuildTarget.Android;
             PlayerSettings.SetApplicationIdentifier(android, PackageName);
             PlayerSettings.SetScriptingBackend(android, ScriptingImplementation.IL2CPP);   // máy Android đời mới chỉ chạy app 64-bit
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
-            PlayerSettings.Android.bundleVersionCode = VersionCode;
-            EditorUserBuildSettings.buildAppBundle = false;   // APK để cài thẳng vào máy (AAB chỉ để lên Google Play)
+            int build = BuildNumber();
+            PlayerSettings.Android.bundleVersionCode = build;
+            EditorUserBuildSettings.buildAppBundle = appBundle;   // APK để cài thẳng vào máy, AAB để lên Google Play
+            if (!dev && !appBundle && !PlayerSettings.Android.useCustomKeystore)
+                Debug.Log("[PawFit] Release APK ký bằng debug keystore: cài thử được, chưa lên Google Play được (dùng menu Release (AAB))");
             BuildOptions options = dev ? BuildOptions.Development : BuildOptions.None;
             if (run) options |= BuildOptions.AutoRunPlayer;
-            Run(BuildTarget.Android, BuildTargetGroup.Android, Path.Combine("Builds/Android", dev ? "PawFit-dev.apk" : "PawFit.apk"),
-                options, !run);
+            string file = appBundle ? "PawFit-" + Version + "-" + build + ".aab" : dev ? "PawFit-dev.apk" : "PawFit.apk";
+            Run(BuildTarget.Android, BuildTargetGroup.Android, Path.Combine("Builds/Android", file), options, !run);
+        }
+
+        /// <summary>
+        /// Google Play cần bản ký bằng khóa riêng (upload key), không nhận debug keystore. Unity không lưu mật khẩu khóa:
+        /// mỗi lần mở Unity phải nhập lại ở Player ▸ Publishing Settings. Thiếu gì thì báo + mở đúng chỗ đó.
+        /// </summary>
+        private static bool CheckUploadKey()
+        {
+            string keystore = PlayerSettings.Android.keystoreName;
+            string problem = null;
+            if (!PlayerSettings.Android.useCustomKeystore || string.IsNullOrEmpty(keystore))
+                problem = "Chưa chọn khóa ký riêng (upload key). Lần đầu: tạo khóa bằng Keystore Manager (Docs/BUILD.md mục 15).";
+            else if (!File.Exists(Path.GetFullPath(keystore)))
+                problem = "Không thấy file khóa ký: " + keystore + "\nChọn lại file ở Publishing Settings ▸ Custom Keystore.";
+            else if (string.IsNullOrEmpty(PlayerSettings.Android.keyaliasName))
+                problem = "Chưa chọn Alias (tên khóa) ở Publishing Settings ▸ Custom Keystore.";
+            else if (string.IsNullOrEmpty(PlayerSettings.Android.keystorePass) || string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass))
+                problem = "Chưa nhập mật khẩu khóa ký (Unity không lưu mật khẩu, mỗi lần mở Unity nhập lại 1 lần).";
+            if (problem == null) return true;
+            EditorUtility.DisplayDialog("PawFit · chưa build AAB được",
+                                        problem + "\n\nĐang mở Project Settings ▸ Player: chọn tab Android ▸ Publishing Settings.", "OK");
+            UnityEditor.SettingsService.OpenProjectSettings("Project/Player");
+            return false;
         }
 
         // ------------------------------------------------------------------
@@ -69,7 +110,7 @@ namespace PawFit.EditorTools
             if (!Prepare(BuildTargetGroup.iOS, BuildTarget.iOS, "iOS Build Support"))
                 return;
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, PackageName);
-            PlayerSettings.iOS.buildNumber = VersionCode.ToString();
+            PlayerSettings.iOS.buildNumber = BuildNumber().ToString();   // TestFlight cũng bắt buộc số này tăng
             PlayerSettings.iOS.appleEnableAutomaticSigning = true;   // Xcode tự lo chứng chỉ khi bạn chọn Team (Apple ID)
             Run(BuildTarget.iOS, BuildTargetGroup.iOS, dev ? "Builds/iOS/PawFit-dev" : "Builds/iOS/PawFit",
                 dev ? BuildOptions.Development : BuildOptions.None, true);

@@ -259,3 +259,61 @@ Game chưa có địa chỉ máy chủ thì chơi **offline như trước**: PvP
 | Hòm thư: "chưa nối được" | Mac và điện thoại phải cùng Wi-Fi, máy chủ phải đang chạy. Thử mở `http://192.168.1.10:5080/` bằng trình duyệt trên điện thoại. Bảng DEV ▸ **Nối lại máy chủ** |
 | macOS hỏi có cho `dotnet` nhận kết nối không | Bấm **Cho phép**. Lỡ từ chối: **Cài đặt hệ thống ▸ Mạng ▸ Tường lửa ▸ Tùy chọn** ▸ cho `dotnet` |
 | "Bản game cũ, hãy cập nhật để đấu PvP" | Máy chủ và game khác phiên bản giao thức: pull code mới cho cả hai, build lại |
+
+## 15. Đưa lên Google Play (bản thử nội bộ)
+
+Làm khi bản APK đã chạy ổn trên điện thoại. Google Play không nhận APK ký bằng debug keystore. Phải build **AAB** ký bằng **khóa tải lên (upload key)** của bạn.
+
+**Trước lần tải lên đầu tiên:**
+
+- **Tên gói** hiện là `com.pawfit.game` (hằng `PackageName` trong `Assets/PawFit/Editor/PawFitBuild.cs`).
+  - Tên gói cố định vĩnh viễn sau lần tải lên đầu, và phải chưa ai dùng trên Google Play.
+  - Nên đổi sang tên riêng, ví dụ `com.tenban.pawfit`. Báo tôi đổi, hoặc tự sửa hằng đó.
+- **Tài khoản nhà phát triển Google Play:** phí 25 USD một lần, phải xác minh danh tính.
+  - Bản thử nội bộ (tối đa 100 người, qua email) dùng được ngay.
+  - Tài khoản cá nhân mới: muốn phát hành công khai, Google thường yêu cầu thử kín với ít nhất 12 người trong 14 ngày. Play Console sẽ báo đúng yêu cầu hiện hành.
+
+**1. Tạo khóa tải lên (1 lần duy nhất):**
+
+1. Unity: **Edit ▸ Project Settings ▸ Player** ▸ tab Android (hình robot) ▸ **Publishing Settings** ▸ **Keystore Manager...**
+2. **Keystore... ▸ Create New ▸ Anywhere...** ▸ lưu **ngoài** thư mục repo, ví dụ `~/PawFitKeys/pawfit-upload.keystore`. Đặt mật khẩu.
+3. Mục **New Key Values:**
+   - Alias `pawfit`, đặt mật khẩu (có thể trùng mật khẩu ở bước 2).
+   - Validity 50 năm. First and Last Name: tên bạn. Country Code: `VN`.
+   - Bấm **Add Key**. Unity hỏi có dùng làm khóa của project không: **Yes**.
+4. **Sao lưu file `.keystore` + 2 mật khẩu** vào chỗ an toàn (trình quản lý mật khẩu, ổ đĩa riêng). Repo đã chặn file `.keystore` / `.jks` khỏi git.
+   - Lỡ mất khóa thì xin Google Play đặt lại khóa tải lên được, nhưng mất vài ngày.
+
+**2. Mỗi lần mở Unity để build bản lên Play:** Publishing Settings ▸ **Custom Keystore**:
+
+- **Password**: mật khẩu khóa.
+- **Project Key ▸ Alias**: chọn `pawfit`, rồi nhập **Password** của alias.
+
+Unity không lưu 2 mật khẩu này, tắt Unity là phải nhập lại.
+
+**3. Build:** menu **PawFit ▸ Build Android ▸ Release (AAB, Google Play)**.
+
+- Ra file `Builds/Android/PawFit-0.6.0-<số build>.aab`.
+- Số build tự tăng theo thời gian, nên mỗi lần tải lên luôn lớn hơn lần trước.
+- Thiếu khóa hoặc mật khẩu thì menu báo lỗi và mở sẵn Publishing Settings.
+
+**4. Tải lên Play Console:**
+
+1. [play.google.com/console](https://play.google.com/console) ▸ **Create app**: tên PawFit, ngôn ngữ Tiếng Việt, Game, Free.
+2. **Test and release ▸ Testing ▸ Internal testing** ▸ tab **Testers**: tạo danh sách email người thử.
+3. **Create new release:**
+   - Play App Signing: để Google tạo và giữ khóa ký app, đây là mặc định. Bạn chỉ giữ khóa tải lên.
+   - Kéo file `.aab` vào ▸ **Next** ▸ **Save and publish**.
+4. Gửi **link tham gia** (tab Testers) cho người thử. Họ mở link trên điện thoại ▸ chấp nhận ▸ cài từ Play Store.
+5. Play Console sẽ đòi khai một số mục (chính sách quyền riêng tư, an toàn dữ liệu, độ tuổi, quảng cáo). Với game hiện tại:
+   - **Không có quảng cáo thật:** bản Release chưa có SDK quảng cáo.
+   - **Không thu thông tin cá nhân.**
+   - **Có máy chủ riêng thì khai thêm:** mã người chơi ngẫu nhiên + dữ liệu game sao lưu.
+
+| Lỗi | Cách xử lý |
+|---|---|
+| *Package name already exists* | Tên gói đã có người dùng: đổi `PackageName` (xem phần đầu mục này) rồi build lại |
+| *You uploaded an APK or Android App Bundle that is signed in debug mode* | Build bằng menu **Release (AAB, Google Play)**, không dùng Release (APK) |
+| *Version code has already been used* | Build lại (số build tự tăng theo phút) |
+| *Target API level too low* | Unity Hub ▸ Installs ▸ bản 6.3 ▸ Add modules: cập nhật Android SDK. Player ▸ Other Settings ▸ **Target API Level**: Automatic (highest installed) |
+| Mất mật khẩu khóa | Không lấy lại được. Play Console ▸ App integrity ▸ Upload key ▸ **Request upload key reset** |

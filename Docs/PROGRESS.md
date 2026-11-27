@@ -288,6 +288,16 @@
     - Soát API: 511 thành viên khớp Unity 6000.3.29f1 + 33/33 thành viên khớp mã nguồn package 2.5.0.
   - Chưa chạy được ở container: thông báo thật trên Android / iOS (cần build + điện thoại).
 
+- **Phase 5.3d · Bản phát hành Google Play** (trong lúc chờ bạn build):
+  - `PawFitBuild`:
+    - Menu **Build Android ▸ Release (AAB, Google Play)**: kiểm khóa ký riêng (file, alias, 2 mật khẩu nhập ở Publishing Settings). Thiếu thì báo + mở Project Settings ▸ Player.
+    - Số build = số phút từ 01/01/2026 (luôn tăng: Google Play / TestFlight bắt buộc).
+    - Phiên bản `0.6.0`.
+  - `.gitignore` chặn `*.keystore` / `*.jks`.
+  - `Docs/BUILD.md` mục 15: tạo khóa tải lên bằng Keystore Manager, build AAB, bản thử nội bộ trên Play Console, các lỗi hay gặp.
+  - API khóa ký (`PlayerSettings.Android.useCustomKeystore / keystoreName / keystorePass / keyaliasName / keyaliasPass`, `SettingsService.OpenProjectSettings`) đã soát: 517 thành viên khớp Unity 6000.3.29f1.
+    - Không tự bật debug symbols: `EditorUserBuildSettings.androidCreateSymbols` đã cũ ở Unity 6.3. Cần thì bật tay ở Build Profiles.
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -316,8 +326,8 @@
 - **Thử thông báo** — build Dev, bật thông báo, bảng DEV ▸ Thông báo ▸ Thử sau 10 giây (`Docs/BUILD.md` mục 13). Gửi tôi ảnh thông báo trên máy.
 - **Phase 4.5 phần FCM** — thông báo từ máy chủ (thưởng mùa, thách đấu...). Cần project Firebase + file cấu hình. Làm khi máy chủ đã lên VPS.
 - **Phase 5.3** — Bạn build Android theo `Docs/BUILD.md`, gửi lỗi Console / log điện thoại + số fps. Tôi sửa theo kết quả, rồi làm tiếp:
-  - icon / tên hiển thị
-  - khóa ký phát hành (keystore) + AAB cho Google Play
+  - chốt tên gói riêng trước lần tải lên Google Play đầu tiên (hiện `com.pawfit.game`)
+  - đưa bản thử nội bộ lên Google Play (menu AAB + hướng dẫn đã có ở `Docs/BUILD.md` mục 15; cần tài khoản Play Console của bạn)
   - build iOS (cần Xcode)
 
 ## Ghi chú cho session sau

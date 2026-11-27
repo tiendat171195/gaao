@@ -42,7 +42,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 4.5 | Thông báo: cục bộ (bé đói / buồn ngủ / bẩn / ốm, trứng nở) + FCM (từ máy chủ) | 🔄 Cục bộ xong (package Mobile Notifications 2.5.0), chờ bạn thử trên điện thoại; FCM sau |
 | 5.1 | Kinh tế + shop vườn + quảng cáo mock (tối đa 5 lần/ngày) | ✅ |
 | 5.2 | Trang trí + phụ kiện + polish | ✅ |
-| 5.3 | Build Android / iOS | 🔄 Đã có menu build Android + iOS, chờ bạn build thử (`Docs/BUILD.md`) |
+| 5.3 | Build Android / iOS | 🔄 Có menu build Android (APK + AAB cho Google Play, kiểm khóa ký, số build tự tăng) + iOS; chờ bạn build thử (`Docs/BUILD.md`) |
 | 6 | Model thật (Gen 2) + shader lông + LOD mobile | ⏳ (sau gameplay) |
 
 ## Kiến trúc thư mục

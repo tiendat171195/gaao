@@ -791,6 +791,10 @@ namespace UnityEditor
 
     public static class EditorApplication { public static bool isPlaying { get; set; } }
 
+    public class EditorWindow : Object { }
+
+    public static class SettingsService { public static EditorWindow OpenProjectSettings(string settingsPath = null) => null; }
+
     public static class PlayerSettings
     {
         public static InsecureHttpOption insecureHttpOption { get; set; }
@@ -810,6 +814,11 @@ namespace UnityEditor
         {
             public static AndroidArchitecture targetArchitectures { get; set; }
             public static int bundleVersionCode { get; set; }
+            public static bool useCustomKeystore { get; set; }
+            public static string keystoreName { get; set; }
+            public static string keystorePass { get; set; }
+            public static string keyaliasName { get; set; }
+            public static string keyaliasPass { get; set; }
         }
 
         public static class iOS
