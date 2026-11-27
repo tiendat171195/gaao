@@ -37,6 +37,8 @@ namespace PawFit.Pet
 
         /// <summary>Hồi phục chỉ tiến triển tới mốc này. Mỗi lượt chăm kỹ (hoặc thuốc + chăm thường) đẩy mốc thêm 12h.</summary>
         public DateTime CoveredUntilUtc;
+
+        public RecoveryState Clone() => (RecoveryState)MemberwiseClone();
     }
 
     /// <summary>Đã làm việc nào của lượt chăm kỹ hiện tại (và lúc nào).</summary>
@@ -45,6 +47,8 @@ namespace PawFit.Pet
         public DateTime? PorridgeUtc;
         public DateTime? BlanketUtc;
         public DateTime? WipeUtc;
+
+        public CarefulCareMarks Clone() => (CarefulCareMarks)MemberwiseClone();
     }
 
     /// <summary>Sức khỏe của 1 con thú (lưu trong file).</summary>
@@ -61,6 +65,16 @@ namespace PawFit.Pet
         public CarefulCareMarks Marks = new CarefulCareMarks();
 
         public DateTime? DiedAtUtc;
+
+        /// <summary>Bản sao sâu (để mô phỏng tới trước mà không đụng dữ liệu thật — vd dự đoán thông báo). Thêm trường mới nhớ chép ở đây.</summary>
+        public PetHealth Clone() => new PetHealth
+        {
+            Stage = Stage,
+            NeglectHours = NeglectHours,
+            Recovery = Recovery?.Clone(),
+            Marks = Marks?.Clone() ?? new CarefulCareMarks(),
+            DiedAtUtc = DiedAtUtc,
+        };
     }
 
     /// <summary>

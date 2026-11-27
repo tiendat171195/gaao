@@ -11,7 +11,8 @@
         "PawFit.Battle",
         "PawFit.Battle.View",
         "PawFit.Economy",
-        "PawFit.Online"
+        "PawFit.Online",
+        "Unity.Notifications.Unified"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -22,6 +23,12 @@
     ],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.mobile.notifications",
+            "expression": "2.5.0",
+            "define": "PAWFIT_NOTIFICATIONS"
+        }
+    ],
     "noEngineReferences": false
 }

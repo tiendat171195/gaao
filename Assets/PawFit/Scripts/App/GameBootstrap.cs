@@ -24,6 +24,8 @@ namespace PawFit.App
         private INetworkManager _net;
         private OnlineService _online;
         private TipService _tips;
+        private MobileNotificationScheduler _notifyOs;
+        private NotificationService _notifications;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private MockAdService _mockAds;   // chỉ bản Dev / Editor có quảng cáo giả lập
 #endif
@@ -136,6 +138,13 @@ namespace PawFit.App
             // Mẹo hướng dẫn theo tình huống (vườn không có nút nên chỉ cho người mới đúng lúc), mỗi mẹo 1 lần
             _tips = new TipService(settings, _pets, health, evo, exprCfg, bus);
             Services.Register(_tips);
+
+            // Thông báo nhắc chăm thú (Phase 4.5): ẩn app thì hẹn lịch (đói / buồn ngủ / bẩn / ốm / trứng nở),
+            // vào lại app thì xóa. Chơi đủ lâu thì hỏi có bật không, rồi mới xin quyền của máy.
+            _notifyOs = new MobileNotificationScheduler();
+            _notifications = new NotificationService(settings, _pets, time, cfg, exprCfg, _notifyOs, LocalOffset, null, log);
+            Services.Register(_notifications);
+            _notifications.OnForeground();
             Debug.Log("[PawFit] Ví: " + economy.Coins + " Coin · quảng cáo còn " + economy.AdsLeftToday + "/" + economy.MaxAdsPerDay + " lượt hôm nay");
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -168,6 +177,12 @@ namespace PawFit.App
 #endif
             _online?.Update(Time.unscaledDeltaTime);   // tài khoản, giờ máy chủ, sao lưu
             _net?.Update();   // tìm trận / nhịp trận PvP (mạng giả lập: người chơi ảo vào hàng chờ)
+            _notifyOs?.Tick();   // chờ người chơi trả lời hộp thoại xin quyền thông báo
+            if (_notifications != null && SceneFlow.Garden != null && SceneFlow.Battle == null && !GardenUi.IsOpen)
+            {
+                _notifications.Update(Time.unscaledDeltaTime);
+                if (_notifications.ShouldAsk) SceneFlow.AskNotifications();   // 1 lần, sau khi chơi một lúc
+            }
             if (_tips != null && SceneFlow.Garden != null && SceneFlow.Battle == null && !GardenUi.IsOpen)
             {
                 TipId? tip = _tips.Update(Time.unscaledDeltaTime);
@@ -186,15 +201,24 @@ namespace PawFit.App
             {
                 _pets.Save();
                 _online?.OnPause();   // tải file game lên máy chủ (có thể bị tắt hẳn sau đó)
+                _notifications?.OnBackground();   // hẹn thông báo nhắc chăm thú
             }
             else
             {
                 _pets.Tick();   // quay lại app: tính bù thời gian vắng mặt
                 _online?.OnResume();   // đồng bộ giờ lại / nối lại máy chủ
+                _notifications?.OnForeground();   // đang ở trong game: xóa lịch + thông báo đang hiện
             }
         }
 
-        private void OnApplicationQuit() => _pets?.Save();
+        private void OnApplicationQuit()
+        {
+            _pets?.Save();
+            _notifications?.OnBackground();
+        }
+
+        /// <summary>Giờ trên máy − UTC (làm tròn phút): tính giờ yên tĩnh 22:00–08:00 của thông báo.</summary>
+        private static TimeSpan LocalOffset() => TimeSpan.FromMinutes(Math.Round((DateTime.Now - DateTime.UtcNow).TotalMinutes));
     }
 
     /// <summary>Ghi log ra Console của Unity.</summary>

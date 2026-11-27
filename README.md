@@ -36,7 +36,7 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 | Chạm vào khay đồ ăn | Thú chạy tới chòi ăn |
 | Chạm vào **quầy hàng** (phía trước bên phải, có lối đá dẫn tới) | Mở quầy: mua thuốc / bánh / nước, xem quảng cáo lấy thưởng |
 | Chạm vào **hình nộm** ở sân tập | Vào sân tập: Huấn luyện hoặc Đấu Bot |
-| Chạm vào **hòm thư** (cạnh cổng đấu trường, sau sân tập) | Cài đặt: bật / tắt âm thanh, tài khoản (biệt danh, mã chuyển máy) khi có máy chủ, xem lại hướng dẫn, copy mã DNA, phiên bản game |
+| Chạm vào **hòm thư** (cạnh cổng đấu trường, sau sân tập) | Cài đặt: bật / tắt âm thanh, bật / tắt thông báo nhắc chăm bé (trên điện thoại), tài khoản (biệt danh, mã chuyển máy) khi có máy chủ, xem lại hướng dẫn, copy mã DNA, phiên bản game |
 | Chạm vào **cổng đấu trường** (sau sân tập) | Thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút **Tìm trận** PvP |
 
 Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ.
@@ -167,6 +167,13 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Phải xem hết mới có thưởng. Bỏ qua giữa chừng thì không có thưởng nhưng cũng không mất lượt.
   - Bản dev là **quảng cáo giả lập 3 giây** (màn tối có đếm ngược + nút Bỏ qua). Phase 5.3 thay bằng quảng cáo thật.
 - Số liệu nằm ở `EconomyConfig` trong `GameConfig.cs` (giá thuốc ở `HealthConfig`), chỉnh được không cần sửa luật.
+
+## Thông báo nhắc chăm bé (Phase 4.5, thông báo cục bộ)
+
+- Tắt / ẩn game thì máy hẹn thông báo đúng lúc bé **đói, buồn ngủ, lấm lem, mệt, bị ốm, ốm nặng**, lúc "còn 1 ngày để cứu bé", hoặc lúc **trứng nở được**. Mở game lại thì xóa hết.
+- Tính bằng đúng luật nhu cầu + sức khỏe của game. Đêm 22:00–08:00 không báo, chuyện gần nhau gộp 1 thông báo.
+- Chơi khoảng 90 giây thì game hỏi có bật không, đồng ý mới hiện hộp thoại xin quyền của máy. Bật / tắt lại ở **hòm thư**.
+- Bảng **DEV ▸ Thông báo**: xem lịch sẽ hẹn nếu ẩn app ngay bây giờ, nút **Thử sau 10 giây**.
 
 ## PvP + rank (Phase 4)
 

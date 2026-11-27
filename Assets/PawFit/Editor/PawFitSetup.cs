@@ -37,6 +37,7 @@ namespace PawFit.EditorTools
             SetupOrientation();
             bool needRestart = SetupInputHandling();
             SetupScene();
+            NotificationSetup.Apply();   // icon thông báo Android + giữ lịch khi khởi động lại máy (Phase 4.5)
             PlayerSettings.productName = "PawFit";
             PlayerSettings.companyName = "PawFit";
             AssetDatabase.SaveAssets();

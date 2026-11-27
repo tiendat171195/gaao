@@ -830,7 +830,20 @@ namespace UnityEditor
 
     public sealed class EditorBuildSettingsScene { public EditorBuildSettingsScene(string path, bool enabled) { } }
 
-    public class AssetImporter : Object { }
+    public class AssetImporter : Object
+    {
+        public static AssetImporter GetAtPath(string path) => null;
+        public void SaveAndReimport() { }
+    }
+
+    public enum TextureImporterType { Default = 0, NormalMap = 1, GUI = 2, Sprite = 8, Cursor = 7, Cookie = 4, Lightmap = 6, SingleChannel = 10 }
+
+    public sealed class TextureImporter : AssetImporter
+    {
+        public TextureImporterType textureType { get; set; }
+        public bool isReadable { get; set; }
+        public bool alphaIsTransparency { get; set; }
+    }
 
     public class AssetPostprocessor
     {
@@ -915,4 +928,83 @@ namespace UnityEditor.Build.Reporting
     }
 
     public sealed class BuildReport { public BuildSummary summary { get; set; } }
+}
+
+// ---- package com.unity.mobile.notifications 2.5.0 (chữ ký soát với mã nguồn package thật) ----
+namespace Unity.Notifications
+{
+    using System;
+
+    [Flags]
+    public enum NotificationPresentation { Alert = 1, Badge = 1 << 1, Sound = 1 << 2, Vibrate = 1 << 3 }
+
+    public enum NotificationSettingsSection { Application, Category }
+
+    public struct NotificationCenterArgs
+    {
+        public static NotificationCenterArgs Default => new NotificationCenterArgs();
+        public NotificationPresentation PresentationOptions { get; set; }
+        public string AndroidChannelId { get; set; }
+        public string AndroidChannelName { get; set; }
+        public string AndroidChannelDescription { get; set; }
+        public string AndroidSmallIcon { get; set; }
+    }
+
+    public enum NotificationsPermissionStatus { RequestPending, Granted, Denied }
+
+    public class NotificationsPermissionRequest
+    {
+        public NotificationsPermissionStatus Status => NotificationsPermissionStatus.Granted;
+    }
+
+    public struct Notification
+    {
+        public int? Identifier { get; set; }
+        public string Title { get; set; }
+        public string Text { get; set; }
+        public bool ShowInForeground { get; set; }
+    }
+
+    public interface NotificationSchedule { }
+
+    public struct NotificationIntervalSchedule : NotificationSchedule
+    {
+        public NotificationIntervalSchedule(TimeSpan interval, bool repeats = false)
+        {
+            Interval = interval;
+            Repeats = repeats;
+        }
+
+        public TimeSpan Interval { get; set; }
+        public bool Repeats { get; set; }
+    }
+
+    public static class NotificationCenter
+    {
+        public static void Initialize(NotificationCenterArgs args) { }
+        public static NotificationsPermissionRequest RequestPermission() => new NotificationsPermissionRequest();
+        public static int ScheduleNotification<T>(Notification notification, T schedule) where T : NotificationSchedule => 0;
+        public static void CancelAllScheduledNotifications() { }
+        public static void CancelAllDeliveredNotifications() { }
+        public static void ClearBadge() { }
+        public static void OpenNotificationSettings(NotificationSettingsSection section = NotificationSettingsSection.Application) { }
+    }
+
+    // Editor (assembly Unity.Notifications của package)
+    public enum NotificationIconType { Small = 0, Large = 1 }
+
+    public class NotificationSettings
+    {
+        public static class AndroidSettings
+        {
+            public static bool RescheduleOnDeviceRestart { get; set; }
+            public static void AddDrawableResource(string id, UnityEngine.Texture2D image, NotificationIconType type) { }
+            public static void ClearDrawableResources() { }
+        }
+
+        public static class iOSSettings
+        {
+            public static bool RequestAuthorizationOnAppLaunch { get; set; }
+        }
+    }
 }

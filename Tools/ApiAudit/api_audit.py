@@ -9,6 +9,9 @@ Cách chạy (từ gốc repo, cần mạng đọc GitHub):
         https://github.com/Unity-Technologies/unitycsreference /tmp/unitycsreference
     python3 Tools/ApiAudit/api_audit.py Tools/UnityCompileCheck/UnityStubs.cs /tmp/unitycsreference
 "VẤN ĐỀ" rỗng (trừ các kiểu thuộc package) = mọi API engine / editor đều có trong bản Unity đó.
+
+Soát API của 1 package (vd Mobile Notifications 2.5.0, tải từ packages.unity.com) — chỉ namespace đó:
+    python3 Tools/ApiAudit/api_audit.py Tools/UnityCompileCheck/UnityStubs.cs <thư mục package> Unity.Notifications
 """
 import os
 import re
@@ -16,7 +19,8 @@ import sys
 from collections import defaultdict
 
 STUBS, REF = sys.argv[1], sys.argv[2]
-SKIP_NS = ("UnityEngine.UI", "UnityEngine.EventSystems", "UnityEngine.Rendering.Universal", "UnityEngine.Events")
+ONLY_NS = sys.argv[3] if len(sys.argv) > 3 else None   # soát riêng 1 namespace của package
+SKIP_NS = ("UnityEngine.UI", "UnityEngine.EventSystems", "UnityEngine.Rendering.Universal", "UnityEngine.Events", "Unity.Notifications")
 
 files_by_type = defaultdict(list)
 texts = {}
@@ -85,7 +89,12 @@ for raw in lines:
 report = []
 problems = []
 for (n, t), members in sorted(used.items(), key=lambda kv: ((kv[0][0] or ""), kv[0][1])):
-    if n in SKIP_NS or n is None:
+    if n is None:
+        continue
+    if ONLY_NS is not None:
+        if n != ONLY_NS and not n.startswith(ONLY_NS + "."):
+            continue
+    elif n in SKIP_NS:
         continue
     cands = [p for p in files_by_type.get(t, []) if in_ns(texts[p], n)]
     if not cands:

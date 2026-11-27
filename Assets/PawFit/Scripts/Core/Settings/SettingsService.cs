@@ -10,6 +10,9 @@ namespace PawFit.Core
 
         /// <summary>Mẹo hướng dẫn đã hiện / người chơi đã tự làm (mỗi mẹo chỉ hiện 1 lần).</summary>
         public List<string> SeenTips = new List<string>();
+
+        /// <summary>Thông báo nhắc chăm thú khi tắt app: null = chưa hỏi người chơi, true = bật, false = tắt.</summary>
+        public bool? NotificationsOn;
     }
 
     /// <summary>Cài đặt vừa đổi (App bật / tắt âm thanh theo).</summary>
@@ -58,6 +61,22 @@ namespace PawFit.Core
             if (_data.SeenTips == null) _data.SeenTips = new List<string>();
             if (_data.SeenTips.Contains(id)) return;
             _data.SeenTips.Add(id);
+            _save.Save(SaveKey, _data);
+        }
+
+        /// <summary>Bật / tắt thông báo nhắc chăm thú (hòm thư, hoặc lúc game hỏi lần đầu).</summary>
+        public void SetNotifications(bool on)
+        {
+            if (_data.NotificationsOn == on) return;
+            _data.NotificationsOn = on;
+            _save.Save(SaveKey, _data);
+            _bus.Publish(new SettingsChanged(_data));
+        }
+
+        /// <summary>Bảng DEV: coi như chưa hỏi bật thông báo.</summary>
+        public void ResetNotificationsForDebug()
+        {
+            _data.NotificationsOn = null;
             _save.Save(SaveKey, _data);
         }
 

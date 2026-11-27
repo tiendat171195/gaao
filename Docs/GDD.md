@@ -226,6 +226,22 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Mua hết khoảng 1.320 Coin, tức khoảng 2 tuần xem quảng cáo + thắng Bot.
 - **G13 · Hòm thư = cài đặt (đã cài):** hòm thư đứng cạnh cổng đấu trường. Chạm vào để bật / tắt âm thanh, xem + copy mã DNA, xem phiên bản game.
   - Có máy chủ riêng: thêm biệt danh, mã chuyển máy (máy cũ), nhập mã chuyển máy (máy mới).
+  - Trên điện thoại: thêm bật / tắt thông báo nhắc chăm bé (G14).
+- **G14 · Thông báo nhắc chăm thú (thông báo cục bộ, không cần máy chủ; tôi tự đặt số, bạn sửa ở `NotificationConfig`):**
+  - Ẩn / tắt app thì hẹn lịch, mở lại app thì xóa hết (đang ở trong game rồi).
+  - Cách tính: mô phỏng tới trước 8 ngày bằng đúng luật nhu cầu + sức khỏe của game (bản sao dữ liệu).
+  - Lấy lần đầu mỗi chuyện xảy ra:
+    - Đói / buồn ngủ / lấm lem: đúng ngưỡng biểu cảm ở vườn (no < 35, năng lượng < 30 khi thức, sạch < 40).
+    - Mệt (bỏ bê 24 giờ), ốm (72 giờ), ốm lại, ốm nặng (120 giờ), "còn 1 ngày để cứu bé" (24 giờ trước lúc mất), trứng nở được.
+    - Chuyện đã có sẵn lúc rời game thì không báo lại. Thú đang ngủ thì không báo buồn ngủ.
+  - Giờ yên tĩnh 22:00–08:00 (giờ trên máy): dời tới 8:00.
+  - Chuyện cách nhau dưới 60 phút thì gộp 1 thông báo, ví dụ "Kem cần bạn! Bé đang đói, buồn ngủ và lấm lem".
+  - Không báo trong 15 phút đầu sau khi tắt app. Tối đa 8 thông báo.
+  - Hỏi quyền:
+    - Chơi 90 giây trong vườn thì hiện thẻ giải thích "Bật thông báo?" (1 lần).
+    - Đồng ý mới hiện hộp thoại xin quyền của máy (Android 13+ / iOS).
+    - "Để sau" = tắt, bật lại ở hòm thư. Máy đã chặn thì hòm thư mở Cài đặt của máy.
+  - Android: kênh "Nhắc chăm thú", icon dấu chân trắng, khởi động lại điện thoại vẫn giữ lịch.
   - Cài đặt lưu file riêng của máy (`settings`), không nằm trong file game, không đồng bộ cloud.
   - Sau này thư thông báo (thưởng mùa giải...) cũng gửi về hòm thư này.
 

@@ -432,6 +432,20 @@ namespace PawFit.App
                 enabled.Add(on);
                 actions.Add(() => AskTransferCode(online));
             }
+            if (_services.TryGet(out NotificationService notify) && notify.Supported)   // thông báo nhắc chăm thú (Phase 4.5)
+            {
+                labels.Add("Thông báo nhắc chăm bé: " + (notify.Enabled ? "Bật (chạm để tắt)" : "Tắt (chạm để bật)"));
+                enabled.Add(true);
+                actions.Add(() =>
+                {
+                    if (notify.Enabled)
+                    {
+                        notify.Disable();
+                        GardenUi.Toast("Đã tắt thông báo");
+                    }
+                    else EnableNotifications(notify);
+                });
+            }
             labels.Add("Xem lại hướng dẫn");
             enabled.Add(true);
             actions.Add(() =>
@@ -450,6 +464,40 @@ namespace PawFit.App
             enabled.Add(true);
             actions.Add(null);
             GardenUi.ShowChoice("Hòm thư", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
+        }
+
+        /// <summary>Hỏi bật thông báo (1 lần, sau khi chơi một lúc): thẻ giải thích trước, đồng ý mới xin quyền của máy.</summary>
+        public static void AskNotifications()
+        {
+            if (Garden == null || Battle != null || GardenUi.IsOpen || !_services.TryGet(out NotificationService notify)) return;
+            var pets = _services.Get<PetService>();
+            string pet = pets.HasPet ? pets.Current.Name : "bé";
+            GardenUi.ShowChoice("Bật thông báo?",
+                                "PawFit sẽ báo khi " + pet + " đói, buồn ngủ, lấm lem hay bị ốm lúc bạn không mở game.\n" +
+                                "Đêm 22:00–08:00 không báo. Tắt lúc nào cũng được ở hòm thư.",
+                                new[] { "Bật thông báo", "Để sau" }, i =>
+                                {
+                                    if (i == 0) EnableNotifications(notify);
+                                    else
+                                    {
+                                        notify.Disable();
+                                        GardenUi.Toast("Bật lại lúc nào cũng được ở hòm thư");
+                                    }
+                                });
+        }
+
+        private static void EnableNotifications(NotificationService notify)
+        {
+            notify.Enable(ok =>
+            {
+                if (ok)
+                {
+                    GardenUi.Toast("Đã bật thông báo nhắc chăm bé");
+                    return;
+                }
+                GardenUi.ShowChoice("Máy đang chặn thông báo", "Mở Cài đặt của máy để cho PawFit gửi thông báo?",
+                                    new[] { "Mở Cài đặt", "Thôi" }, i => { if (i == 0) notify.OpenSystemSettings(); });
+            });
         }
 
         private static void AskNickname(OnlineService online)

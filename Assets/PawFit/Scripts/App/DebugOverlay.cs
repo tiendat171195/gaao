@@ -34,6 +34,8 @@ namespace PawFit.App
         private Vector2 _scroll;
         private GUIStyle _label, _small, _button, _title, _field;
         private string _serverUrl;
+        private System.Collections.Generic.List<PlannedNotification> _planCache;
+        private float _planAt;
         private float _fps = 60f;
 
         private static ServiceLocator S => GameBootstrap.Services;
@@ -96,6 +98,7 @@ namespace PawFit.App
             else DrawEgg();
             DrawEconomy();
             DrawServer();
+            DrawNotifications();
             DrawTime();
             DrawAvatar();
             GUILayout.EndScrollView();
@@ -272,6 +275,28 @@ namespace PawFit.App
             }
             GUILayout.EndHorizontal();
             if (online != null && online.State != OnlineState.Online && GUILayout.Button("Nối lại máy chủ", _button)) online.OnResume();
+        }
+
+        /// <summary>Thông báo nhắc chăm thú: trạng thái + lịch sẽ hẹn nếu ẩn app ngay bây giờ + gửi thử.</summary>
+        private void DrawNotifications()
+        {
+            if (!S.TryGet(out NotificationService notify)) return;
+            string state = !notify.Supported ? "máy này không hẹn được (Editor)" : notify.Setting == null ? "chưa hỏi" : notify.Enabled ? "bật" : "tắt";
+            GUILayout.Label("Thông báo: " + state + " · nếu ẩn app bây giờ sẽ hẹn:", _label);
+            TimeSpan offset = DateTime.Now - DateTime.UtcNow;
+            if (_planCache == null || Time.unscaledTime >= _planAt)   // mô phỏng 8 ngày tới: tính lại mỗi giây là đủ
+            {
+                _planCache = notify.Preview();
+                _planAt = Time.unscaledTime + 1f;
+            }
+            System.Collections.Generic.List<PlannedNotification> plan = _planCache;
+            for (int i = 0; i < plan.Count && i < 4; i++)
+                GUILayout.Label("  " + (plan[i].FireUtc + offset).ToString("dd/MM HH:mm") + " · " + plan[i].Title + " — " + plan[i].Body, _small);
+            if (plan.Count == 0) GUILayout.Label("  (không có gì)", _small);
+            GUILayout.BeginHorizontal();
+            if (notify.Supported && GUILayout.Button("Thử sau 10 giây (ẩn app đi)", _button)) notify.SendTest(10);
+            if (notify.Supported && notify.Setting != null && GUILayout.Button("Hỏi lại từ đầu", _button)) notify.ResetAskForDebug();
+            GUILayout.EndHorizontal();
         }
 
         private void DrawEgg()

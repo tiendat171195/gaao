@@ -261,6 +261,33 @@
     - Docker image (container không có Docker daemon; `docker compose config` hợp lệ).
     - Unity thật: UnityWebRequest / ClientWebSocket trên điện thoại, bàn phím ô nhập mã.
 
+- **Phase 4.5 · Thông báo cục bộ** (bạn chọn làm tiếp, G14; FCM từ máy chủ để sau):
+  - Logic (Garden, C# thuần, có test):
+    - `NotificationPlanner`: mô phỏng tới trước 8 ngày bằng đúng `NeedsSimulator` + `HealthRules` trên bản sao dữ liệu (`PetHealth.Clone`), lấy lần đầu mỗi chuyện xảy ra.
+      - Các chuyện: đói / buồn ngủ / lấm lem / mệt / ốm / ốm lại / ốm nặng / còn 1 ngày để cứu bé / trứng nở.
+      - Giờ yên tĩnh 22:00–08:00, gộp trong 60 phút, không báo 15 phút đầu, tối đa 8.
+    - `NotificationService`:
+      - Hỏi 1 lần sau 90 giây chơi, ẩn app = hẹn lịch, mở app = xóa, bật / tắt (lưu `settings.NotificationsOn`).
+      - Bảng DEV: xem trước lịch, gửi thử.
+    - `INotificationScheduler` (cổng hệ điều hành) + `NoNotificationScheduler`.
+  - Unity:
+    - Package **com.unity.mobile.notifications 2.5.0**. Chọn 2.5.0 vì có `AndroidSmallIcon` trong API chung. Mã nguồn tải từ packages.unity.com, đã soát API.
+    - `MobileNotificationScheduler` (API chung `Unity.Notifications.NotificationCenter`):
+      - Kênh "Nhắc chăm thú", hẹn theo khoảng chờ (không lệch múi giờ / giờ máy), xin quyền.
+      - Chỉ chạy trên điện thoại (asmdef `versionDefines` → `PAWFIT_NOTIFICATIONS`). Thiếu package thì game vẫn chạy, chỉ không có thông báo.
+    - `GameBootstrap`: ẩn / tắt app → `OnBackground`, quay lại → `OnForeground`, hỏi bật khi chơi đủ lâu.
+    - `SceneFlow`: thẻ "Bật thông báo?", mục bật / tắt ở hòm thư, máy chặn thì mở Cài đặt của máy.
+    - Bảng DEV: mục Thông báo.
+    - Editor `NotificationSetup` (Setup Project + mỗi lần build):
+      - Icon nhỏ Android `pawfit_small`: dấu chân trắng 96×96, tạo bằng `Tools/Icons/make_notify_icon.py`.
+      - Khởi động lại máy vẫn giữ lịch. iOS không tự xin quyền lúc mở app.
+  - Test: 205/205 logic (thêm 8 test thông báo) · 8/8 máy chủ.
+  - Kiểm tra:
+    - Compile check 3 chế độ: Editor, Release, điện thoại (`UNITY_ANDROID` + package; đã kiểm là nhánh điện thoại có được biên dịch).
+    - NetStandardCheck pass.
+    - Soát API: 511 thành viên khớp Unity 6000.3.29f1 + 33/33 thành viên khớp mã nguồn package 2.5.0.
+  - Chưa chạy được ở container: thông báo thật trên Android / iOS (cần build + điện thoại).
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -282,11 +309,12 @@
 
 ## Tiếp theo
 
-- **Thử máy chủ** — chạy `dotnet run` trên Mac, điện thoại (bản Dev) gõ địa chỉ ở bảng DEV ▸ Máy chủ (`Docs/BUILD.md` mục 13). Gửi tôi:
+- **Thử máy chủ** — chạy `dotnet run` trên Mac, điện thoại (bản Dev) gõ địa chỉ ở bảng DEV ▸ Máy chủ (`Docs/BUILD.md` mục 14). Gửi tôi:
   - Console / log nếu không nối được;
   - cảm giác độ trễ khi đánh PvP.
 - **Phase 4.4** — Đưa máy chủ lên VPS (`Server/README.md` mục 3). **Cần bạn:** thuê VPS (Ubuntu, nên chọn Singapore) + 1 tên miền trỏ về VPS.
-- **Phase 4.5** — Thông báo: cục bộ (bé đói / buồn ngủ, không cần máy chủ) + FCM (từ máy chủ, cần project Firebase + file cấu hình).
+- **Thử thông báo** — build Dev, bật thông báo, bảng DEV ▸ Thông báo ▸ Thử sau 10 giây (`Docs/BUILD.md` mục 13). Gửi tôi ảnh thông báo trên máy.
+- **Phase 4.5 phần FCM** — thông báo từ máy chủ (thưởng mùa, thách đấu...). Cần project Firebase + file cấu hình. Làm khi máy chủ đã lên VPS.
 - **Phase 5.3** — Bạn build Android theo `Docs/BUILD.md`, gửi lỗi Console / log điện thoại + số fps. Tôi sửa theo kết quả, rồi làm tiếp:
   - icon / tên hiển thị
   - khóa ký phát hành (keystore) + AAB cho Google Play
@@ -299,6 +327,10 @@
 - Chạy test logic: `dotnet test Tools/LogicTests` (khoảng 30 giây, gồm cả restore NuGet lần đầu).
 - Test máy chủ: `dotnet test Server/PawFit.Server.Tests` (khoảng 10 giây, chạy máy chủ thật ở cổng ngẫu nhiên). Chạy thử máy chủ: `cd Server/PawFit.Server && dotnet run` (cổng 5080).
 - Kiểm tra code logic theo bộ thư viện của Unity: `dotnet build Tools/NetStandardCheck` (.NET Standard 2.1). Code logic dùng API mới của .NET 8 thì bước này báo lỗi.
+- Compile check nhánh chạy trên điện thoại (thông báo): `dotnet build Tools/UnityCompileCheck "-p:DefineConstants=UNITY_ANDROID%3BPAWFIT_NOTIFICATIONS" -o <thư mục tạm>`. Sau đó build lại thường bằng `--no-incremental`.
+- Soát API package thông báo:
+  - Tải tarball `com.unity.mobile.notifications-2.5.0.tgz` từ download.packages.unity.com (môi trường `gaao` đã mở packages.unity.com + cdn.packages.unity.com), giải nén vào thư mục tạm.
+  - Chạy `python3 Tools/ApiAudit/api_audit.py Tools/UnityCompileCheck/UnityStubs.cs <thư mục>/package Unity.Notifications`.
 - Đổi luật trận / tin nhắn mạng thì tăng `NetProto.Version` (`Online/Protocol.cs`): bản game cũ sẽ được báo "hãy cập nhật".
 - Máy chủ biên dịch chung `Core / Pet / Battle / Online`: thêm file logic mới vào 4 thư mục này là máy chủ có luôn; dùng `using` tới Garden / Economy trong Online sẽ làm hỏng build máy chủ.
 - Compile thử code Unity: `dotnet build Tools/UnityCompileCheck` (stub ở `UnityStubs.cs`; dùng API Unity mới thì thêm stub).

@@ -39,7 +39,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 4.2 | PvP real-time qua máy chủ riêng (WebSocket) + tìm đối thủ (Elo ±100, lực chiến ±10%): người thật trước, vắng người thì người chơi ảo chạy trên máy chủ | ✅ Như trên |
 | 4.3 | Ranking Elo + bậc + mùa giải 30 ngày (máy chủ quyết định) | ✅ Như trên |
 | 4.4 | Đưa máy chủ lên VPS (Docker + HTTPS) | ⏳ Cần VPS + tên miền của bạn (`Server/README.md`) |
-| 4.5 | Thông báo: cục bộ (bé đói / buồn ngủ) + FCM (từ máy chủ) | ⏳ Sau |
+| 4.5 | Thông báo: cục bộ (bé đói / buồn ngủ / bẩn / ốm, trứng nở) + FCM (từ máy chủ) | 🔄 Cục bộ xong (package Mobile Notifications 2.5.0), chờ bạn thử trên điện thoại; FCM sau |
 | 5.1 | Kinh tế + shop vườn + quảng cáo mock (tối đa 5 lần/ngày) | ✅ |
 | 5.2 | Trang trí + phụ kiện + polish | ✅ |
 | 5.3 | Build Android / iOS | 🔄 Đã có menu build Android + iOS, chờ bạn build thử (`Docs/BUILD.md`) |
@@ -56,7 +56,8 @@ gaao/                            ← gốc repo = gốc project Unity
 │   │   │   └── View/ [Unity]                 IPetAvatar, Gen1PetAvatar, PlaceholderPetAvatar (thú tạm), PetMoodFx, DnaVisuals,
 │   │   │                                     AccessoryView (phụ kiện)
 │   │   ├── Core/Unity/ [Unity]               MaterialFactory, Prim, VecExt (dùng chung cho View)
-│   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, PetExpressionService, CareActionService, PointerGestures
+│   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, PetExpressionService, CareActionService, PointerGestures,
+│   │   │                                     TipService (mẹo), NotificationPlanner + NotificationService (thông báo nhắc chăm thú)
 │   │   │   └── View/ [Unity]                 GardenScene, GardenBuilder, GardenCamera, GardenInputRouter, PetController,
 │   │   │                                     MemorialView, EggView, PetDeathFx, GardenUi (bảng đặt tên / thẻ / toast),
 │   │   │                                     ShopStallView (quầy hàng), DecorBuilder (đồ trang trí)

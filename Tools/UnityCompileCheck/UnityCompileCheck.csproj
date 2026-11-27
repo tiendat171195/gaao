@@ -13,7 +13,9 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>CS0436</NoWarn>
-    <DefineConstants>$(DefineConstants);UNITY_EDITOR</DefineConstants>
+    <!-- PAWFIT_NOTIFICATIONS = đã cài package Mobile Notifications (asmdef versionDefines). Kiểm nhánh chạy trên điện thoại:
+         dotnet build Tools/UnityCompileCheck "-p:DefineConstants=UNITY_ANDROID%3BPAWFIT_NOTIFICATIONS" -o <thư mục tạm> -->
+    <DefineConstants>$(DefineConstants);UNITY_EDITOR;PAWFIT_NOTIFICATIONS</DefineConstants>
     <RootNamespace>PawFit.CompileCheck</RootNamespace>
   </PropertyGroup>
   <ItemGroup>

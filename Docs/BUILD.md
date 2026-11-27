@@ -203,7 +203,25 @@ Nên commit + push các file Unity tự sinh sau lần mở đầu (các file `.
 | *Developer Mode disabled* | Bật Chế độ nhà phát triển trên iPhone (phần "Cần thêm" ở trên) |
 | *Could not launch* / *device is locked* | Mở khóa iPhone rồi bấm Run lại |
 
-## 13. Máy chủ riêng (không bắt buộc)
+## 13. Thông báo nhắc chăm bé (thử trên điện thoại)
+
+Lần đầu pull bản có thông báo, Unity tự tải package **Mobile Notifications 2.5.0** (khai báo trong `Packages/manifest.json`). Sau đó chạy lại **PawFit ▸ Setup Project** một lần để đăng ký icon dấu chân cho thông báo Android. Menu build cũng tự làm bước này.
+
+**Cách thử:**
+
+1. Build bản **Dev**, mở game, chơi khoảng 90 giây trong vườn. Thẻ **"Bật thông báo?"** hiện ra ▸ **Bật thông báo**.
+2. Android 13 trở lên / iPhone: máy hỏi quyền gửi thông báo ▸ **Cho phép**.
+3. Nút **DEV** ▸ mục **Thông báo** ▸ **Thử sau 10 giây**, rồi về màn hình chính ngay. 10 giây sau phải có thông báo "Kem đói rồi!".
+4. Cũng ở mục đó, có danh sách lịch sẽ hẹn nếu ẩn app bây giờ (đói, buồn ngủ, bẩn, mệt, ốm...). Muốn xem nhanh: tua giờ ở bảng DEV rồi ẩn app.
+
+| Thấy gì | Cách xử lý |
+|---|---|
+| Không thấy thẻ "Bật thông báo?" | Thẻ chỉ hiện 1 lần và chỉ trên điện thoại. Bảng DEV ▸ **Hỏi lại từ đầu**, hoặc hòm thư ▸ **Thông báo nhắc chăm bé** |
+| Bấm bật mà máy báo đang chặn | Hòm thư ▸ bật lại ▸ **Mở Cài đặt** ▸ cho PawFit gửi thông báo |
+| Android hiện ô vuông trắng thay vì dấu chân | Chưa chạy **PawFit ▸ Setup Project** sau khi pull: chạy lại rồi build lại |
+| Thông báo đến trễ vài phút | Bình thường: Android gộp báo thức để tiết kiệm pin |
+
+## 14. Máy chủ riêng (không bắt buộc)
 
 Game chưa có địa chỉ máy chủ thì chơi **offline như trước**: PvP với người chơi ảo ngay trên máy, Elo tính trên máy. Muốn có tài khoản + sao lưu + mã chuyển máy + PvP với người thật thì chạy máy chủ riêng. Hướng dẫn đầy đủ: `Server/README.md`.
 
