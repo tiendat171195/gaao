@@ -260,9 +260,15 @@ namespace PawFit.App
         private static void EnterRanked(MatchInfo match)
         {
             var net = _services.Get<INetworkManager>();
-            if (Garden == null || Battle != null)
+            string reason = null;
+            if (Garden == null || Battle != null || !RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out reason))
             {
-                net.LeaveMatch();
+                net.LeaveMatch();   // trong 2,4 giây chờ: thú vừa ốm / ngủ / mất, hoặc đã vào trận khác
+                if (Battle == null)
+                {
+                    GardenUi.Close();
+                    GardenUi.Toast("Hủy trận: thú " + (reason ?? "không đấu được lúc này"));
+                }
                 return;
             }
             OpponentInfo o = match.Opponent;
