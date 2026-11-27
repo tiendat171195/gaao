@@ -4,6 +4,8 @@ Tài liệu cho người làm model: làm bằng tool nào cũng được (Blend
 
 Mọi số ở đây lấy từ code hiện tại: thú Gen 1, vườn dựng bằng code, màn đấu. Khi giao model, tôi viết lớp hiển thị mới (`Gen2PetAvatar`, vườn dạng prefab) theo đúng tài liệu này.
 
+**Tự làm bằng tool AI:** làm theo `Docs/AI_ART_GUIDE.md`. Phần xương đúng tên, điểm gắn `Anchor_*`, mask màu DNA, LOD1, cỡ và hướng tôi xử lý bằng script Blender. Bạn chỉ cần tạo model có màu + gắn xương tự động, rồi gửi file.
+
 Phong cách (GDD): **ngầu + cute, không cartoon phẳng**. Lông xù kiểu thú bông, sau này thêm shader lông (Phase 6).
 
 ---
