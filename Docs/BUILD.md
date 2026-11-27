@@ -86,6 +86,7 @@ Menu **PawFit ▸ Build Android ▸ ...**:
 - Lệnh tự đặt:
   - Tên gói `com.pawfit.game`, phiên bản `0.5.3`.
   - IL2CPP + ARM64, vì máy Android mới chỉ chạy app 64-bit.
+  - Icon app `Assets/PawFit/Art/Icon/PawFit_Icon.png` (thú Gen 1 đeo nơ, render bằng Blender). Muốn đổi icon thì thay file này, giữ nguyên tên, cỡ 1024x1024.
 - Lần build đầu mất khoảng **10–20 phút**: IL2CPP dịch code và Gradle tải thư viện. Các lần sau nhanh hơn nhiều.
 - Xong thì Finder tự mở `~/UnityProjects/gaao/Builds/Android/PawFit-dev.apk`. Thư mục `Builds/` không bị đưa lên git.
 - APK ký bằng khóa debug của Unity: cài thẳng vào máy được, nhưng chưa đưa lên Google Play được.

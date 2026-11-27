@@ -160,6 +160,10 @@
   - Bản Release dùng `NoAdService`: không có bảng DEV, không có quảng cáo giả. `Application.targetFrameRate = 60` (điện thoại mặc định chỉ 30 fps).
   - Sửa input: không tắt "chuột giả từ chạm" nữa (để bảng DEV IMGUI bấm được trên điện thoại); trên điện thoại chỉ đọc cảm ứng.
   - Hướng dẫn cài môi trường Mac + build + cài APK: `Docs/BUILD.md`.
+  - Icon app `Assets/PawFit/Art/Icon/PawFit_Icon.png`:
+    - Thú Gen 1 thật đeo nơ, render bằng Blender, đã kiểm tra khung vuông bo góc + khung tròn của Android.
+    - Menu build tự đặt làm icon mặc định (`PlayerSettings.SetIcons`).
+    - Script render: Blender + `check_kit.spawn`, camera 85 mm nhìn đầu + ngực, nền gradient xanh vườn.
   - Test: 158/158 pass · compile check: pass (cả chế độ Editor lẫn chế độ bản phát hành không có `UNITY_EDITOR`)
 
 ## Quyết định đã chốt

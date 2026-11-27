@@ -31,6 +31,8 @@ namespace UnityEngine
     }
 
     public class Behaviour : Component { public bool enabled { get; set; } }
+    public class Texture : Object { }
+    public class Texture2D : Texture { }
     public sealed class CanvasGroup : Behaviour { public float alpha { get; set; } public bool blocksRaycasts { get; set; } public bool interactable { get; set; } }
 
     public class MonoBehaviour : Behaviour
@@ -704,6 +706,7 @@ namespace UnityEditor
     public enum BuildOptions { None = 0, Development = 1, AutoRunPlayer = 4 }
 
     public enum ScriptingImplementation { Mono2x = 0, IL2CPP = 1 }
+    public enum IconKind { Any = -1, Application = 0, Settings = 1, Notification = 2, Spotlight = 3, Store = 4 }
 
     [Flags]
     public enum AndroidArchitecture { None = 0, ARMv7 = 1, ARM64 = 2, X86_64 = 8 }
@@ -744,6 +747,7 @@ namespace UnityEditor
         public static string bundleVersion { get; set; }
         public static void SetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget target, string identifier) { }
         public static void SetScriptingBackend(UnityEditor.Build.NamedBuildTarget target, ScriptingImplementation backend) { }
+        public static void SetIcons(UnityEditor.Build.NamedBuildTarget target, Texture2D[] icons, IconKind kind) { }
 
         public static class Android
         {
@@ -823,6 +827,7 @@ namespace UnityEditor.Build
 {
     public struct NamedBuildTarget
     {
+        public static readonly NamedBuildTarget Unknown = default;
         public static readonly NamedBuildTarget Android = default;
         public static readonly NamedBuildTarget iOS = default;
     }

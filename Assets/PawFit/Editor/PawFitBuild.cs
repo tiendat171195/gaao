@@ -22,6 +22,7 @@ namespace PawFit.EditorTools
 
         private const string ScenePath = "Assets/PawFit/Scenes/Main.unity";
         private const string LitBasePath = "Assets/PawFit/Resources/PawFit/LitBase.mat";
+        private const string IconPath = "Assets/PawFit/Art/Icon/PawFit_Icon.png";   // thú Gen 1 đeo nơ, render bằng Blender
         private const string OutDir = "Builds/Android";
 
         [MenuItem("PawFit/Build Android/Dev (APK)")]
@@ -94,6 +95,8 @@ namespace PawFit.EditorTools
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.bundleVersion = Version;
             PlayerSettings.Android.bundleVersionCode = VersionCode;
+            var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
+            if (icon != null) PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);   // icon mặc định mọi nền tảng
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
         }
     }
