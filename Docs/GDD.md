@@ -167,6 +167,9 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
     | Vòm hoa | 200 | Phía trước bên trái |
 
   - Mua hết khoảng 1.320 Coin, tức khoảng 2 tuần xem quảng cáo + thắng Bot.
+- **G13 · Hòm thư = cài đặt (đã cài):** hòm thư đứng cạnh cổng đấu trường. Chạm vào để bật / tắt âm thanh, xem + copy mã DNA, xem phiên bản game.
+  - Cài đặt lưu file riêng của máy (`settings`), không nằm trong file game, không đồng bộ cloud.
+  - Sau này thư thông báo (thưởng mùa giải...) cũng gửi về hòm thư này.
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

@@ -170,6 +170,11 @@
     - `NavMeshBuildMarkup.applyToChildren` mặc định = true, nên đánh dấu vật cản áp dụng cho cả object con.
     - **Sửa lỗi:** Setup đặt Active Input Handling = Both, nhưng Unity 6.3 coi giá trị này là "invalid" khi không cài package Input System (và build coi như bật Input System mới). Giờ Setup đặt Input Manager (Old) = 0, giá trị hợp lệ duy nhất cho project này.
     - Stub `Scene` chuyển về đúng `UnityEngine.SceneManagement` (code không gõ tên kiểu này nên trước đó cũng không lỗi).
+  - **Hòm thư cài đặt** (G13):
+    - `SettingsService` (Core, C# thuần, có test) lưu file riêng `settings`. Âm thanh bật / tắt = `AudioListener.volume`.
+    - `MailboxView` cạnh cổng đấu trường (`PointerTarget.Mailbox`, nảy khi chạm).
+    - `SceneFlow.OpenSettings`: âm thanh, copy mã DNA (`GUIUtility.systemCopyBuffer`), phiên bản (`Application.version`). 3 API này đã soát với mã nguồn Unity.
+  - Test: 160/160 pass · compile check: pass
     - Chưa soát được (cần repo `Unity-Technologies/Graphics`, chưa được phép đọc): API URP + SRP Core (URP Asset, Volume / Bloom / Tonemapping...) và shader HLSL. Đây là API ổn định từ URP 10+, rủi ro thấp.
 
 ## Quyết định đã chốt

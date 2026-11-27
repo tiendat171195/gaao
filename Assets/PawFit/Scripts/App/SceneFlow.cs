@@ -32,6 +32,7 @@ namespace PawFit.App
             Garden = GardenScene.Enter(services);
             Garden.DummyTapped = OnDummyTapped;
             Garden.ShopTapped = OpenShop;
+            Garden.MailboxTapped = OpenSettings;
         }
 
         /// <summary>Chạm hình nộm ở sân tập: chọn Huấn luyện (học chiêu) hoặc Đấu (90 giây) với Bot mức đó.</summary>
@@ -129,6 +130,40 @@ namespace PawFit.App
             PetController pet = Garden != null ? Garden.Pet : null;
             if (pet != null && pet.Avatar != null) pet.Avatar.PlayEat();   // bé ăn bánh / uống nước / uống thuốc ngay
             GardenUi.Toast(ItemName(item) + ": -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin");
+        }
+
+        // ------------------------------------------------------------------
+        // Hòm thư = cài đặt (GDD: "cài đặt = hòm thư ở cổng")
+        // ------------------------------------------------------------------
+
+        /// <summary>Chạm hòm thư: bật / tắt âm thanh, xem + copy mã DNA của thú, phiên bản game.</summary>
+        public static void OpenSettings()
+        {
+            if (Garden == null || Battle != null) return;
+            var settings = _services.Get<SettingsService>();
+            var pets = _services.Get<PetService>();
+            string dna = pets.DnaCode;
+            string body = (dna != null ? "Mã DNA của " + pets.Current.Name + ": " + dna : "Chưa có thú (trứng đang chờ nở)") +
+                          "\nPawFit " + Application.version;
+            var labels = new List<string> { "Âm thanh: " + (settings.SoundOn ? "Bật (chạm để tắt)" : "Tắt (chạm để bật)") };
+            var enabled = new List<bool> { true };
+            var actions = new List<Action> { () =>
+            {
+                settings.ToggleSound();
+                GardenUi.Toast(settings.SoundOn ? "Đã bật âm thanh" : "Đã tắt âm thanh");
+                OpenSettings();
+            } };
+            labels.Add("Copy mã DNA");
+            enabled.Add(dna != null);
+            actions.Add(() =>
+            {
+                GUIUtility.systemCopyBuffer = dna;   // dán vào tin nhắn để khoe với bạn bè
+                GardenUi.Toast("Đã copy " + dna);
+            });
+            labels.Add("Thôi");
+            enabled.Add(true);
+            actions.Add(null);
+            GardenUi.ShowChoice("Hòm thư", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
         }
 
         /// <summary>Thẻ Phụ kiện: món chưa có = mua (mua xong đeo luôn); món đã có = chạm để đeo / tháo. Mỗi lúc đeo 1 món.</summary>

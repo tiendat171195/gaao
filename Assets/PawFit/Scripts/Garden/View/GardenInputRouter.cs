@@ -9,7 +9,7 @@ namespace PawFit.Garden.View
     /// Đổi chạm / kéo thành lệnh (không có nút nào):
     ///   chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve (đang ngủ thì dậy)
     ///   kéo thú = dắt đi (thả vào hồ = tắm, vào ổ = ngủ) · kéo từ khay đồ ăn thả lên thú = cho ăn
-    ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy.
+    ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy · chạm hòm thư (cạnh cổng đấu trường) = cài đặt.
     /// Phân loại cử chỉ nằm ở PointerGestureClassifier (C# thuần); lớp này chỉ raycast + chuyển lệnh.
     /// </summary>
     public sealed class GardenInputRouter : MonoBehaviour
@@ -30,12 +30,16 @@ namespace PawFit.Garden.View
         /// <summary>Chạm trúng quầy hàng.</summary>
         public Action ShopTapped { get; set; }
 
+        /// <summary>Chạm trúng hòm thư (mở cài đặt).</summary>
+        public Action MailboxTapped { get; set; }
+
         private Camera _cam;
         private IPointerInput _input;
         private EggView _downEgg;
         private MemorialStone _downStone;
         private TrainingDummyView _downDummy;
         private ShopStallView _downShop;
+        private MailboxView _downMailbox;
         private PointerGestureClassifier _gestures;
         private GardenCamera _camCtl;
         private PetController _pet;
@@ -96,6 +100,7 @@ namespace PawFit.Garden.View
             _downStone = null;
             _downDummy = null;
             _downShop = null;
+            _downMailbox = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -108,6 +113,8 @@ namespace PawFit.Garden.View
                 if (_downDummy != null) return PointerTarget.Dummy;
                 _downShop = hit.collider.GetComponentInParent<ShopStallView>();
                 if (_downShop != null) return PointerTarget.Shop;
+                _downMailbox = hit.collider.GetComponentInParent<MailboxView>();
+                if (_downMailbox != null) return PointerTarget.Mailbox;
             }
             return PointerTarget.Ground;
         }
@@ -145,6 +152,14 @@ namespace PawFit.Garden.View
                         ShopTapped?.Invoke();
                     }
                     else HandleGround(e, screen, onGround, g);   // kéo từ quầy = kéo camera
+                    break;
+                case PointerTarget.Mailbox:
+                    if (e.Kind == GestureKind.Tap)
+                    {
+                        TapBounce.Play(_downMailbox);
+                        MailboxTapped?.Invoke();
+                    }
+                    else HandleGround(e, screen, onGround, g);
                     break;
                 default: HandleGround(e, screen, onGround, g); break;
             }

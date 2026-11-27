@@ -20,6 +20,11 @@ namespace PawFit.Garden.View
     {
     }
 
+    /// <summary>Hòm thư cạnh cổng đấu trường (GDD: "cài đặt = hòm thư ở cổng"): chạm vào = mở cài đặt.</summary>
+    public sealed class MailboxView : MonoBehaviour
+    {
+    }
+
     /// <summary>Đồ vật nảy nhẹ khi được chạm (quầy hàng, hình nộm): co xuống rồi bật lên, về đúng cỡ sau 0,35 giây.</summary>
     public sealed class TapBounce : MonoBehaviour
     {
@@ -217,6 +222,27 @@ namespace PawFit.Garden.View
                 Prim.Make(PrimitiveType.Cylinder, gate, new Vector3(s, 1.2f, 0f), new Vector3(0.3f, 1.2f, 0.3f), Prim.Hex("#9AA0A6"), keepCollider: true);
             Prim.Make(PrimitiveType.Cube, gate, new Vector3(0f, 2.45f, 0f), new Vector3(3.2f, 0.3f, 0.4f), Prim.Hex("#7E8389"));
             Prim.Make(PrimitiveType.Cube, gate, new Vector3(0f, 1.95f, 0f), new Vector3(1.6f, 0.5f, 0.05f), Prim.Hex("#C0392B"));
+            BuildMailbox(obstacles, z.Center + new NVec2(-2.4f, 3.0f));
+        }
+
+        /// <summary>Hòm thư: cột gỗ, thân xanh mái tròn, cờ đỏ, phong thư trắng thò ra ở cửa (mặt cửa nhìn về camera).</summary>
+        private static void BuildMailbox(Transform obstacles, NVec2 at)
+        {
+            Transform m = Prim.Group(obstacles, "Mailbox", W(at));
+            m.localRotation = Quaternion.Euler(0f, -15f, 0f);
+            m.gameObject.AddComponent<MailboxView>();
+            var col = m.gameObject.AddComponent<BoxCollider>();   // vừa để chạm trúng, vừa là vật cản NavMesh
+            col.center = new Vector3(0f, 0.75f, 0f);
+            col.size = new Vector3(0.8f, 1.5f, 1.0f);
+            Color blue = Prim.Hex("#4A90D9");
+            Prim.Make(PrimitiveType.Cube, m, new Vector3(0f, 0.5f, 0f), new Vector3(0.12f, 1.0f, 0.12f), WoodDark);
+            Prim.Make(PrimitiveType.Cube, m, new Vector3(0f, 1.12f, 0f), new Vector3(0.46f, 0.3f, 0.7f), blue, smoothness: 0.45f);
+            Prim.Make(PrimitiveType.Cylinder, m, new Vector3(0f, 1.27f, 0f), new Vector3(0.46f, 0.35f, 0.46f), blue, smoothness: 0.45f,
+                      rotation: Quaternion.Euler(90f, 0f, 0f));   // mái tròn (nửa trên của trụ nằm ngang)
+            Prim.Make(PrimitiveType.Cube, m, new Vector3(0f, 1.16f, -0.36f), new Vector3(0.42f, 0.36f, 0.02f), Prim.Hex("#3A78BE"));   // cửa
+            Prim.Make(PrimitiveType.Cube, m, new Vector3(0f, 1.38f, -0.37f), new Vector3(0.28f, 0.16f, 0.02f), Color.white);   // phong thư
+            Prim.Make(PrimitiveType.Cube, m, new Vector3(0.26f, 1.35f, 0.12f), new Vector3(0.03f, 0.34f, 0.03f), WoodDark);   // cán cờ
+            Prim.Make(PrimitiveType.Cube, m, new Vector3(0.27f, 1.46f, 0.02f), new Vector3(0.02f, 0.12f, 0.18f), Prim.Hex("#E2463F"));   // cờ
         }
 
         private static void BuildMemorial(GardenZone z, Transform obstacles, Transform decor)

@@ -293,7 +293,7 @@ namespace UnityEngine
         public void PlayOneShot(AudioClip clip) { }
     }
 
-    public sealed class AudioListener : Behaviour { }
+    public sealed class AudioListener : Behaviour { public static float volume { get; set; } }
 
     public sealed class Animator : Behaviour { }
 
@@ -395,7 +395,10 @@ namespace UnityEngine
         public static string persistentDataPath => "";
         public static bool isMobilePlatform => false;
         public static int targetFrameRate { get; set; }
+        public static string version => "";
     }
+
+    public static class GUIUtility { public static string systemCopyBuffer { get; set; } }
 
     public enum CameraClearFlags { Skybox, SolidColor, Depth, Nothing }
 
