@@ -93,7 +93,11 @@ namespace PawFit.Garden.View
         /// Thẻ phủ kín màn hình, chữ tự cập nhật mỗi frame (vd quảng cáo giả lập đếm ngược) + 1 nút (null = không có nút).
         /// Không tự đóng khi bấm nút: bên gọi tự <see cref="Close"/> khi xong việc.
         /// </summary>
-        public static void ShowLive(string title, Func<string> body, string button, Action pressed)
+        public static void ShowLive(string title, Func<string> body, string button, Action pressed) =>
+            ShowLive(title, body, button != null ? new[] { button } : null, i => pressed?.Invoke());
+
+        /// <summary>Như trên nhưng nhiều nút (xếp dọc, nút cuối màu xám). `pressed` nhận chỉ số nút; không tự đóng thẻ.</summary>
+        public static void ShowLive(string title, Func<string> body, string[] buttons, Action<int> pressed)
         {
             Close();
             RectTransform dim = Panel(Root, "Live", new Color(0.06f, 0.06f, 0.09f, 0.94f));
@@ -101,13 +105,21 @@ namespace PawFit.Garden.View
             Label(dim, title, 64, FontStyle.Bold, Color.white, new Vector2(0f, 320f), new Vector2(940f, 140f));
             Text text = Label(dim, body != null ? body() : "", 44, FontStyle.Normal, new Color(0.88f, 0.88f, 0.9f),
                               new Vector2(0f, 60f), new Vector2(940f, 300f));
-            if (body != null) dim.gameObject.AddComponent<UiTicker>().Tick = () => text.text = body();
-            if (button != null)
+            GameObject self = dim.gameObject;
+            if (body != null)
+                self.AddComponent<UiTicker>().Tick = () =>
+                {
+                    if (_open == self) text.text = body();   // body() có thể tự mở thẻ khác (vd vừa tìm được trận)
+                };
+            int n = buttons?.Length ?? 0;
+            for (int i = 0; i < n; i++)
             {
-                Button b = Button(dim, button, new Color(0.42f, 0.42f, 0.48f), new Vector2(0f, -320f), new Vector2(760f, 110f), 40);
-                b.onClick.AddListener(() => pressed?.Invoke());
+                int index = i;
+                Color color = i == n - 1 ? new Color(0.42f, 0.42f, 0.48f) : ChoiceColors[i % ChoiceColors.Length];
+                Button b = Button(dim, buttons[i], color, new Vector2(0f, -320f + (n - 1 - i) * 130f), new Vector2(760f, 110f), 40);
+                b.onClick.AddListener(() => pressed?.Invoke(index));
             }
-            _open = dim.gameObject;
+            _open = self;
         }
 
         /// <summary>Dòng báo nhanh ở phía trên màn hình (vd "-25 Coin"), tự mờ dần rồi tắt. Không chặn chạm.</summary>

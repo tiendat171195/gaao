@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using PawFit.Battle;
 using PawFit.Core;
+using PawFit.Pet;
 
 namespace PawFit.Online
 {
@@ -10,8 +11,12 @@ namespace PawFit.Online
     {
         public string PlayerId;
         public string Name;
+        public string PetName;
         public string DnaCode;
         public int Elo;
+
+        /// <summary>Giai đoạn tiến hóa của thú (người chơi ảo sinh cùng giai đoạn cho trận cân sức).</summary>
+        public EvolutionStage Stage;
 
         /// <summary>Lực chiến của thú (EvolutionService.Power, đã tính bệnh).</summary>
         public float Power;

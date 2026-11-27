@@ -220,15 +220,15 @@ namespace PawFit.Tests
         // Mạng giả lập
         // ------------------------------------------------------------------
 
-        private MatchTicket MyTicket() => new MatchTicket
+        private MatchTicket MyTicket(EvolutionStage stage = EvolutionStage.Baby) => new MatchTicket
         {
-            Name = "Kem", Elo = 1000, Power = 500f, Stats = new FighterStats(200, 20, 20, 20, 5), LearnedMask = 1,
+            Name = "Kem", Elo = 1000, Power = 500f, Stats = new FighterStats(200, 20, 20, 20, 5), LearnedMask = 1, Stage = stage,
         };
 
         [Test]
         public void LocalNetwork_FindsGhostOpponent_WithinRules()
         {
-            var net = new LocalNetworkManager(_time, new SeededRandom(4), _cfg.Matchmaking);
+            var net = new LocalNetworkManager(_time, new SeededRandom(4), _cfg);
             bool connected = false;
             net.Connect("me", ok => connected = ok);
             Assert.IsTrue(connected);
@@ -252,6 +252,8 @@ namespace PawFit.Tests
             Assert.Greater(found.Opponent.Stats.Hp, 0f);
             Assert.AreEqual(0, found.LocalSide);
             StringAssert.StartsWith("PF-", found.Opponent.DnaCode);
+            Assert.IsNotNull(found.Opponent.Dna, "người chơi ảo có thú thật (DNA) để dựng hình");
+            Assert.IsFalse(string.IsNullOrEmpty(found.Opponent.PetName));
             net.LeaveMatch();
             Assert.AreEqual(NetworkState.Online, net.State);
         }
@@ -259,7 +261,7 @@ namespace PawFit.Tests
         [Test]
         public void LocalNetwork_NoOpponents_StatusWidensThenSuggestsBot_CancelStops()
         {
-            var net = new LocalNetworkManager(_time, new SeededRandom(4), _cfg.Matchmaking, new LocalNetworkConfig { MaxGhosts = 0 });
+            var net = new LocalNetworkManager(_time, new SeededRandom(4), _cfg, new LocalNetworkConfig { MaxGhosts = 0 });
             net.Connect("me", null);
             bool found = false;
             net.MatchFound += _ => found = true;
@@ -276,8 +278,154 @@ namespace PawFit.Tests
             Assert.AreEqual(NetworkState.Online, net.State);
             Assert.AreEqual(0.0, net.SearchSeconds);
             Assert.IsFalse(found);
-            Assert.Throws<InvalidOperationException>(() => new LocalNetworkManager(_time, new SeededRandom(1), _cfg.Matchmaking)
+            Assert.Throws<InvalidOperationException>(() => new LocalNetworkManager(_time, new SeededRandom(1), _cfg)
                                                          .FindMatch(MyTicket()), "chưa kết nối thì không tìm được");
+        }
+
+        [Test]
+        public void LocalNetwork_ManyBotPlayers_UsuallyFoundWithin20Seconds()
+        {
+            var waits = new List<double>();
+            for (ulong seed = 1; seed <= 30; seed++)
+            {
+                var net = new LocalNetworkManager(_time, new SeededRandom(seed), _cfg);
+                net.Connect("me", null);
+                MatchInfo found = null;
+                net.MatchFound += m => found = m;
+                net.FindMatch(MyTicket(EvolutionStage.Adult));
+                double waited = 0;
+                for (int i = 0; i < 1200 && found == null; i++)
+                {
+                    _time.Advance(TimeSpan.FromSeconds(0.25));
+                    waited = net.SearchSeconds;
+                    net.Update();
+                }
+                Assert.IsNotNull(found, "seed " + seed + ": phải tìm được trận");
+                Assert.AreEqual(EvolutionStage.Adult, found.Opponent.Stage, "đối thủ cùng giai đoạn tiến hóa");
+                Assert.AreNotEqual(AdultForm.None, found.Opponent.Form, "Adult thì có dạng");
+                waits.Add(waited);
+            }
+            waits.Sort();
+            TestContext.Progress.WriteLine("Chờ tìm trận (giây): ngắn nhất " + waits[0].ToString("0.0") + " · giữa " +
+                                           waits[waits.Count / 2].ToString("0.0") + " · lâu nhất " + waits[waits.Count - 1].ToString("0.0"));
+            Assert.Less(waits[waits.Count / 2], 20.0, "nửa số lần tìm thấy trong vòng 20 giây (giống có nhiều người chơi)");
+            Assert.Less(waits[waits.Count - 1], 60.0, "hầu như không phải chờ tới mức gợi ý đấu Bot");
+        }
+
+        // ------------------------------------------------------------------
+        // Người chơi ảo
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void BotPlayer_SameIdentity_SamePerson_StatsMatchPower()
+        {
+            OpponentInfo a = BotPlayers.Create(37, 1200, 800f, EvolutionStage.Teen, _cfg);
+            OpponentInfo b = BotPlayers.Create(37, 1350, 900f, EvolutionStage.Teen, _cfg);
+            Assert.AreEqual(a.Name, b.Name, "cùng số hiệu = cùng biệt danh");
+            Assert.AreEqual(a.PetName, b.PetName);
+            Assert.AreEqual(a.DnaCode, b.DnaCode, "cùng thú");
+            Assert.AreEqual(a.Style, b.Style, "cùng lối đánh");
+            Assert.AreEqual(a.Accessory, b.Accessory);
+            Assert.AreEqual(1350, b.Elo);
+            PetStats asPet = new PetStats { Hp = b.Stats.Hp, Atk = b.Stats.Atk, Def = b.Stats.Def, Spd = b.Stats.Spd, Crit = b.Stats.Crit };
+            Assert.AreEqual(900f, StatsRules.Power(asPet, _cfg.Stats), 900f * 0.01f, "chỉ số khớp lực chiến");
+            var names = new HashSet<string>();
+            for (int i = 0; i < 60; i++) names.Add(BotPlayers.Create(i, 1000, 500f, EvolutionStage.Baby, _cfg).Name);
+            Assert.Greater(names.Count, 30, "nhiều người chơi ảo khác nhau");
+        }
+
+        [Test]
+        public void BotPlayer_SkillRisesWithElo_UltimateKnowsAllSkills()
+        {
+            float low = 0f, high = 0f;
+            for (int i = 0; i < 40; i++)
+            {
+                low += BotPlayers.Create(i, 900, 500f, EvolutionStage.Baby, _cfg).Skill;
+                high += BotPlayers.Create(i, 1700, 500f, EvolutionStage.Baby, _cfg).Skill;
+            }
+            Assert.Greater(high, low + 40 * 0.5f, "Elo cao đánh giỏi hơn hẳn");
+            OpponentInfo ult = BotPlayers.Create(5, 1500, 2000f, EvolutionStage.Ultimate, _cfg);
+            Assert.AreEqual(15, ult.LearnedMask, "Ultimate đã thuộc đủ 4 chiêu");
+            GrowthLook look = BotPlayers.LookFor(ult.Stage, ult.Form, _cfg.Evolution);
+            Assert.IsTrue(look.Ultimate);
+            Assert.AreEqual(1f, look.Get(ult.Form), 1e-4f);
+            Assert.AreEqual(0f, BotPlayers.LookFor(EvolutionStage.Baby, AdultForm.Fire, _cfg.Evolution).Total, 1e-6f);
+        }
+
+        [Test]
+        public void Persona_InterpolatesLevels_StyleChangesBehaviour()
+        {
+            var d = new BotConfig();
+            BotConfig easy = BotConfig.Persona(0f, BotStyle.Balanced), normal = BotConfig.Persona(0.5f, BotStyle.Balanced);
+            BotConfig hard = BotConfig.Persona(1f, BotStyle.Balanced);
+            Assert.AreEqual(d.ReactionSeconds[0], easy.ReactionSeconds[1], 1e-5f);
+            Assert.AreEqual(d.GuardChance[1], normal.GuardChance[1], 1e-5f);
+            Assert.AreEqual(d.WrongChance[2], hard.WrongChance[1], 1e-5f);
+            Assert.IsTrue(hard.AimParry[1], "giỏi thì biết canh phản đòn");
+            Assert.IsFalse(easy.AimParry[1]);
+            BotConfig aggr = BotConfig.Persona(0.5f, BotStyle.Aggressive), def = BotConfig.Persona(0.5f, BotStyle.Defensive);
+            Assert.Less(aggr.AttackGapMax[1], def.AttackGapMax[1], "Hăng đánh dồn hơn Thủ");
+            Assert.Less(aggr.GuardChance[1], def.GuardChance[1], "Thủ hay đỡ hơn Hăng");
+            Assert.IsTrue(def.AimParry[1], "Thủ sớm biết canh phản đòn");
+        }
+
+        [Test]
+        public void EndToEnd_FindBotPlayer_Fight90s_RankUpdated()
+        {
+            var health = new HealthService(_pets, _time, _cfg);
+            var evo = new EvolutionService(_pets, health, _time, _bus, _cfg);
+            var net = new LocalNetworkManager(_time, new SeededRandom(21), _cfg);
+            net.Connect("me", null);
+            MatchInfo match = null;
+            net.MatchFound += m => match = m;
+            PetStats ps = evo.Stats;
+            net.FindMatch(new MatchTicket
+            {
+                Name = "Bạn", PetName = "Kem", Elo = _rank.Elo, Power = ps.Power, Stage = _pets.Current.Growth.Stage,
+                Stats = new FighterStats(ps.Hp, ps.Atk, ps.Def, ps.Spd, ps.Crit),
+            });
+            for (int i = 0; i < 600 && match == null; i++)
+            {
+                _time.Advance(TimeSpan.FromSeconds(0.25));
+                net.Update();
+            }
+            Assert.IsNotNull(match);
+            var session = new BattleSession(_pets, evo, BotPlayers.ToRanked(match.Opponent), match.Seed);
+            for (int i = 0; i < 3000 && !session.IsOver; i++)   // mình vuốt liên tục, người chơi ảo tự đánh
+            {
+                session.PlayerSwipe(new SwipeResult { Kind = i % 2 == 0 ? SwipeKind.Horizontal : SwipeKind.Up, Quality = 1f });
+                session.Advance(0.1f);
+            }
+            Assert.IsTrue(session.IsOver, "trận kết thúc (hạ gục hoặc hết 90 giây)");
+            int elo = _rank.Elo, coins = _eco.Coins;
+            RankResult r = _rank.ApplyMatch(match.Opponent.Elo, session.Result.Outcome);
+            net.LeaveMatch();
+            Assert.AreNotEqual(elo, _rank.Elo, "thắng hay thua đều đổi Elo (đối thủ gần Elo mình)");
+            Assert.AreEqual(session.Result.PlayerWon ? coins + 30 : coins, _eco.Coins);
+            Assert.AreEqual(r.EloAfter, _rank.Elo);
+            Assert.AreEqual(NetworkState.Online, net.State, "đấu xong tìm trận tiếp được");
+        }
+
+        [Test]
+        public void RankedSession_UsesOpponentStats_BotFights_QuitIsLoss()
+        {
+            var health = new HealthService(_pets, _time, _cfg);
+            var evo = new EvolutionService(_pets, health, _time, _bus, _cfg);
+            OpponentInfo o = BotPlayers.Create(11, 1000, evo.Power, _pets.Current.Growth.Stage, _cfg);
+            RankedOpponent opp = BotPlayers.ToRanked(o);
+            var s = new BattleSession(_pets, evo, opp, 99);
+            Assert.AreEqual(BattleMode.Ranked, s.Mode);
+            Assert.AreEqual(o.Stats.Atk, s.Sim.Fighters[1].Stats.Atk, 1e-4f, "đối thủ dùng chỉ số của thú họ");
+            Assert.AreEqual(1f, s.TimeScale, "PvP chạy tốc độ thường");
+            var events = new List<BattleEvent>();
+            for (int i = 0; i < 300 && !s.IsOver; i++) s.Advance(0.1f, events);
+            Assert.IsTrue(events.Exists(e => e.Side == 1 && e.Kind == BattleEventKind.AttackStarted), "người chơi ảo tự ra đòn");
+            int coins = _eco.Coins;
+            s.Quit();
+            Assert.IsTrue(s.IsOver);
+            Assert.AreEqual(BattleOutcome.Win1, s.Result.Outcome, "bỏ cuộc = thua");
+            Assert.AreEqual(0, s.Result.Coins, "PvP không có Coin thắng Bot (Coin PvP do RankService)");
+            Assert.AreEqual(coins, _eco.Coins);
         }
     }
 }

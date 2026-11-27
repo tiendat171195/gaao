@@ -10,7 +10,30 @@ using UnityEngine;
 namespace PawFit.Battle.View
 {
     /// <summary>
-    /// Màn đấu (màn NGANG): đấu trường dựng bằng code, thú của người chơi (bên trái) vs hình nộm (bên phải).
+    /// Dữ liệu 1 trận PvP để màn đấu dựng (App điền từ kết quả ghép trận): đối thủ trong trận + thú của họ trông thế nào,
+    /// và hàm App gọi lúc hết trận để tính Elo / Coin rồi trả về các dòng chữ cho thẻ kết quả.
+    /// </summary>
+    public sealed class RankedMatchView
+    {
+        public RankedOpponent Opponent;
+        public ulong Seed;
+
+        /// <summary>Tên thú đối thủ, biệt danh người chơi, dòng phụ (vd "Silver · Elo 1180").</summary>
+        public string PetName;
+        public string PlayerName;
+        public string Title;
+
+        public PetDna Dna;
+        public GrowthLook Look;
+        public AccessoryKind Accessory;
+
+        /// <summary>Hết trận: App ghi Elo / Coin và trả các dòng thêm cho thẻ kết quả (vd "Elo 1000 → 1016 (+16)").</summary>
+        public Func<BattleResult, List<string>> OnResult;
+    }
+
+    /// <summary>
+    /// Màn đấu (màn NGANG): đấu trường dựng bằng code, thú của người chơi (bên trái) vs hình nộm (bên phải),
+    /// hoặc vs thú của người chơi khác / người chơi ảo khi đấu PvP (Ranked).
     /// Đọc nét vuốt -> SwipeRecognizer -> BattleSession (C# thuần); sự kiện trận -> hoạt cảnh + hiệu ứng.
     /// Không chứa luật đấu.
     /// </summary>
@@ -39,23 +62,38 @@ namespace PawFit.Battle.View
         private float _endT = -1f;
         private readonly List<BattleEvent> _events = new List<BattleEvent>();
         private readonly List<SessionNote> _notes = new List<SessionNote>();
+        private RankedMatchView _match;
 
         public static BattleScene Enter(ServiceLocator s, BattleMode mode, BotLevel level, Action onExit)
         {
             var scene = new GameObject("PawFit_Battle").AddComponent<BattleScene>();
-            scene.Build(s, mode, level, onExit);
+            scene.Build(s, mode, level, onExit, null);
             return scene;
         }
 
-        private void Build(ServiceLocator s, BattleMode mode, BotLevel level, Action onExit)
+        /// <summary>Vào trận PvP 90 giây với đối thủ đã ghép (người thật sau này / người chơi ảo bây giờ).</summary>
+        public static BattleScene EnterRanked(ServiceLocator s, RankedMatchView match, Action onExit)
+        {
+            if (match == null) throw new ArgumentNullException(nameof(match));
+            var scene = new GameObject("PawFit_Battle").AddComponent<BattleScene>();
+            scene.Build(s, BattleMode.Ranked, BotLevel.Normal, onExit, match);
+            return scene;
+        }
+
+        private void Build(ServiceLocator s, BattleMode mode, BotLevel level, Action onExit, RankedMatchView match)
         {
             if (Application.isMobilePlatform) Screen.orientation = ScreenOrientation.LandscapeLeft;   // đấu: màn ngang
             _pets = s.Get<PetService>();
             _evo = s.Get<EvolutionService>();
             _log = s.Get<ILog>();
             _onExit = onExit;
-            ICoinWallet wallet = s.TryGet(out ICoinWallet w) ? w : null;   // thắng Bot có Coin (Phase 5.1)
-            _session = new BattleSession(mode, level, _pets, _evo, (ulong)DateTime.UtcNow.Ticks, wallet: wallet);
+            _match = match;
+            if (match != null) _session = new BattleSession(_pets, _evo, match.Opponent, match.Seed);   // PvP: Elo do App tính sau trận
+            else
+            {
+                ICoinWallet wallet = s.TryGet(out ICoinWallet w) ? w : null;   // thắng Bot có Coin (Phase 5.1)
+                _session = new BattleSession(mode, level, _pets, _evo, (ulong)DateTime.UtcNow.Ticks, wallet: wallet);
+            }
             transform.position = ArenaPos;
             BuildArena();
 
@@ -73,12 +111,16 @@ namespace PawFit.Battle.View
             _player = p.gameObject.AddComponent<FighterRig>();
             _player.Init(pBody, 1f, avatar);
 
-            // hình nộm (bên phải, nhìn sang trái)
-            Transform d = Prim.Group(transform, "Dummy", new Vector3(1.3f, 0f, 0f));
-            Transform dBody = DummyBuilder.Build(d, level, out Transform[] arms);
-            dBody.localRotation = Quaternion.Euler(0f, -25f, 0f);
-            _dummy = d.gameObject.AddComponent<FighterRig>();
-            _dummy.Init(dBody, -1f, null, arms);
+            if (match != null) BuildOpponentPet(match);
+            else
+            {
+                // hình nộm (bên phải, nhìn sang trái)
+                Transform d = Prim.Group(transform, "Dummy", new Vector3(1.3f, 0f, 0f));
+                Transform dBody = DummyBuilder.Build(d, level, out Transform[] arms);
+                dBody.localRotation = Quaternion.Euler(0f, -25f, 0f);
+                _dummy = d.gameObject.AddComponent<FighterRig>();
+                _dummy.Init(dBody, -1f, null, arms);
+            }
 
             _cam = Camera.main;
             if (_cam != null)
@@ -91,13 +133,33 @@ namespace PawFit.Battle.View
                 _cam.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(ArenaPos + new Vector3(0f, 0.75f, 0f) - eye));
             }
             bool training = mode == BattleMode.Training;
-            _hud = BattleHud.Create(transform, training, _pets.Current.Name, training ? "Hình nộm tập" : LevelNames[(int)level],
-                                    OnButton);
+            string rightName = match != null ? match.PetName + " · " + match.Title : training ? "Hình nộm tập" : LevelNames[(int)level];
+            _hud = BattleHud.Create(transform, training, _pets.Current.Name, rightName, OnButton);
             _input = new LegacyPointerInput();
             _dpi = Screen.dpi > 0 ? Mathf.Max(1f, Screen.dpi / 160f) : 1f;
             _recognizer = new SwipeRecognizer(new SwipeConfig(), _dpi);
             if (training) _hud.Hint("Vuốt theo bóng mờ để học chiêu. Vuốt xuống để đỡ.", 3f);
-            _log.Info("[PawFit] Vào sân tập: " + mode + (training ? "" : " · " + level));
+            if (match != null)
+            {
+                _hud.Big(_pets.Current.Name + "   VS   " + match.PetName, 2.2f);
+                _hud.Hint("Đối thủ: " + match.PlayerName + " · " + match.Title, 3f);
+            }
+            _log.Info("[PawFit] Vào trận: " + mode + (match != null ? " · gặp " + match.PlayerName : training ? "" : " · " + level));
+        }
+
+        /// <summary>Thú của đối thủ (bên phải, nhìn sang trái): dựng từ DNA + dáng tiến hóa + phụ kiện của họ.</summary>
+        private void BuildOpponentPet(RankedMatchView match)
+        {
+            Transform d = Prim.Group(transform, "Opponent", new Vector3(1.3f, 0f, 0f));
+            Transform dBody = Prim.Group(d, "Body");
+            var host = new GameObject("Pet");
+            host.transform.SetParent(dBody, false);
+            host.transform.localRotation = Quaternion.Euler(0f, -65f, 0f);   // đối xứng với thú mình (65°)
+            IPetAvatar avatar = PetAvatarFactory.Create(host, match.Dna, PetController.UsePlaceholder);
+            avatar.SetGrowth(match.Look);
+            AccessoryView.Attach(avatar, match.Accessory);
+            _dummy = d.gameObject.AddComponent<FighterRig>();
+            _dummy.Init(dBody, -1f, avatar);
         }
 
         private void BuildArena()
@@ -137,6 +199,8 @@ namespace PawFit.Battle.View
             if (_session.SlowMo) _hud.Hint("Hình nộm sắp đánh — vuốt XUỐNG để đỡ!", 0.3f);
             _player.Avatar?.LookAt(_dummy.Center);
             _player.Avatar?.SetMoveSpeed(0f);
+            _dummy.Avatar?.LookAt(_player.Center);   // PvP: thú đối thủ cũng nhìn sang mình
+            _dummy.Avatar?.SetMoveSpeed(0f);
 
             if (_session.IsOver && _endT < 0f) _endT = 0f;
             if (_endT >= 0f && !_hud.ResultShown)
@@ -265,6 +329,7 @@ namespace PawFit.Battle.View
             if (r.Gained.Strength > 0.01f) lines.Add("+" + r.Gained.Strength.ToString("0.#") + " Sức mạnh");
             if (r.Gained.Speed > 0.01f) lines.Add("+" + r.Gained.Speed.ToString("0.#") + " Tốc độ");
             if (r.Coins > 0) lines.Add("+" + r.Coins + " Coin");
+            if (_match?.OnResult != null) lines.AddRange(_match.OnResult(r));   // PvP: Elo / bậc / Coin do App tính
             if (lines.Count == 0) lines.Add("Hôm nay tập đủ rồi, mai tập tiếp nhé");
             _hud.ShowResult(title, string.Join("\n", lines), Exit);
         }

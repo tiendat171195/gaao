@@ -61,6 +61,7 @@ namespace PawFit.App
         public static void EnterBattle(BattleMode mode, BotLevel level)
         {
             if (Battle != null || Garden == null) return;
+            CancelSearch();   // đang tìm trận PvP mà vào sân tập thì thôi tìm
             var pets = _services.Get<PetService>();
             if (!BattleSession.CanStart(pets, _services.Get<HealthService>(), out string reason))
             {
@@ -138,7 +139,7 @@ namespace PawFit.App
         // Cổng đấu trường = PvP (Phase 4). Logic rank + ghép trận đã có; trận PvP thật chờ máy chủ (Phase 4.1 / 4.2).
         // ------------------------------------------------------------------
 
-        /// <summary>Chạm cổng đấu trường: thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày).</summary>
+        /// <summary>Chạm cổng đấu trường: thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút Tìm trận.</summary>
         public static void OpenArena()
         {
             if (Garden == null || Battle != null) return;
@@ -146,11 +147,150 @@ namespace PawFit.App
             RankData d = rank.Current;
             int daysLeft = Math.Max(0, (int)Math.Ceiling((rank.SeasonEndsUtc - _services.Get<ITimeProvider>().UtcNow).TotalDays));
             string body = "Bậc " + rank.Tier + " · Elo " + rank.Elo + " · thắng " + d.Wins + " / thua " + d.Losses + "\n" +
-                          "Mùa " + rank.Season + " còn " + daysLeft + " ngày · PvP thật cần máy chủ (Phase 4.2)";
-            if (!RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out string reason))
-                body += "\nThú " + reason + " nên chưa đấu được";
-            GardenUi.ShowChoice("Đấu trường", body, new[] { "Thôi" }, null);
+                          "Mùa " + rank.Season + " còn " + daysLeft + " ngày · thắng +" + _services.Get<GameConfig>().Economy.PvpWinCoins + " Coin";
+            bool can = RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out string reason);
+            GardenUi.ShowChoice("Đấu trường", body,
+                                new[] { can ? "Tìm trận" : "Tìm trận (thú " + reason + ")", "Thôi" },
+                                i => { if (i == 0) StartSearch(); },
+                                new[] { can, true });
         }
+
+        /// <summary>Xếp hàng tìm đối thủ (Elo ±100, lực chiến ±10%; 30 giây nới khoảng; 60 giây gợi ý đấu hình nộm).</summary>
+        private static void StartSearch()
+        {
+            var net = _services.Get<INetworkManager>();
+            var pets = _services.Get<PetService>();
+            var evo = _services.Get<EvolutionService>();
+            var rank = _services.Get<RankService>();
+            if (net.State == NetworkState.Offline) net.Connect("local", null);
+            if (net.State != NetworkState.Online) return;
+            PetStats ps = evo.Stats;
+            bool[] learned = evo.LearnedMask();
+            int mask = 0;
+            for (int i = 0; i < learned.Length; i++) if (learned[i]) mask |= 1 << i;
+            var ticket = new MatchTicket
+            {
+                Name = "Bạn",
+                PetName = pets.Current.Name,
+                DnaCode = pets.DnaCode,
+                Elo = rank.Elo,
+                Power = ps.Power,
+                Stage = pets.Current.Growth.Stage,
+                Stats = new FighterStats(ps.Hp, ps.Atk, ps.Def, ps.Spd, ps.Crit),
+                LearnedMask = mask,
+            };
+            net.MatchFound -= OnMatchFound;
+            net.MatchFound += OnMatchFound;
+            net.FindMatch(ticket);
+            ShowSearching(false);
+        }
+
+        private static void ShowSearching(bool suggestBot)
+        {
+            var net = _services.Get<INetworkManager>();
+            var cfg = _services.Get<GameConfig>().Matchmaking;
+            int elo = _services.Get<RankService>().Elo;
+            string[] buttons = suggestBot ? new[] { "Đấu hình nộm", "Hủy tìm" } : new[] { "Hủy tìm" };
+            GardenUi.ShowLive("Đang tìm đối thủ", () =>
+            {
+                double t = net.SearchSeconds;
+                MatchSearchStatus status = net.SearchStatus;
+                if (status == MatchSearchStatus.SuggestBot && !suggestBot && net.State == NetworkState.Searching)
+                    ShowSearching(true);   // 60 giây: thêm nút đấu hình nộm (vẫn tìm tiếp)
+                string line = ((int)t / 60) + ":" + ((int)t % 60).ToString("00") + "\nElo " + elo + " ±" + MatchmakingRules.EloWindow(t, cfg) +
+                              " · lực chiến ±" + Mathf.RoundToInt(MatchmakingRules.PowerWindow(t, cfg) * 100f) + "%";
+                if (status == MatchSearchStatus.Widened) line += "\nĐã nới khoảng tìm";
+                if (status == MatchSearchStatus.SuggestBot) line += "\nChưa thấy ai hợp — đấu hình nộm trong lúc chờ?";
+                return line;
+            }, buttons, i =>
+            {
+                CancelSearch();
+                GardenUi.Close();
+                if (suggestBot && i == 0) EnterBattle(BattleMode.BotFight, BotLevel.Normal);
+            });
+        }
+
+        private static void CancelSearch()
+        {
+            if (!_services.TryGet(out INetworkManager net) || net.State != NetworkState.Searching) return;
+            net.MatchFound -= OnMatchFound;
+            net.CancelFindMatch();
+        }
+
+        /// <summary>Ghép được: thẻ "Tìm thấy đối thủ" 2,4 giây rồi vào trận.</summary>
+        private static void OnMatchFound(MatchInfo match)
+        {
+            var net = _services.Get<INetworkManager>();
+            net.MatchFound -= OnMatchFound;
+            string reason = null;
+            if (Garden == null || Battle != null || !RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out reason))
+            {
+                net.LeaveMatch();   // thú vừa ốm / ngủ / mất trong lúc tìm, hoặc đang ở trận khác
+                if (Battle == null)
+                {
+                    GardenUi.Close();
+                    GardenUi.Toast("Hủy trận: thú " + (reason ?? "không đấu được lúc này"));
+                }
+                return;
+            }
+            OpponentInfo o = match.Opponent;
+            var rank = _services.Get<RankService>();
+            string me = _services.Get<PetService>().Current.Name + " · " + rank.Tier + " " + rank.Elo;
+            string them = o.PetName + " (của " + o.Name + ") · " + TierName(o.Elo) + " " + o.Elo;
+            GardenUi.ShowLive("Tìm thấy đối thủ!", () => me + "\nVS\n" + them + "\nLực chiến " + Mathf.RoundToInt(o.Power), (string[])null, null);
+            Garden.StartCoroutine(StartRankedAfter(match, 2.4f));
+        }
+
+        private static System.Collections.IEnumerator StartRankedAfter(MatchInfo match, float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            EnterRanked(match);
+        }
+
+        /// <summary>Vào trận PvP (màn ngang). Hết trận: RankService tính Elo + Coin, thẻ kết quả hiện thay đổi.</summary>
+        private static void EnterRanked(MatchInfo match)
+        {
+            var net = _services.Get<INetworkManager>();
+            if (Garden == null || Battle != null)
+            {
+                net.LeaveMatch();
+                return;
+            }
+            OpponentInfo o = match.Opponent;
+            var cfg = _services.Get<GameConfig>();
+            var view = new RankedMatchView
+            {
+                Opponent = BotPlayers.ToRanked(o),
+                Seed = match.Seed,
+                PetName = o.PetName,
+                PlayerName = o.Name,
+                Title = TierName(o.Elo) + " · Elo " + o.Elo,
+                Dna = o.Dna ?? DnaCodec.Decode(o.DnaCode),
+                Look = BotPlayers.LookFor(o.Stage, o.Form, cfg.Evolution),
+                Accessory = o.Accessory,
+                OnResult = r => RankLines(_services.Get<RankService>().ApplyMatch(o.Elo, r.Outcome)),
+            };
+            GardenUi.Close();
+            Garden.SetPaused(true);
+            Battle = BattleScene.EnterRanked(_services, view, () =>
+            {
+                net.LeaveMatch();
+                Battle = null;
+                if (Garden != null) Garden.SetPaused(false);
+            });
+        }
+
+        private static List<string> RankLines(RankResult r)
+        {
+            var lines = new List<string> { "Elo " + r.EloBefore + " → " + r.EloAfter + " (" + (r.Delta >= 0 ? "+" : "") + r.Delta + ")" };
+            if (r.Promoted) lines.Add("Lên bậc " + r.TierAfter + "!");
+            else if (r.Demoted) lines.Add("Xuống bậc " + r.TierAfter);
+            else lines.Add("Bậc " + r.TierAfter);
+            if (r.CoinsWon > 0) lines.Add("+" + r.CoinsWon + " Coin");
+            return lines;
+        }
+
+        private static string TierName(int elo) => RankRules.TierOf(elo, _services.Get<GameConfig>().Rank).ToString();
 
         // ------------------------------------------------------------------
         // Hòm thư = cài đặt (GDD: "cài đặt = hòm thư ở cổng")

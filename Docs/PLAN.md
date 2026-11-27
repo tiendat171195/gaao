@@ -31,7 +31,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 3.1 | SwipeRecognizer + BattleSimulation + Bot (logic thuần) | ✅ |
 | 3.2 | Màn đấu ngang + Mode Huấn luyện (bóng mờ, slow-mo, 10 lần = thuộc chiêu) | ✅ |
 | 4.1 | Firebase Auth + Firestore + giờ server | ⏳ |
-| 4.2 | PvP real-time Photon Fusion + tìm đối thủ (Elo ±100, lực chiến ±10%) | 🔄 Logic ghép trận + `INetworkManager` + bản giả lập xong; Photon chờ tài khoản |
+| 4.2 | PvP real-time Photon Fusion + tìm đối thủ (Elo ±100, lực chiến ±10%) | 🔄 Màn tìm trận + PvP với người chơi ảo chạy được; Photon (người thật) chờ tài khoản |
 | 4.3 | Ranking Elo + bậc + mùa giải 30 ngày | 🔄 Logic xong (chạy offline); đồng bộ máy chủ chờ 4.1 |
 | 5.1 | Kinh tế + shop vườn + quảng cáo mock (tối đa 5 lần/ngày) | ✅ |
 | 5.2 | Trang trí + phụ kiện + polish | ✅ |

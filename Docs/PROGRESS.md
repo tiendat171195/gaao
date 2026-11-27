@@ -193,7 +193,19 @@
     - Chạm cổng đấu trường → thẻ rank.
     - Bảng DEV: Thắng / Thua PvP giả.
     - `RankService` đăng ký trong `GameBootstrap`.
-  - Chưa làm: màn tìm trận + trận PvP với đối thủ (bản giả lập dùng được ngay, không cần tài khoản) — bước tiếp của 4.2.
+  - **Màn tìm trận + PvP với người chơi ảo (G10c)**, chạy được khi chưa có máy chủ:
+    - `BotPlayers`: 600 người chơi ảo cố định theo số hiệu, thú cùng giai đoạn với mình, chỉ số khớp lực chiến.
+    - `BotConfig.Persona`: tay nghề theo Elo + 4 lối đánh. `AimParry` cho phép người giỏi canh phản đòn.
+    - `BattleMode.Ranked` + `RankedOpponent`: đấu 90 giây với đối thủ cho trước. Bỏ cuộc = thua.
+    - `LocalNetworkManager` dùng người chơi ảo, dày hơn: chờ ở giữa 10,5 giây.
+    - Vườn:
+      - Cổng đấu trường ▸ Tìm trận → màn đếm giây (nới khoảng 30 giây, nút Đấu hình nộm 60 giây, Hủy tìm) → "Tìm thấy đối thủ!" 2,4 giây.
+      - `GardenUi.ShowLive` hiện được nhiều nút.
+    - Màn đấu:
+      - `BattleScene.EnterRanked` dựng thú đối thủ thật bên phải (DNA + dáng tiến hóa + phụ kiện), giới thiệu "Kem VS Mun".
+      - Thẻ kết quả có Elo trước → sau / lên-xuống bậc / +30 Coin (`RankService.ApplyMatch`).
+    - Test: người chơi ảo (cố định theo số hiệu, khớp lực chiến, tay nghề theo Elo), Persona, trận Ranked, test xuyên suốt tìm trận → đấu → rank.
+  - Test: 179/179 pass · compile check: pass (Editor + Release) · soát API: 467 thành viên khớp
   - Test: 173/173 pass · compile check: pass · soát API: 467 thành viên khớp Unity 6000.3.29f1
 
 ## Quyết định đã chốt
@@ -214,7 +226,7 @@
 
 ## Tiếp theo
 
-- **Phase 4.2 (phần không cần tài khoản)** — Màn tìm trận ở cổng đấu trường (đếm giây, nới khoảng, gợi ý Bot), trận PvP 90 giây với đối thủ giả (thú khác, không phải hình nộm), thẻ kết quả có Elo / bậc / Coin. Photon thật thay `LocalNetworkManager` sau.
+- **Phase 4.1 / 4.2 phần máy chủ** — Firebase Auth + Firestore + giờ server, Photon Fusion cho người thật. Cần tài khoản của bạn. Người chơi ảo vẫn giữ để lấp chỗ khi vắng người.
 - **Phase 5.3** — Bạn build Android theo `Docs/BUILD.md`, gửi lỗi Console / log điện thoại + số fps. Tôi sửa theo kết quả, rồi làm tiếp:
   - icon / tên hiển thị
   - khóa ký phát hành (keystore) + AAB cho Google Play

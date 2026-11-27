@@ -37,7 +37,7 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 | Chạm vào **quầy hàng** (phía trước bên phải, có lối đá dẫn tới) | Mở quầy: mua thuốc / bánh / nước, xem quảng cáo lấy thưởng |
 | Chạm vào **hình nộm** ở sân tập | Vào sân tập: Huấn luyện hoặc Đấu Bot |
 | Chạm vào **hòm thư** (cạnh cổng đấu trường, sau sân tập) | Cài đặt: bật / tắt âm thanh, xem + copy mã DNA của thú, phiên bản game |
-| Chạm vào **cổng đấu trường** (sau sân tập) | Thẻ rank: bậc, Elo, thắng / thua, mùa còn mấy ngày (PvP thật chờ máy chủ, Phase 4.2) |
+| Chạm vào **cổng đấu trường** (sau sân tập) | Thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút **Tìm trận** PvP |
 
 Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ.
 
@@ -160,6 +160,22 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Bản dev là **quảng cáo giả lập 3 giây** (màn tối có đếm ngược + nút Bỏ qua). Phase 5.3 thay bằng quảng cáo thật.
 - Số liệu nằm ở `EconomyConfig` trong `GameConfig.cs` (giá thuốc ở `HealthConfig`), chỉnh được không cần sửa luật.
 
+## PvP + rank (Phase 4, chạy được khi chưa có máy chủ)
+
+- **Tìm trận:**
+  - Chạm cổng đấu trường ▸ **Tìm trận**. Màn tìm hiện số giây đã chờ và khoảng đang tìm.
+  - Lúc đầu tìm đối thủ chênh Elo ±100, lực chiến ±10%. Chờ 30 giây thì nới ra ±200 / ±20%.
+  - Chờ 60 giây thì có thêm nút **Đấu hình nộm**, vẫn tìm tiếp. Bấm **Hủy tìm** để thôi.
+- **Đối thủ = người chơi ảo** (chưa có máy chủ thật nên chưa có người thật):
+  - Mỗi người chơi ảo có biệt danh, có thú riêng (DNA, tên, cùng giai đoạn tiến hóa với thú bạn, dạng Adult, có người đeo phụ kiện).
+  - Mỗi người có lối đánh riêng: Hăng / Thủ / Kỹ thuật / Cân bằng. Elo càng cao đánh càng giỏi.
+  - Họ vuốt chiêu y như người chơi, không ăn gian.
+  - Thường tìm thấy sau khoảng 5–20 giây, như đang có nhiều người chơi.
+- **Trận:**
+  - Có thẻ "Tìm thấy đối thủ!", rồi màn xoay ngang: thú bạn vs thú đối thủ, 90 giây.
+  - Thẻ kết quả hiện Elo trước → sau, lên / xuống bậc, thắng +30 Coin. **Bỏ cuộc** tính là thua.
+- Thú ốm / đang ngủ không đấu được. Bậc cao nhất của thú được ghi lên bia mộ khi thú mất.
+
 ## Phụ kiện + trang trí vườn (Phase 5.2)
 
 Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của người chơi nên thú mất vẫn còn, thú mới nở vẫn đeo được. Chỉ để đẹp, không đổi chỉ số hay luật chăm sóc.
@@ -201,7 +217,7 @@ Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của ng
   - Tiến hóa: xem giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến. Nút **+1 ngày tuổi**, **Lên giai đoạn**, **Thuộc 1 chiêu**, **+10** từng hướng tập.
   - Nút **Huấn luyện** / **Đấu Bot Thường**: vào sân tập ngay, không cần đi tới hình nộm.
   - Kinh tế: xem Coin, lượt quảng cáo còn lại, tổng đã nhận / đã tiêu. Nút **+100 Coin** / **-100 Coin** / **Trả lượt QC** / **Mở quầy hàng** / **QC: hết hàng** (giả lập không có quảng cáo).
-  - Rank: xem bậc / Elo / mùa. Nút **Thắng PvP giả** / **Thua PvP giả** (đổi Elo như thắng / thua 1 người ngang cơ; thắng +30 Coin).
+  - Rank: xem bậc / Elo / mùa. Nút **Thắng PvP giả** / **Thua PvP giả** (đổi Elo như thắng / thua 1 người ngang cơ; thắng +30 Coin). Nút **Đấu trường** mở thẻ đấu trường ngay.
   - Phụ kiện / trang trí: xem đang đeo gì, có mấy món. Nút **Có hết đồ (test)** (có hết, không trừ Coin) và **Đổi phụ kiện** (lần lượt từng món).
   - Tua giờ +1 / +6 / +24.
   - **Thú mới** (DNA ngẫu nhiên).
@@ -234,7 +250,7 @@ dotnet build Tools/UnityCompileCheck
 | `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
 | `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt |
 | `Assets/PawFit/Scripts/Economy` | Kinh tế (C# thuần): ví Coin + quảng cáo `EconomyService`, quầy hàng `ShopService`, phụ kiện + trang trí `CosmeticsService`, cổng quảng cáo `IAdService` + bản giả lập `MockAdService` |
-| `Assets/PawFit/Scripts/Online` | Phase 4 phần không cần tài khoản (C# thuần): rank Elo + bậc + mùa giải `RankService`, luật ghép trận + hàng chờ `Matchmaker`, cổng mạng `INetworkManager` + bản giả lập `LocalNetworkManager` |
+| `Assets/PawFit/Scripts/Online` | Phase 4 phần không cần tài khoản (C# thuần): rank Elo + bậc + mùa giải `RankService`, luật ghép trận + hàng chờ `Matchmaker`, người chơi ảo `BotPlayers`, cổng mạng `INetworkManager` + bản giả lập `LocalNetworkManager` |
 | `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow (chuyển màn, quầy hàng, quảng cáo, phụ kiện, trang trí), tiếng Coin `UiSounds`, Debug overlay |
 | `Assets/PawFit/Resources/Pets/Gen1` | Model thú Gen 1 (FBX bản 2: thân LOD0 / LOD1 + blendshape + xương + mọi kiểu bộ phận) + file mốc neo JSON |
 | `Assets/PawFit/Resources/Shaders` | Shader URP `PawFit/Gen1Fur` (lông theo vertex color, bẩn) + `PawFit/Gen1Eye` (mắt vẽ bằng toán) |

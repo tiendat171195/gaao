@@ -5,8 +5,22 @@ using PawFit.Pet;
 
 namespace PawFit.Battle
 {
-    /// <summary>Huấn luyện = học chiêu với hình nộm (không thua, vuốt sai không bị phạt); Đấu Bot = trận thật 90 giây.</summary>
-    public enum BattleMode { Training = 0, BotFight = 1 }
+    /// <summary>
+    /// Huấn luyện = học chiêu với hình nộm (không thua, vuốt sai không bị phạt); Đấu Bot = trận thật 90 giây với hình nộm;
+    /// Ranked = PvP 90 giây với người chơi khác (hoặc người chơi ảo khi vắng người), tính Elo.
+    /// </summary>
+    public enum BattleMode { Training = 0, BotFight = 1, Ranked = 2 }
+
+    /// <summary>Đối thủ PvP cho trước: chỉ số + chiêu đã thuộc của thú họ; Bot != null = máy điều khiển (người chơi ảo).</summary>
+    public sealed class RankedOpponent
+    {
+        public string Name;
+        public FighterStats Stats;
+        public bool[] Learned;
+
+        /// <summary>Cấu hình điều khiển của người chơi ảo (BotConfig.Persona). null = người thật ở máy khác (Phase 4.2 Photon).</summary>
+        public BotConfig Bot;
+    }
 
     public sealed class BattleSessionConfig
     {
@@ -125,6 +139,30 @@ namespace PawFit.Battle
             Result = new BattleResult();
         }
 
+        /// <summary>
+        /// PvP (Phase 4.2): đấu 90 giây với đối thủ cho trước, cùng luật như đấu Bot (thú mình dùng chỉ số thật, đã tính bệnh).
+        /// Elo + Coin do RankService tính sau trận (BattleSession không biết rank). Thắng không có điểm thưởng thêm như đấu Bot.
+        /// </summary>
+        public BattleSession(PetService pets, EvolutionService evo, RankedOpponent opponent, ulong seed,
+                             BattleConfig battleCfg = null, BattleSessionConfig sessionCfg = null)
+        {
+            _pets = pets ?? throw new ArgumentNullException(nameof(pets));
+            _evo = evo ?? throw new ArgumentNullException(nameof(evo));
+            if (opponent == null) throw new ArgumentNullException(nameof(opponent));
+            _sc = sessionCfg ?? new BattleSessionConfig();
+            Mode = BattleMode.Ranked;
+            Level = BotLevel.Normal;
+            Opponent = opponent;
+            PetStats ps = evo.Stats;
+            var me = new FighterStats(ps.Hp, ps.Atk, ps.Def, ps.Spd, ps.Crit);
+            Sim = new BattleSimulation(me, opponent.Stats, battleCfg ?? new BattleConfig(), seed, evo.LearnedMask(), opponent.Learned);
+            _bot = opponent.Bot != null ? new BattleBot(BotSide, BotLevel.Normal, seed * 7 + 3, opponent.Bot) : null;
+            Result = new BattleResult();
+        }
+
+        /// <summary>Đối thủ PvP (null nếu không phải trận Ranked).</summary>
+        public RankedOpponent Opponent { get; }
+
         public BattleMode Mode { get; }
         public BotLevel Level { get; }
         public BattleSimulation Sim { get; }
@@ -192,7 +230,7 @@ namespace PawFit.Battle
             while (_accum >= tick && !Sim.IsOver)
             {
                 _accum -= tick;
-                SwipeResult? s = _bot.Think(Sim);
+                SwipeResult? s = _bot?.Think(Sim);   // người chơi ảo / hình nộm; người thật ở máy khác gửi nét qua mạng
                 if (s.HasValue) Sim.Submit(BotSide, s.Value, local);
                 Sim.Tick(local);
                 if (Mode == BattleMode.Training && Sim.Fighters[BotSide].WindingUp && !_hintedGuard)
@@ -242,7 +280,7 @@ namespace PawFit.Battle
         {
             if (_finished) return;
             _finished = true;
-            Result.Outcome = _quit && Mode == BattleMode.BotFight ? BattleOutcome.Win1 : Sim.Outcome;
+            Result.Outcome = _quit && Mode != BattleMode.Training ? BattleOutcome.Win1 : Sim.Outcome;   // bỏ cuộc = thua
             Result.PlayerWon = Result.Outcome == BattleOutcome.Win0;
             if (Mode == BattleMode.BotFight && Result.PlayerWon)
             {

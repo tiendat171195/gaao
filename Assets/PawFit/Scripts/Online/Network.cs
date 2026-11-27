@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using PawFit.Battle;
 using PawFit.Core;
 using PawFit.Pet;
@@ -7,14 +8,28 @@ namespace PawFit.Online
 {
     public enum NetworkState { Offline = 0, Online = 1, Searching = 2, InMatch = 3 }
 
-    /// <summary>Đối thủ của 1 trận PvP (máy chủ gửi về).</summary>
+    /// <summary>Đối thủ của 1 trận PvP (máy chủ gửi về, hoặc người chơi ảo sinh trên máy).</summary>
     public sealed class OpponentInfo
     {
         public string PlayerId;
+
+        /// <summary>Tên người chơi (biệt danh) + tên thú.</summary>
         public string Name;
+        public string PetName;
+
+        public PetDna Dna;
         public string DnaCode;
         public int Elo;
         public float Power;
+
+        /// <summary>Thú đối thủ trông thế nào: giai đoạn, dạng (Teen = dạng đang nghiêng), phụ kiện đang đeo.</summary>
+        public EvolutionStage Stage;
+        public AdultForm Form;
+        public AccessoryKind Accessory;
+
+        /// <summary>Người chơi ảo: lối đánh + tay nghề 0..1 (BotConfig.Persona).</summary>
+        public BotStyle Style;
+        public float Skill;
 
         /// <summary>Chỉ số chiến đấu của thú đối thủ (đã tính bệnh): dựng bên đối thủ trong BattleSimulation.</summary>
         public FighterStats Stats;
@@ -72,43 +87,52 @@ namespace PawFit.Online
         event Action OpponentLeft;
     }
 
-    /// <summary>Số liệu của mạng giả lập: người chơi giả vào hàng chờ cách nhau 2–9 giây, Elo ±250, lực chiến ±30% quanh mình.</summary>
+    /// <summary>
+    /// Số liệu của mạng giả lập: người chơi ảo vào hàng chờ cách nhau 1,5–6 giây, Elo ±180, lực chiến ±20% quanh mình
+    /// => thường tìm được trận sau 5–20 giây như có nhiều người đang chơi (giải quyết chuyện ít người tìm trận PvP).
+    /// </summary>
     public sealed class LocalNetworkConfig
     {
-        public int MaxGhosts = 15;
-        public double GhostEverySecondsMin = 2.0;
-        public double GhostEverySecondsMax = 9.0;
-        public int GhostEloSpread = 250;
-        public float GhostPowerSpread = 0.30f;
+        public int MaxGhosts = 30;
+        public double GhostEverySecondsMin = 1.5;
+        public double GhostEverySecondsMax = 6.0;
+        public int GhostEloSpread = 180;
+        public float GhostPowerSpread = 0.20f;
+
+        /// <summary>Không gặp lại người chơi ảo trong bấy nhiêu trận gần nhất.</summary>
+        public int AvoidRecentOpponents = 12;
     }
 
     /// <summary>
-    /// Mạng giả lập (C# thuần, chưa cần Photon): "người chơi giả" sinh theo seed quanh Elo + lực chiến của mình lần lượt vào
-    /// hàng chờ, ghép bằng <see cref="Matchmaker"/> thật (đúng luật ±100 / ±10%, 30 giây nới, 60 giây gợi ý Bot).
-    /// Ghép trúng người giả thì báo MatchFound với IsGhost = true: màn đấu tự điều khiển đối thủ bằng BattleBot.
+    /// Mạng giả lập (C# thuần, chưa cần Photon): người chơi ảo (<see cref="BotPlayers"/>) sinh quanh Elo + lực chiến của mình
+    /// lần lượt vào hàng chờ, ghép bằng <see cref="Matchmaker"/> thật (đúng luật ±100 / ±10%, 30 giây nới, 60 giây gợi ý Bot).
+    /// Ghép trúng người chơi ảo thì báo MatchFound với IsGhost = true: màn đấu điều khiển đối thủ bằng BattleBot theo tính cách
+    /// của người đó. Sau này có Photon: tìm người thật trước, quá lâu mới thả người chơi ảo vào.
     /// App gọi <see cref="Update"/> mỗi frame (thời gian lấy từ ITimeProvider).
     /// </summary>
     public sealed class LocalNetworkManager : INetworkManager
     {
-        private static readonly string[] GhostNames = { "Mun", "Bông", "Su Su", "Tôm", "Bơ", "Cốm", "Mochi", "Kẹo", "Mít", "Nấm", "Gạo", "Sữa" };
-
         private readonly ITimeProvider _time;
         private readonly IRandom _rng;
+        private readonly GameConfig _game;
         private readonly MatchmakingConfig _cfg;
         private readonly LocalNetworkConfig _net;
         private readonly Matchmaker _matchmaker;
+        private readonly Dictionary<string, OpponentInfo> _ghostInfo = new Dictionary<string, OpponentInfo>();
+        private readonly Queue<int> _recent = new Queue<int>();
         private MatchTicket _mine;
         private DateTime _searchStartUtc, _nextGhostUtc;
         private int _ghosts;
         private string _playerId;
 
-        public LocalNetworkManager(ITimeProvider time, IRandom rng, MatchmakingConfig cfg, LocalNetworkConfig net = null)
+        public LocalNetworkManager(ITimeProvider time, IRandom rng, GameConfig cfg, LocalNetworkConfig net = null)
         {
             _time = time ?? throw new ArgumentNullException(nameof(time));
             _rng = rng ?? throw new ArgumentNullException(nameof(rng));
-            _cfg = cfg ?? throw new ArgumentNullException(nameof(cfg));
+            _game = cfg ?? throw new ArgumentNullException(nameof(cfg));
+            _cfg = cfg.Matchmaking;
             _net = net ?? new LocalNetworkConfig();
-            _matchmaker = new Matchmaker(cfg);
+            _matchmaker = new Matchmaker(_cfg);
         }
 
         public NetworkState State { get; private set; } = NetworkState.Offline;
@@ -183,7 +207,8 @@ namespace PawFit.Online
             foreach (MatchPair p in _matchmaker.Tick(now))
             {
                 MatchTicket other = p.A == _mine ? p.B : p.B == _mine ? p.A : null;
-                if (other == null) continue;   // 2 người giả ghép với nhau (giống người chơi khác tìm được trận)
+                if (other == null) continue;   // 2 người chơi ảo ghép với nhau (giống người khác tìm được trận)
+                OpponentInfo opponent = ToOpponent(other);
                 ClearQueue();
                 State = NetworkState.InMatch;
                 var info = new MatchInfo
@@ -191,17 +216,18 @@ namespace PawFit.Online
                     MatchId = "local-" + _rng.NextUInt().ToString("x8"),
                     Seed = ((ulong)_rng.NextUInt() << 32) | _rng.NextUInt(),
                     LocalSide = 0,
-                    Opponent = ToOpponent(other),
+                    Opponent = opponent,
                 };
                 MatchFound?.Invoke(info);
                 return;
             }
         }
 
-        /// <summary>Bỏ cả người giả còn chờ: lần tìm sau sinh người giả mới quanh Elo lúc đó.</summary>
+        /// <summary>Bỏ cả người chơi ảo còn chờ: lần tìm sau sinh người mới quanh Elo lúc đó.</summary>
         private void ClearQueue()
         {
             _matchmaker.Clear();
+            _ghostInfo.Clear();
             _mine = null;
         }
 
@@ -213,31 +239,39 @@ namespace PawFit.Online
             _ghosts++;
             float powerK = 1f + (float)((_rng.NextDouble() * 2.0 - 1.0) * _net.GhostPowerSpread);
             int elo = Math.Max(0, _mine.Elo + _rng.Range(-_net.GhostEloSpread, _net.GhostEloSpread + 1));
-            return new MatchTicket
+            OpponentInfo info = BotPlayers.Create(PickIdentity(), elo, Math.Max(1f, _mine.Power * powerK), _mine.Stage, _game);
+            var t = new MatchTicket
             {
-                PlayerId = "ghost-" + _ghosts,
-                Name = GhostNames[_rng.Next(GhostNames.Length)],
-                DnaCode = DnaCodec.Encode(DnaGenerator.Random(_rng)),
-                Elo = elo,
-                Power = Math.Max(1f, _mine.Power * powerK),
-                Stats = Scale(_mine.Stats, powerK),
-                LearnedMask = _rng.Next(16),
+                PlayerId = info.PlayerId + "#" + _ghosts,   // mỗi lần vào hàng là 1 vé riêng
+                Name = info.Name,
+                PetName = info.PetName,
+                DnaCode = info.DnaCode,
+                Elo = info.Elo,
+                Power = info.Power,
+                Stage = info.Stage,
+                Stats = info.Stats,
+                LearnedMask = info.LearnedMask,
                 QueuedUtc = queuedUtc,
             };
+            _ghostInfo[t.PlayerId] = info;
+            return t;
         }
 
-        private static FighterStats Scale(FighterStats s, float k) => new FighterStats(s.Hp * k, s.Atk * k, s.Def * k, s.Spd * k, s.Crit);
-
-        private static OpponentInfo ToOpponent(MatchTicket t) => new OpponentInfo
+        /// <summary>Chọn người chơi ảo chưa gặp gần đây.</summary>
+        private int PickIdentity()
         {
-            PlayerId = t.PlayerId,
-            Name = t.Name,
-            DnaCode = t.DnaCode,
-            Elo = t.Elo,
-            Power = t.Power,
-            Stats = t.Stats,
-            LearnedMask = t.LearnedMask,
-            IsGhost = true,
-        };
+            int id = _rng.Next(BotPlayers.IdentityCount);
+            for (int tries = 0; tries < 8 && _recent.Contains(id); tries++) id = _rng.Next(BotPlayers.IdentityCount);
+            return id;
+        }
+
+        private OpponentInfo ToOpponent(MatchTicket t)
+        {
+            if (!_ghostInfo.TryGetValue(t.PlayerId, out OpponentInfo info)) return null;
+            int id = int.Parse(info.PlayerId.Substring("bot-".Length));
+            _recent.Enqueue(id);
+            while (_recent.Count > Math.Max(0, _net.AvoidRecentOpponents)) _recent.Dequeue();
+            return info;
+        }
     }
 }

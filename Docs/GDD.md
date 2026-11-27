@@ -140,6 +140,20 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Mạng giả lập:
     - "Người chơi giả" vào hàng chờ cách nhau 2–9 giây, Elo ±250, lực chiến ±30% quanh mình.
     - Ghép trúng người giả thì máy tự điều khiển đối thủ bằng Bot.
+- **G10c · Người chơi ảo cho PvP (bạn chốt: "tạo nhiều bot như người chơi thật" để không thiếu người tìm trận):**
+  - 600 người chơi ảo cố định theo số hiệu. Mỗi người luôn có cùng biệt danh, cùng thú (DNA + tên), cùng lối đánh, 35% có đeo phụ kiện.
+  - Khi ghép trận:
+    - Elo của họ đặt quanh Elo của bạn (±180), lực chiến ±20%.
+    - Thú cùng giai đoạn tiến hóa với thú bạn. Dạng Adult hợp lối đánh: Hăng → Lửa / Bóng Tối, Thủ → Thép, Kỹ thuật → Nước, Cân bằng → Ánh Sáng.
+    - Chỉ số tính đúng công thức G8 rồi chỉnh cho khớp lực chiến.
+    - Số chiêu đã thuộc theo giai đoạn: Ultimate thuộc đủ 4.
+  - Cách đánh: `BotConfig.Persona(tay nghề, lối đánh)`.
+    - Tay nghề = (Elo − 850) / 900, ±0,08 tùy người. 0 ≈ hình nộm Dễ, 0,5 ≈ Thường, 1 ≈ Khó.
+    - Hăng: đánh dồn, ít đỡ. Thủ: đánh thưa, hay đỡ, sớm biết canh phản đòn. Kỹ thuật: hay ra chiêu riêng / Ultimate.
+  - Mật độ: cứ 1,5–6 giây có 1 người chơi ảo vào hàng chờ, không gặp lại 12 người gần nhất.
+    - Đo 30 lần tìm: ngắn nhất 1,8 giây, ở giữa 10,5 giây, lâu nhất 30 giây.
+  - Khi có máy chủ thật: tìm người thật trước, chờ lâu mới thả người chơi ảo vào. Elo / Coin tính như trận thật.
+  - Lưu ý phát hành: nhiều game có làm vậy. Nên ghi trong điều khoản / mô tả app rằng khi ít người, trận có thể gặp đối thủ do máy điều khiển.
 - **G11 · Kinh tế:**
   - Thức ăn cơ bản miễn phí, khởi đầu 200 Coin, thắng PvP +30, quảng cáo +20 Coin / +20 năng lượng.
   - Không có HUD: shop = quầy hàng trên map; đấu Bot = 3 hình nộm; PvP = cổng đấu trường; cài đặt = hòm thư ở cổng.

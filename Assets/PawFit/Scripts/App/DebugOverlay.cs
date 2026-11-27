@@ -215,6 +215,7 @@ namespace PawFit.App
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Mở quầy hàng", _button)) SceneFlow.OpenShop();
+            if (GUILayout.Button("Đấu trường", _button)) SceneFlow.OpenArena();
             if (eco.Ads is MockAdService mock && GUILayout.Button(mock.NoFill ? "QC: có lại" : "QC: hết hàng", _button))
                 mock.NoFill = !mock.NoFill;
             GUILayout.EndHorizontal();

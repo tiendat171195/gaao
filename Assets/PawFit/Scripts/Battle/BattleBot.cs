@@ -6,6 +6,9 @@ namespace PawFit.Battle
     /// <summary>3 mức Bot = 3 hình nộm ở sân tập (GDD G11).</summary>
     public enum BotLevel { Easy = 0, Normal = 1, Hard = 2 }
 
+    /// <summary>Lối đánh của người chơi ảo (PvP giả lập): Cân bằng / Hăng (đánh dồn, ít đỡ) / Thủ (hay đỡ, canh phản đòn) / Kỹ thuật (hay ra chiêu riêng).</summary>
+    public enum BotStyle { Balanced = 0, Aggressive = 1, Defensive = 2, Technical = 3 }
+
     /// <summary>Số liệu Bot theo mức (chỉ số mảng = BotLevel).</summary>
     public sealed class BotConfig
     {
@@ -33,6 +36,58 @@ namespace PawFit.Battle
             new[] { 0.55f, 0.3f, 0.15f, 0f },
             new[] { 0.45f, 0.3f, 0.17f, 0.08f },
         };
+
+        /// <summary>Có canh đỡ sát đòn để phản đòn không (mặc định chỉ mức Khó).</summary>
+        public bool[] AimParry = { false, false, true };
+
+        /// <summary>
+        /// Cấu hình cho 1 người chơi ảo (PvP giả lập): tay nghề 0..1 nội suy giữa Dễ (0) / Thường (0.5) / Khó (1),
+        /// rồi chỉnh theo lối đánh. Mọi ô theo mức đều cùng giá trị nên dùng với BotLevel nào cũng được.
+        /// </summary>
+        public static BotConfig Persona(float skill, BotStyle style)
+        {
+            var d = new BotConfig();
+            float k = skill < 0f ? 0f : (skill > 1f ? 1f : skill);
+            float P(float[] a) => k < 0.5f ? a[0] + (a[1] - a[0]) * (k * 2f) : a[1] + (a[2] - a[1]) * ((k - 0.5f) * 2f);
+            float react = P(d.ReactionSeconds), guard = P(d.GuardChance), gapMin = P(d.AttackGapMin), gapMax = P(d.AttackGapMax);
+            float qMin = P(d.QualityMin), qMax = P(d.QualityMax), wrong = P(d.WrongChance);
+            var w = new float[4];
+            for (int i = 0; i < 4; i++) w[i] = P(new[] { d.MoveWeights[0][i], d.MoveWeights[1][i], d.MoveWeights[2][i] });
+            bool aim = k > 0.6f;
+            switch (style)
+            {
+                case BotStyle.Aggressive:   // đánh dồn, ít đỡ, hay đánh mạnh
+                    gapMin *= 0.75f;
+                    gapMax *= 0.75f;
+                    guard *= 0.6f;
+                    w[1] += 0.15f;
+                    break;
+                case BotStyle.Defensive:    // đánh thưa, hay đỡ, sớm biết canh phản đòn
+                    gapMin *= 1.3f;
+                    gapMax *= 1.3f;
+                    guard = Math.Min(0.9f, guard * 1.35f);
+                    aim = k > 0.35f;
+                    break;
+                case BotStyle.Technical:    // hay ra chiêu riêng / Ultimate, vuốt đẹp hơn
+                    w[2] += 0.12f;
+                    if (k > 0.5f) w[3] += 0.06f;
+                    qMin += 0.05f;
+                    qMax += 0.05f;
+                    break;
+            }
+            return new BotConfig
+            {
+                ReactionSeconds = new[] { react, react, react },
+                GuardChance = new[] { guard, guard, guard },
+                AttackGapMin = new[] { gapMin, gapMin, gapMin },
+                AttackGapMax = new[] { gapMax, gapMax, gapMax },
+                QualityMin = new[] { qMin, qMin, qMin },
+                QualityMax = new[] { qMax, qMax, qMax },
+                WrongChance = new[] { wrong, wrong, wrong },
+                MoveWeights = new[] { w, w, w },
+                AimParry = new[] { aim, aim, aim },
+            };
+        }
     }
 
     /// <summary>
@@ -74,8 +129,8 @@ namespace PawFit.Battle
                 if (_rng.NextDouble() < _cfg.GuardChance[_lv])
                 {
                     float react = _cfg.ReactionSeconds[_lv];
-                    // mức Khó canh để đỡ sát đòn (trong cửa sổ phản đòn); mức khác đỡ ngay khi kịp phản ứng
-                    float aim = _lv == (int)BotLevel.Hard ? foe.WindupLeft - sim.Config.ParryWindowSeconds * 0.5f : react;
+                    // Bot biết canh (mức Khó / người chơi ảo giỏi) thì đỡ sát đòn để phản đòn; còn lại đỡ ngay khi kịp phản ứng
+                    float aim = _cfg.AimParry[_lv] ? foe.WindupLeft - sim.Config.ParryWindowSeconds * 0.5f : react;
                     _guardIn = Math.Max(react, aim);
                     if (_guardIn >= foe.WindupLeft) _guardIn = -1f;   // không kịp đỡ
                 }

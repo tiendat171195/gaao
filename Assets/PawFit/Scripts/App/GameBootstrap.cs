@@ -20,6 +20,7 @@ namespace PawFit.App
         public static ServiceLocator Services { get; private set; }
 
         private PetService _pets;
+        private LocalNetworkManager _localNet;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private MockAdService _mockAds;   // chỉ bản Dev / Editor có quảng cáo giả lập
 #endif
@@ -93,6 +94,10 @@ namespace PawFit.App
             Services.Register(new ShopService(_pets, health, economy, bus, cfg, log));
             Services.Register(new CosmeticsService(_pets, economy, bus, cfg, log));   // phụ kiện + trang trí (Phase 5.2)
             Services.Register(new RankService(_pets, time, bus, cfg, economy, log));    // rank Elo + mùa giải (Phase 4.3, chạy offline)
+            // PvP (Phase 4.2): chưa có Photon => mạng giả lập ghép với người chơi ảo (đông như có nhiều người đang chơi).
+            // Có Photon: thay bằng lớp INetworkManager thật, người chơi ảo chỉ thả vào khi chờ lâu.
+            _localNet = new LocalNetworkManager(time, new SeededRandom(rng.NextUInt()), cfg);
+            Services.Register<INetworkManager>(_localNet);
             gameObject.AddComponent<UiSounds>().Init(bus);   // tiếng "ting" khi nhận / tiêu Coin
 
             // Cài đặt ở hòm thư: lưu file riêng của máy này. Tắt tiếng = tắt mọi âm thanh của game 1 chỗ.
@@ -130,6 +135,7 @@ namespace PawFit.App
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             _mockAds?.Update(Time.unscaledDeltaTime);   // quảng cáo giả lập chạy theo giờ thật
 #endif
+            _localNet?.Update();   // người chơi ảo vào hàng chờ, ghép trận
             _tickTimer += Time.unscaledDeltaTime;
             if (_tickTimer < 1f) return;
             _tickTimer = 0f;
