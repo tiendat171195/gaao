@@ -43,7 +43,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 5.1 | Kinh tế + shop vườn + quảng cáo mock (tối đa 5 lần/ngày) | ✅ |
 | 5.2 | Trang trí + phụ kiện + polish | ✅ |
 | 5.3 | Build Android / iOS | 🔄 Có menu build Android (APK + AAB cho Google Play, kiểm khóa ký, số build tự tăng) + iOS; chờ bạn build thử (`Docs/BUILD.md`) |
-| 6 | Model thật (Gen 2) + shader lông + LOD mobile | ⏳ (sau gameplay) |
+| 6 | Model thật (Gen 2) + vườn đẹp + shader lông + LOD mobile | ⏳ (sau gameplay). Yêu cầu kỹ thuật cho người làm model: `Docs/MODEL_SPEC.md` |
 
 ## Kiến trúc thư mục
 

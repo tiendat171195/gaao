@@ -299,6 +299,18 @@
     - Không tự bật debug symbols: `EditorUserBuildSettings.androidCreateSymbols` đã cũ ở Unity 6.3. Cần thì bật tay ở Build Profiles.
   - Tên gói / Bundle ID đổi thành **`com.tiedee.pawfit`** (bạn chốt, trước lần cài đầu tiên).
 
+- **Yêu cầu kỹ thuật model Gen 2 + vườn** (`Docs/MODEL_SPEC.md`, chuẩn bị Phase 6; bạn sẽ làm model bằng tool khác):
+  - Quy ước FBX (mét, Y lên, mặt +Z, pivot giữa 4 chân, cách xuất từ Blender).
+  - Kích thước đo từ Gen 1: Baby ~0,95 m, Adult 1,0–1,3 m theo dạng.
+  - 2 cách dựng: mỗi giai đoạn 1 model chung bộ xương (khuyên dùng), hoặc 1 thân + blendshape như Gen 1.
+  - Thú:
+    - Bộ xương đúng tên + clip hoạt cảnh nên có.
+    - Bộ phận theo DNA: tai / sừng / đuôi / mắt.
+    - Tô màu theo DNA bằng albedo xám + mask RGBA (bụng / chân sẫm / sọc / đốm, giống 4 kênh màu đỉnh của Gen 1).
+    - Biểu cảm, điểm gắn `Anchor_*`, ngân sách điện thoại (LOD0 ≤ 15k, LOD1 ≤ 6k tam giác), phụ kiện.
+  - Vườn: đúng tọa độ và tên từng khu theo `GardenLayout`, chỗ đặt đồ trang trí, ngân sách ≤ 120k tam giác / 80 draw call, màn đấu.
+  - Đợt giao đầu nên là 1 model Adult để ghép thử trước.
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
