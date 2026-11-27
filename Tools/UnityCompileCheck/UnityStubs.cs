@@ -757,6 +757,12 @@ namespace UnityEditor
             public static AndroidArchitecture targetArchitectures { get; set; }
             public static int bundleVersionCode { get; set; }
         }
+
+        public static class iOS
+        {
+            public static string buildNumber { get; set; }
+            public static bool appleEnableAutomaticSigning { get; set; }
+        }
     }
 
     public sealed class SerializedProperty { public int intValue { get; set; } }

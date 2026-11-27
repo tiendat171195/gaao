@@ -1,4 +1,4 @@
-# Build Android trên Mac (Phase 5.3)
+# Build Android (và iOS) trên Mac (Phase 5.3)
 
 Làm lần lượt từ trên xuống. Lần đầu mất khoảng 1–2 giờ, chủ yếu là chờ tải Unity và chờ build. Những lần sau chỉ còn bước 9 (lấy code mới) và bước 6 (build).
 
@@ -165,3 +165,40 @@ Nên commit + push các file Unity tự sinh sau lần mở đầu (các file `.
 - Lỗi trong Unity: cửa sổ **Console** ▸ bấm dòng đỏ ▸ copy cả đoạn chữ bên dưới (stack trace).
 - Lỗi trên điện thoại: chụp màn hình + log `adb logcat -s Unity` (xem bảng ở bước 10).
 - Ghi kèm: tên máy Android, phiên bản Android, bản Unity (`6000.3.x`), Mac chip M hay Intel.
+
+## 12. Build iOS (làm sau khi Android đã chạy)
+
+**Cần thêm (làm 1 lần):**
+
+- **Xcode:** cài từ App Store, miễn phí, khoảng 10 GB.
+  - Mở Xcode 1 lần cho nó cài nốt thành phần.
+  - **Xcode ▸ Settings ▸ Accounts ▸ +** ▸ đăng nhập Apple ID. Apple ID thường cũng được.
+- **Module iOS Build Support** trong Unity Hub: Installs ▸ ⚙ ở bản 6.3 ▸ Add modules.
+- **iPhone + cáp:**
+  - Cắm iPhone vào Mac, bấm **Tin cậy** trên iPhone.
+  - iOS 16 trở lên: bật **Cài đặt ▸ Quyền riêng tư & Bảo mật ▸ Chế độ nhà phát triển**, rồi khởi động lại iPhone. Mục này chỉ hiện sau khi đã cắm vào Mac có Xcode.
+
+**Các bước:**
+
+1. Unity: menu **PawFit ▸ Build iOS ▸ Dev (project Xcode)**. Lần đầu chuyển nền tảng + build mất khoảng 5–20 phút. Xong thì Finder mở thư mục `Builds/iOS/PawFit-dev`.
+2. Nháy đúp file `Unity-iPhone.xcodeproj` trong thư mục đó để mở bằng Xcode.
+3. Cột trái chọn **Unity-iPhone** (trên cùng) ▸ target **Unity-iPhone** ▸ tab **Signing & Capabilities**:
+   - Tick **Automatically manage signing**.
+   - **Team**: chọn Apple ID của bạn (*Personal Team*).
+4. Ô thiết bị trên cùng chọn iPhone của bạn ▸ bấm **▶ (Run)**.
+5. Lần đầu iPhone báo *Untrusted Developer*:
+   - **Cài đặt ▸ Cài đặt chung ▸ VPN & Quản lý thiết bị** ▸ chọn Apple ID của bạn ▸ **Tin cậy**.
+   - Mở lại app.
+
+**Lưu ý Apple ID miễn phí:**
+
+- App tự hết hạn sau 7 ngày. Bấm Run lại là cài lại được.
+- Tối đa 3 app cùng lúc.
+- Muốn TestFlight / App Store thì cần Apple Developer Program (99 USD/năm).
+
+| Lỗi trong Xcode | Cách xử lý |
+|---|---|
+| *Signing for "Unity-iPhone" requires a development team* | Làm bước 3 (chọn Team) |
+| *Failed to register bundle identifier* / *com.pawfit.game is not available* | Tên gói đã có người dùng. Tạm đổi **Bundle Identifier** ở tab Signing, ví dụ `com.<tênbạn>.pawfit`. Muốn đổi hẳn thì báo tôi sửa `PackageName` trong `PawFitBuild.cs` (đổi trong Xcode sẽ mất ở lần build sau) |
+| *Developer Mode disabled* | Bật Chế độ nhà phát triển trên iPhone (phần "Cần thêm" ở trên) |
+| *Could not launch* / *device is locked* | Mở khóa iPhone rồi bấm Run lại |

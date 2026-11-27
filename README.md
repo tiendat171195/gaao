@@ -18,7 +18,7 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 5. Game view chọn độ phân giải **1080x1920 (dọc)**, mở scene `Main`, bấm **Play**.
 6. Commit luôn các file `.meta` Unity vừa sinh để giữ GUID ổn định.
 
-**Build Android:** menu **PawFit ▸ Build Android ▸ Dev (APK)** (có bảng DEV) / **Dev + chạy trên điện thoại (USB)** / **Release (APK)**. File ra ở `Builds/Android/`. Hướng dẫn từng bước (cài module Android, bật gỡ lỗi USB, cài APK, lỗi hay gặp): `Docs/BUILD.md`.
+**Build Android:** menu **PawFit ▸ Build Android ▸ Dev (APK)** (có bảng DEV) / **Dev + chạy trên điện thoại (USB)** / **Release (APK)**. File ra ở `Builds/Android/`. **Build iOS:** **PawFit ▸ Build iOS ▸ Dev / Release (project Xcode)**, ra `Builds/iOS/`, mở bằng Xcode để ký + cài vào iPhone. Hướng dẫn từng bước (cài module, bật gỡ lỗi USB / Developer Mode, cài APK, ký bằng Apple ID, lỗi hay gặp): `Docs/BUILD.md`.
 
 **Nếu thú trông không đúng:**
 - Thú là các khối vuông tròn (thú tạm): chưa nạp được model Gen 1. Xem Console có dòng `[PawFit] Không nạp được model Gen 1`. Thử chuột phải thư mục `Assets/PawFit/Resources/Pets/Gen1` ▸ **Reimport**.

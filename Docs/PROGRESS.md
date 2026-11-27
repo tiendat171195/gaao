@@ -170,6 +170,10 @@
     - `NavMeshBuildMarkup.applyToChildren` mặc định = true, nên đánh dấu vật cản áp dụng cho cả object con.
     - **Sửa lỗi:** Setup đặt Active Input Handling = Both, nhưng Unity 6.3 coi giá trị này là "invalid" khi không cài package Input System (và build coi như bật Input System mới). Giờ Setup đặt Input Manager (Old) = 0, giá trị hợp lệ duy nhất cho project này.
     - Stub `Scene` chuyển về đúng `UnityEngine.SceneManagement` (code không gõ tên kiểu này nên trước đó cũng không lỗi).
+  - **Build iOS:** menu **PawFit ▸ Build iOS ▸ Dev / Release (project Xcode)**.
+    - Tên gói `com.pawfit.game`, build number 53, ký tự động.
+    - Ra `Builds/iOS/`. Hướng dẫn Xcode + Apple ID miễn phí: `Docs/BUILD.md` mục 12.
+    - API `PlayerSettings.iOS.buildNumber / appleEnableAutomaticSigning` đã soát với mã nguồn Unity.
   - **Hòm thư cài đặt** (G13):
     - `SettingsService` (Core, C# thuần, có test) lưu file riêng `settings`. Âm thanh bật / tắt = `AudioListener.volume`.
     - `MailboxView` cạnh cổng đấu trường (`PointerTarget.Mailbox`, nảy khi chạm).
