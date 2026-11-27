@@ -47,6 +47,18 @@ crashlytics-build.properties
 /Tools/LogicTests/bin/
 /Tools/LogicTests/obj/
 /Tools/LogicTests/TestResults/
+!/Tools/NetStandardCheck/NetStandardCheck.csproj
+/Tools/NetStandardCheck/bin/
+/Tools/NetStandardCheck/obj/
+
+# ---- Máy chủ riêng (Server/, .NET 8) ----
+!/Server/PawFit.Server/PawFit.Server.csproj
+!/Server/PawFit.Server.Tests/PawFit.Server.Tests.csproj
+/Server/*/bin/
+/Server/*/obj/
+/Server/*/TestResults/
+/Server/PawFit.Server/data/
+/Server/.env
 
 # ---- Python / Blender ----
 __pycache__/

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Biên dịch code logic C# thuần theo .NET Standard 2.1 = bộ thư viện Unity 6 dùng (API Compatibility Level mặc định).
+    Bắt lỗi lỡ dùng API chỉ có ở .NET 8 (test chạy net8 nên không thấy):
+        dotnet build Tools/NetStandardCheck
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/PawFit/Scripts/Core/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Core/Unity/**" />
+    <Compile Include="../../Assets/PawFit/Scripts/Pet/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Pet/View/**" />
+    <Compile Include="../../Assets/PawFit/Scripts/Garden/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Garden/View/**" />
+    <Compile Include="../../Assets/PawFit/Scripts/Battle/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Battle/View/**" />
+    <Compile Include="../../Assets/PawFit/Scripts/Economy/**/*.cs" />
+    <Compile Include="../../Assets/PawFit/Scripts/Online/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

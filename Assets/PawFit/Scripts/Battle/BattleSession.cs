@@ -18,7 +18,10 @@ namespace PawFit.Battle
         public FighterStats Stats;
         public bool[] Learned;
 
-        /// <summary>Cấu hình điều khiển của người chơi ảo (BotConfig.Persona). null = người thật ở máy khác (Phase 4.2 Photon).</summary>
+        /// <summary>
+        /// Cấu hình điều khiển của người chơi ảo chạy trên máy này (BotConfig.Persona, mạng giả lập).
+        /// null = trận qua máy chủ: đối thủ (người thật, hoặc người chơi ảo chạy trên máy chủ) đến qua <see cref="IMatchFeed"/>.
+        /// </summary>
         public BotConfig Bot;
     }
 
@@ -54,6 +57,13 @@ namespace PawFit.Battle
         public float TrainingSatietyCost = 4f;
         public float FightEnergyCost = 10f;
         public float FightSatietyCost = 6f;
+
+        /// <summary>
+        /// PvP qua máy chủ: chạy chậm hơn máy chủ bấy nhiêu bước làm đệm (mạng chập chờn không bị giật);
+        /// tụt lại quá bấy nhiêu bước thì chạy dồn cho kịp.
+        /// </summary>
+        public int NetBufferTicks = 2;
+        public int NetCatchUpTicks = 6;
     }
 
     public enum SessionNoteKind { Practiced, Learned, AllLearned, Retry, GuardHint, Finished }
@@ -97,10 +107,14 @@ namespace PawFit.Battle
         private readonly BattleSessionConfig _sc;
         private readonly BattleBot _bot;
         private readonly ICoinWallet _wallet;
+        private readonly IMatchFeed _feed;
         private float _accum;
         private bool _quit;
         private bool _finished;
         private bool _hintedGuard;
+        private bool _readySent;
+        private int _tick;
+        private BattleOutcome? _forced;
 
         /// <summary>Có vào sân tập được không (cần thú còn sống, không ốm — GDD G3).</summary>
         public static bool CanStart(PetService pets, HealthService health, out string reason)
@@ -140,8 +154,9 @@ namespace PawFit.Battle
         }
 
         /// <summary>
-        /// PvP (Phase 4.2): đấu 90 giây với đối thủ cho trước, cùng luật như đấu Bot (thú mình dùng chỉ số thật, đã tính bệnh).
-        /// Elo + Coin do RankService tính sau trận (BattleSession không biết rank). Thắng không có điểm thưởng thêm như đấu Bot.
+        /// PvP với người chơi ảo chạy trên máy (mạng giả lập): đấu 90 giây với đối thủ cho trước, cùng luật như đấu Bot
+        /// (thú mình dùng chỉ số thật, đã tính bệnh). Elo + Coin do RankService tính sau trận (BattleSession không biết rank).
+        /// Thắng không có điểm thưởng thêm như đấu Bot.
         /// </summary>
         public BattleSession(PetService pets, EvolutionService evo, RankedOpponent opponent, ulong seed,
                              BattleConfig battleCfg = null, BattleSessionConfig sessionCfg = null)
@@ -160,8 +175,43 @@ namespace PawFit.Battle
             Result = new BattleResult();
         }
 
+        /// <summary>
+        /// PvP qua máy chủ riêng (Phase 4.2): máy chủ chạy trận và quyết định kết quả; máy này chạy lại đúng các bước +
+        /// nét vuốt máy chủ đã chốt (<see cref="IMatchFeed"/>), mình luôn là bên 0 trên màn hình.
+        /// Nét vuốt của mình gửi lên máy chủ chứ không áp thẳng (chờ máy chủ chốt bước rồi mới áp, 2 máy như nhau).
+        /// Chỉ số 2 bên lấy đúng bản máy chủ gửi về. `opponent` chỉ dùng để hiện tên.
+        /// </summary>
+        public BattleSession(PetService pets, EvolutionService evo, RankedOpponent opponent, IMatchFeed feed,
+                             BattleConfig battleCfg = null, BattleSessionConfig sessionCfg = null)
+        {
+            _pets = pets ?? throw new ArgumentNullException(nameof(pets));
+            _evo = evo ?? throw new ArgumentNullException(nameof(evo));
+            Opponent = opponent ?? throw new ArgumentNullException(nameof(opponent));
+            _feed = feed ?? throw new ArgumentNullException(nameof(feed));
+            _sc = sessionCfg ?? new BattleSessionConfig();
+            Mode = BattleMode.Ranked;
+            Level = BotLevel.Normal;
+            int me = feed.ServerSide == 1 ? 1 : 0;
+            BattleConfig bc = battleCfg ?? new BattleConfig();
+            if (feed.DurationSeconds > 0f) bc.DurationSeconds = feed.DurationSeconds;
+            Sim = new BattleSimulation(feed.StatsOf(me), feed.StatsOf(1 - me), bc, feed.Seed, feed.LearnedOf(me), feed.LearnedOf(1 - me), me);
+            Result = new BattleResult();
+        }
+
         /// <summary>Đối thủ PvP (null nếu không phải trận Ranked).</summary>
         public RankedOpponent Opponent { get; }
+
+        /// <summary>Trận qua máy chủ (có <see cref="IMatchFeed"/>).</summary>
+        public bool Networked => _feed != null;
+
+        /// <summary>Trận qua máy chủ: đang chờ máy chủ bắt đầu (đối thủ chưa vào màn đấu).</summary>
+        public bool WaitingForServer => _feed != null && !_feed.Started && !_finished;
+
+        /// <summary>Trận qua máy chủ: số bước đã chạy trên máy này.</summary>
+        public int TicksPlayed => _tick;
+
+        /// <summary>Số lần phải sửa máu theo máy chủ (0 = 2 máy + máy chủ khớp hoàn toàn).</summary>
+        public int HpFixes { get; private set; }
 
         public BattleMode Mode { get; }
         public BotLevel Level { get; }
@@ -198,6 +248,12 @@ namespace PawFit.Battle
         public bool PlayerSwipe(SwipeResult swipe, List<BattleEvent> events = null, List<SessionNote> notes = null)
         {
             if (_finished) return false;
+            if (_feed != null)   // qua máy chủ: gửi lên, máy chủ chốt bước rồi cả 2 máy cùng áp
+            {
+                if (!_feed.Started) return false;
+                _feed.SendSwipe(swipe);
+                return true;
+            }
             if (Mode == BattleMode.Training && !swipe.IsValid)   // huấn luyện: vuốt sai không bị hở, cho vuốt lại
             {
                 notes?.Add(new SessionNote { Kind = SessionNoteKind.Retry, Skill = Lesson, Text = swipe.Reason });
@@ -224,6 +280,11 @@ namespace PawFit.Battle
         public void Advance(float realSeconds, List<BattleEvent> events = null, List<SessionNote> notes = null)
         {
             if (_finished) return;
+            if (_feed != null)
+            {
+                AdvanceFeed(realSeconds, events, notes);
+                return;
+            }
             _accum += Math.Max(0f, realSeconds) * TimeScale;
             float tick = Sim.Config.TickSeconds;
             var local = new List<BattleEvent>();
@@ -247,12 +308,87 @@ namespace PawFit.Battle
             if (Sim.IsOver) Finish(notes);
         }
 
-        /// <summary>Rời sân (Huấn luyện: lúc nào cũng được; Đấu: bỏ cuộc = thua).</summary>
+        /// <summary>Rời sân (Huấn luyện: lúc nào cũng được; Đấu: bỏ cuộc = thua; qua máy chủ: báo máy chủ là bỏ cuộc).</summary>
         public void Quit(List<SessionNote> notes = null)
         {
             if (_finished) return;
-            _quit = true;
+            if (_feed != null && _feed.Ended) _forced = FeedSides.Local(_feed.EndOutcome, _feed.ServerSide);   // máy chủ đã chốt rồi
+            else
+            {
+                _feed?.Leave();
+                _quit = true;
+            }
             Finish(notes);
+        }
+
+        /// <summary>Qua máy chủ: chạy các bước máy chủ đã chốt theo đồng hồ máy (giữ vài bước đệm), hết trận theo máy chủ.</summary>
+        private void AdvanceFeed(float realSeconds, List<BattleEvent> events, List<SessionNote> notes)
+        {
+            if (!_readySent)
+            {
+                _readySent = true;
+                _feed.Ready();
+            }
+            var local = new List<BattleEvent>();
+            if (_feed.Started)
+            {
+                float dt = Sim.Config.TickSeconds;
+                _accum += Math.Max(0f, realSeconds);
+                int avail = Math.Max(0, _feed.ConfirmedTicks - _tick);
+                int ahead = _feed.Ended ? avail : Math.Max(0, avail - Math.Max(0, _sc.NetBufferTicks));
+                int steps = (int)(_accum / dt + 1e-3f);   // + chút xíu: 2 × (1/30) cộng float có thể ra 1,99999
+                if (ahead > steps + Math.Max(1, _sc.NetCatchUpTicks)) steps = ahead;   // tụt lại quá xa: chạy dồn cho kịp
+                steps = Math.Min(steps, ahead);
+                _accum = Math.Max(0f, Math.Min(_accum - steps * dt, dt * 2f));   // đang chờ máy chủ thì không dồn thời gian
+                for (int i = 0; i < steps && !Sim.IsOver; i++) StepFeed(local);
+            }
+            foreach (BattleEvent e in local)
+            {
+                Reward(e);
+                events?.Add(e);
+            }
+            if (_feed.Ended)
+            {
+                if (_tick >= _feed.EndTick || Sim.IsOver)
+                {
+                    _forced = FeedSides.Local(_feed.EndOutcome, _feed.ServerSide);
+                    Finish(notes);
+                }
+            }
+            else if (_feed.Lost)   // mất kết nối giữa trận: máy chủ tính bỏ cuộc
+            {
+                _quit = true;
+                Finish(notes);
+            }
+        }
+
+        /// <summary>1 bước: áp nét vuốt máy chủ đã chốt ở bước này (đúng thứ tự máy chủ), chạy bước, so máu với máy chủ.</summary>
+        private void StepFeed(List<BattleEvent> local)
+        {
+            int me = _feed.ServerSide;
+            while (_feed.TryPeekInput(out TickInput input) && input.Tick <= _tick)
+            {
+                _feed.PopInput();
+                Sim.Submit(FeedSides.Local(input.Side, me), input.Swipe, local);
+            }
+            Sim.Tick(local);
+            _tick++;
+            while (_feed.TryPeekHp(out HpCheck c) && c.Ticks <= _tick)
+            {
+                _feed.PopHp();
+                if (c.Ticks != _tick || Sim.IsOver) continue;
+                FixHp(FeedSides.Local(0, me), c.Hp0);
+                FixHp(FeedSides.Local(1, me), c.Hp1);
+            }
+        }
+
+        /// <summary>Máu lệch so với máy chủ (lẽ ra không xảy ra vì cùng seed + cùng chỉ số tới từng bit) thì theo máy chủ.</summary>
+        private void FixHp(int side, float hp)
+        {
+            Fighter f = Sim.Fighters[side];
+            if (float.IsNaN(hp) || f.Hp == hp) return;
+            f.Hp = hp;
+            HpFixes++;
         }
 
         private void Reward(BattleEvent e)
@@ -280,7 +416,7 @@ namespace PawFit.Battle
         {
             if (_finished) return;
             _finished = true;
-            Result.Outcome = _quit && Mode != BattleMode.Training ? BattleOutcome.Win1 : Sim.Outcome;   // bỏ cuộc = thua
+            Result.Outcome = _forced ?? (_quit && Mode != BattleMode.Training ? BattleOutcome.Win1 : Sim.Outcome);   // bỏ cuộc = thua
             Result.PlayerWon = Result.Outcome == BattleOutcome.Win0;
             if (Mode == BattleMode.BotFight && Result.PlayerWon)
             {

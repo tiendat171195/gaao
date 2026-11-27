@@ -25,6 +25,10 @@ namespace PawFit.Online
         public FighterStats Stats;
         public int LearnedMask;
 
+        /// <summary>Thú mình trông thế nào (đối thủ dựng hình): dạng (Teen = dạng đang nghiêng) + phụ kiện đang đeo.</summary>
+        public AdultForm Form;
+        public AccessoryKind Accessory;
+
         public DateTime QueuedUtc;
     }
 
@@ -67,8 +71,7 @@ namespace PawFit.Online
     }
 
     /// <summary>
-    /// Hàng chờ ghép trận chạy trên 1 máy (C# thuần): dùng cho bản giả lập mạng + test.
-    /// Máy chủ thật (Photon, Phase 4.2) dùng đúng <see cref="MatchmakingRules"/> để lọc phòng.
+    /// Hàng chờ ghép trận (C# thuần): dùng ở mạng giả lập trên máy, và ở máy chủ riêng (cùng 1 code).
     /// Người chờ lâu nhất được ghép trước, với đối thủ gần Elo nhất (hòa thì gần lực chiến nhất).
     /// </summary>
     public sealed class Matchmaker

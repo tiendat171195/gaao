@@ -116,12 +116,19 @@ namespace PawFit.Battle
     {
         private readonly BattleConfig _cfg;
         private readonly IRandom _rng;
+        private readonly int _tieFirst;
 
+        /// <param name="tieFirst">
+        /// 2 bên SPD bằng nhau mà đòn trúng cùng 1 bước thì bên này tính trước. Mặc định bên 0.
+        /// PvP qua máy chủ: máy nào cũng đứng bên 0 trên màn hình của mình, nên máy của bên 1 (theo máy chủ) đặt 1
+        /// để thứ tự tính giống hệt máy chủ.
+        /// </param>
         public BattleSimulation(FighterStats a, FighterStats b, BattleConfig cfg = null, ulong seed = 1,
-                                bool[] learnedA = null, bool[] learnedB = null)
+                                bool[] learnedA = null, bool[] learnedB = null, int tieFirst = 0)
         {
             _cfg = cfg ?? new BattleConfig();
             _rng = new SeededRandom(seed, 91UL);
+            _tieFirst = tieFirst == 1 ? 1 : 0;
             Fighters = new[] { NewFighter(a, learnedA), NewFighter(b, learnedB) };
             // SPD quyết định ai đánh trước: bên chậm hơn chờ 1 chút mới được ra đòn đầu
             if (a.Spd > b.Spd) Fighters[1].Cooldown = _cfg.FirstMoveDelaySeconds;
@@ -208,7 +215,8 @@ namespace PawFit.Battle
                 }
             }
             // đòn trúng cùng lúc: bên SPD cao hơn tính trước (có thể hạ gục trước khi đòn kia kịp trúng)
-            int first = Fighters[1].Stats.Spd > Fighters[0].Stats.Spd ? 1 : 0;
+            float s0 = Fighters[0].Stats.Spd, s1 = Fighters[1].Stats.Spd;
+            int first = s1 > s0 ? 1 : s0 > s1 ? 0 : _tieFirst;
             for (int k = 0; k < 2 && !IsOver; k++)
             {
                 int side = k == 0 ? first : 1 - first;

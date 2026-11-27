@@ -2,4 +2,6 @@
 <linker>
   <assembly fullname="PawFit.Core" preserve="all"/>
   <assembly fullname="PawFit.Pet" preserve="all"/>
+  <assembly fullname="PawFit.Battle" preserve="all"/>
+  <assembly fullname="PawFit.Online" preserve="all"/>
 </linker>
