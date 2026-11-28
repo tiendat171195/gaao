@@ -9,6 +9,8 @@ namespace PawFit.Battle
     /// 1 lần đi Săn quái (Thám hiểm, Phase 9.2, C# thuần): chạy HuntSimulation theo bước cố định, nhận lệnh từ View,
     /// hết trận thì: cộng điểm tập (hạ quái = Sức mạnh, đỡ đẹp / né = Tốc độ), trừ năng lượng + no như 1 trận đấu,
     /// tính sao + Coin qua AdventureService, báo BattleEnded (nhiệm vụ ngày).
+    /// Phase 10.3: quái bị hạ có thể rơi hạt giống (trùm luôn rơi hạt quý) — thua / bỏ cuộc vẫn giữ hạt đã nhặt;
+    /// ghi sổ tay quái rừng (đủ mốc số con hạ thì thưởng Coin), báo MonstersHunted (nhiệm vụ "hạ N quái").
     /// </summary>
     public sealed class HuntSession
     {
@@ -16,12 +18,17 @@ namespace PawFit.Battle
         private readonly EvolutionService _evo;
         private readonly AdventureService _adv;
         private readonly BattleSessionConfig _costs;
+        private readonly ISeedBag _seeds;
+        private readonly HuntLootConfig _loot;
+        private readonly IRandom _lootRng;
         private readonly List<HuntEvent> _out = new List<HuntEvent>();
+        private readonly List<SeedDrop> _drops = new List<SeedDrop>();
+        private int _commonDrops;
         private float _acc;
         private bool _quit;
 
         public HuntSession(PetService pets, EvolutionService evo, AdventureService adv, int stage, ulong seed,
-                           HuntConfig cfg = null, BattleSessionConfig costs = null)
+                           HuntConfig cfg = null, BattleSessionConfig costs = null, ISeedBag seeds = null, HuntLootConfig loot = null)
         {
             _pets = pets ?? throw new ArgumentNullException(nameof(pets));
             _evo = evo ?? throw new ArgumentNullException(nameof(evo));
@@ -30,7 +37,16 @@ namespace PawFit.Battle
             Stage = stage;
             Plan = adv.PlanFor(stage);
             Sim = new HuntSimulation(Plan, HunterStats.From(evo.Stats), seed, cfg);
+            _seeds = seeds;
+            _loot = loot ?? new HuntLootConfig();
+            _lootRng = new SeededRandom(seed ^ 0x5EED5EEDUL, 23UL);   // quay số rơi hạt riêng: không đổi diễn biến trận
         }
+
+        /// <summary>Hạt giống đã nhặt lần săn này (đã bỏ vào vườn rau khi hết trận).</summary>
+        public IReadOnlyList<SeedDrop> Drops => _drops;
+
+        /// <summary>Thưởng sổ tay quái rừng lần săn này (có sau khi hết trận).</summary>
+        public IReadOnlyList<BookReward> BookRewards { get; private set; } = new List<BookReward>();
 
         public int Stage { get; }
         public HuntPlan Plan { get; }
@@ -59,12 +75,30 @@ namespace PawFit.Battle
                 _acc -= tick;
                 Sim.Step();
                 _out.AddRange(Sim.Events);
+                foreach (HuntEvent e in Sim.Events)
+                    if (e.Kind == HuntEventKind.Kill) RollDrop(e);
                 if (Sim.Outcome != HuntOutcome.None)
                 {
                     Finish();
                     return;
                 }
             }
+        }
+
+        /// <summary>Quái vừa hạ: quay số rơi hạt (có nơi cất hạt mới quay), rơi thì báo View bằng việc Drop.</summary>
+        private void RollDrop(HuntEvent kill)
+        {
+            if (_seeds == null) return;
+            HuntMonster m = Sim.Find(kill.Monster);
+            if (m == null) return;
+            SeedDrop? drop = HuntLoot.Roll(m.Kind, Plan.Region, _commonDrops, _lootRng, _loot);
+            if (!drop.HasValue) return;
+            if (!MonsterBook.Get(m.Kind).Boss) _commonDrops++;
+            _drops.Add(drop.Value);
+            _out.Add(new HuntEvent
+            {
+                Kind = HuntEventKind.Drop, Monster = kill.Monster, Amount = drop.Value.Count, X = kill.X, Value = (int)drop.Value.Kind,
+            });
         }
 
         /// <summary>Lấy các việc đã xảy ra từ lần lấy trước (rồi xóa hàng chờ).</summary>
@@ -121,6 +155,9 @@ namespace PawFit.Battle
                 _pets.Spend(NeedType.Satiety, _costs.FightSatietyCost);
             }
             Result = _adv.Complete(Stage, won, won ? Sim.Hunter.Hp01 : 0f);
+            foreach (SeedDrop d in _drops) _seeds?.AddSeeds(d.Kind, d.Count);   // thua / bỏ cuộc vẫn giữ hạt đã nhặt
+            BookRewards = _adv.RecordKills(Sim.KillsByKind);
+            if (Sim.Kills > 0) Events?.Publish(new MonstersHunted(Sim.Kills));
             Events?.Publish(new BattleEnded((int)BattleMode.Adventure, won));
         }
     }

@@ -111,9 +111,11 @@ namespace PawFit.App
             Services.Register(new PlayService(_pets, health, evo, time, bus));   // đồ chơi + trò chơi trong vườn (Phase 8.3)
             var farm = new FarmService(_pets, care, time, bus, economy, null, log);   // vườn rau: gieo, tưới, hái, bé ăn quả (Phase 10.2)
             Services.Register(farm);
+            adventure.Seeds = farm;   // săn quái rơi hạt giống vào vườn rau (Phase 10.3)
             Services.Register(new DailyService(_pets, time, bus, economy, layout,   // quà ngày + nhiệm vụ + kho báu (Phase 7.3)
                                                starsLeft: () => adventure.TotalStars < adventure.MaxStars, log: log,
-                                               hasToys: () => _pets.Cosmetics != null && _pets.Cosmetics.Toys.Count > 0));
+                                               hasToys: () => _pets.Cosmetics != null && _pets.Cosmetics.Toys.Count > 0,
+                                               hasFarm: () => true));
             // Máy chủ riêng (Phase 4): có địa chỉ máy chủ thì tài khoản khách + giờ + sao lưu + PvP qua máy chủ
             // (máy chủ ghép người thật trước, vắng người thì thả người chơi ảo, tự tính Elo).
             // Không có địa chỉ: mạng giả lập trên máy như trước (người chơi ảo, Elo tính trên máy).

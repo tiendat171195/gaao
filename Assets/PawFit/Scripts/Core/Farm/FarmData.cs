@@ -22,6 +22,20 @@ namespace PawFit.Core
         public DateTime WetUntilUtc;
     }
 
+    /// <summary>Tên tiếng Việt của loại cây (dùng chung: vườn rau, thẻ kết quả săn quái, HUD).</summary>
+    public static class CropNames
+    {
+        private static readonly string[] Names = { "Dâu tây", "Cà rốt", "Việt quất", "Bí ngô" };
+
+        public static string Of(CropKind kind) => (int)kind >= 0 && (int)kind < Names.Length ? Names[(int)kind] : kind.ToString();
+    }
+
+    /// <summary>Nơi cất hạt giống (FarmService). Săn quái (Battle) nhặt được hạt thì bỏ vào đây, không cần biết vườn rau.</summary>
+    public interface ISeedBag
+    {
+        void AddSeeds(CropKind kind, int count);
+    }
+
     /// <summary>Vườn rau (Phase 10.2, trong file lưu game; thú mất vẫn giữ): luống đất, hạt giống, giỏ quả đã hái.</summary>
     public sealed class FarmData
     {

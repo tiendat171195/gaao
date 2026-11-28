@@ -270,6 +270,18 @@ namespace PawFit.Battle
         private static readonly MonsterKind[] Bosses =
             { MonsterKind.KingSlime, MonsterKind.MushroomKing, MonsterKind.StoneGolem, MonsterKind.BoarChief, MonsterKind.CrystalGolem };
 
+        /// <summary>Vùng đầu tiên có loài quái này (sổ tay quái rừng chỉ chỗ gặp, Phase 10.3). -1 = không vùng nào.</summary>
+        public static int FirstRegionOf(MonsterKind kind)
+        {
+            for (int r = 0; r < Pools.Length; r++)
+            {
+                if (Bosses[r] == kind) return r;
+                foreach (MonsterKind k in Pools[r])
+                    if (k == kind) return r;
+            }
+            return -1;
+        }
+
         private static readonly string[][] Titles =
         {
             new[] { "Chất nhờn đầu đồi", "Dơi gió", "Bầy chất nhờn", "Đồi rộn ràng" },

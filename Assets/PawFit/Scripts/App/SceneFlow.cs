@@ -244,6 +244,9 @@ namespace PawFit.App
                 enabled.Add(open);
                 actions.Add(() => OpenRegion(ri));
             }
+            labels.Add("Sổ tay quái rừng · đã gặp " + adv.MetCount + "/" + AdventureService.BookKinds.Count + " loài");   // Phase 10.3
+            enabled.Add(true);
+            actions.Add(OpenBestiary);
             labels.Add("Thôi");
             enabled.Add(true);
             actions.Add(null);
@@ -293,9 +296,15 @@ namespace PawFit.App
             HuntPlan plan = adv.PlanFor(stage);
             var names = new List<string>();
             foreach (MonsterKind k in plan.Kinds) names.Add(MonsterBook.Get(k).Name);
+            var seeds = new List<string>();
+            FarmService farm = _services.TryGet(out FarmService f) ? f : null;
+            if (farm != null)
+                foreach (CropKind k in HuntLoot.SeedsOf(s.Region)) seeds.Add(farm.Def(k).Name);
+            string drops = farm == null ? "" : "\nQuái hay rơi hạt " + string.Join(", ", seeds) +
+                           (s.Boss ? " · trùm rơi " + adv.Loot.BossSeeds + " hạt " + farm.Def(HuntLoot.BossSeed(s.Region)).Name : "");
             string body = (s.Boss ? "TRÙM vùng · " : "") + "Độ khó với bé: " + DifficultyNames[(int)adv.DifficultyOf(stage)] +
                           " · " + StarText(stars) + "\n" + reward + "\nGặp: " + string.Join(", ", names) + " · " + plan.Waves.Count + " đợt, " +
-                          plan.TotalMonsters + " con\nChạm = đánh · vuốt lên = đập đất · vuốt xuống = đỡ · vuốt ngang = lướt né";
+                          plan.TotalMonsters + " con" + drops + "\nChạm = đánh · vuốt lên = đập đất · vuốt xuống = đỡ · vuốt ngang = lướt né";
             bool ok = adv.CanStart(stage, out string reason);
             if (!ok) body += "\nChưa đi được: " + reason + ".";
             GardenUi.ShowChoice(s.Code + " · " + s.Creature, body, new[] { "Đi săn!", "Quay lại" }, i =>
@@ -326,7 +335,7 @@ namespace PawFit.App
                 Code = s.Code,
                 Title = s.Creature + (s.Boss ? " · TRÙM" : ""),
                 RegionName = r.Name,
-                Lines = h => AdventureLines(adv, h.Result),
+                Lines = h => AdventureLines(adv, h),
                 Again = () => EnterAdventure(stage),
                 Next = h =>
                 {
@@ -340,14 +349,16 @@ namespace PawFit.App
             Hunt = HuntScene.Enter(_services, opt, BattleClosed);
         }
 
-        private static List<string> AdventureLines(AdventureService adv, AdventureResult r)
+        private static List<string> AdventureLines(AdventureService adv, HuntSession h)
         {
             var lines = new List<string>();
+            AdventureResult r = h?.Result;
             if (r == null) return lines;
             AdventureStage s = adv.Stages[r.Stage];
+            LootLines(h, lines);   // hạt giống nhặt được + thưởng sổ tay (thua cũng giữ, Phase 10.3)
             if (!r.Won)
             {
-                lines.Add("Chưa qua được " + s.Creature);
+                lines.Insert(0, "Chưa qua được " + s.Creature);
                 lines.Add("Thấy dấu ! thì vuốt xuống đỡ sát lúc (phản đòn), lướt xuyên qua heo đang lao, bị vây thì vuốt lên đập đất");
                 return lines;
             }
@@ -359,6 +370,47 @@ namespace PawFit.App
             int next = adv.NextAfter(r.Stage);
             if (next >= 0 && !adv.CanStart(next, out string why)) lines.Add("Màn sau chưa đi được: " + why);
             return lines;
+        }
+
+        /// <summary>Thẻ kết quả: "Nhặt được 2 hạt Dâu tây, 1 hạt Cà rốt" + "Sổ tay: Chất Nhờn 10 con · +20 Coin".</summary>
+        private static void LootLines(HuntSession h, List<string> lines)
+        {
+            if (h.Drops.Count > 0 && _services.TryGet(out FarmService farm))
+            {
+                var count = new int[FarmService.Kinds.Length];
+                foreach (SeedDrop d in h.Drops) count[(int)d.Kind] += d.Count;
+                var parts = new List<string>();
+                foreach (CropKind k in FarmService.Kinds)
+                    if (count[(int)k] > 0) parts.Add(count[(int)k] + " hạt " + farm.Def(k).Name);
+                lines.Add("Nhặt được " + string.Join(", ", parts) + " → gieo ở vườn rau");
+            }
+            foreach (BookReward b in h.BookRewards)
+                lines.Add("Sổ tay: " + MonsterBook.Get(b.Kind).Name + (b.Milestone == 1 ? " lần đầu gặp" : " " + b.Milestone + " con") +
+                          (b.Coins > 0 ? " · +" + b.Coins + " Coin" : ""));
+        }
+
+        /// <summary>Sổ tay quái rừng (Phase 10.3): loài đã gặp (số con đã hạ, mốc thưởng kế), loài chưa gặp hiện "???" + vùng có nó.</summary>
+        private static void OpenBestiary()
+        {
+            var adv = _services.Get<AdventureService>();
+            var lines = new List<string>();
+            foreach (MonsterKind k in AdventureService.BookKinds)
+            {
+                MonsterDef d = MonsterBook.Get(k);
+                int region = HuntPlan.FirstRegionOf(k);
+                string where = region >= 0 && region < adv.Regions.Count ? adv.Regions[region].Name : "?";
+                if (!adv.HasMet(k))
+                {
+                    lines.Add("??? " + (d.Boss ? "(trùm) " : "") + "· chưa gặp · ở " + where);
+                    continue;
+                }
+                (int need, int coins) = adv.NextMilestone(k);
+                lines.Add((d.Boss ? "TRÙM " : "") + d.Name + " · đã hạ " + adv.KillsOf(k) +
+                          (need > 0 ? " · mốc " + need + " con: +" + coins + " Coin" : " · đủ mọi mốc") + " · " + where);
+            }
+            string body = "Hạ đủ số con mỗi loài thì được thưởng Coin (lần đầu gặp cũng có quà).\n" + string.Join("\n", lines);
+            GardenUi.ShowChoice("Sổ tay quái rừng · " + adv.MetCount + "/" + AdventureService.BookKinds.Count, body,
+                                new[] { "Quay lại", "Thôi" }, i => { if (i == 0) OpenAdventure(); });
         }
 
         // ------------------------------------------------------------------

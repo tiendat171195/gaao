@@ -231,6 +231,13 @@ namespace PawFit.Battle.View
                     Sfx.PlayVaried(SoundId.Pop, 0.45f);
                     Sfx.Play(SoundId.KO, 0.22f, 1.3f);
                     break;
+                case HuntEventKind.Drop:   // quái rơi hạt giống cho vườn rau (Phase 10.3): túi hạt bật lên rồi bay vào bé
+                    Vector3 seedAt = (mv != null ? mv.Center : at) + Vector3.up * 0.15f;
+                    SeedPickup.Spawn(transform, seedAt, () => _hunter.Center);
+                    FxBurst.Popup(transform, seedAt + Vector3.up * 0.55f, "+" + Mathf.RoundToInt(e.Amount) + " hạt " + CropNames.Of((CropKind)e.Value),
+                                  new Color(0.62f, 1f, 0.55f), 0.2f);
+                    Sfx.Play(SoundId.Chime, 0.22f, 1.45f);
+                    break;
                 case HuntEventKind.PetHurt:
                     _hunter.OnHurt();
                     FxBurst.Spark(transform, _hunter.Center, new Color(1f, 0.35f, 0.3f), 7, 2.4f);

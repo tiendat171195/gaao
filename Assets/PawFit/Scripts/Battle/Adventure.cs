@@ -72,6 +72,30 @@ namespace PawFit.Battle
 
         /// <summary>So lực chiến sinh vật / thú: dưới mốc đầu = Dễ, rồi Vừa, Khó, trên mốc cuối = Rất khó.</summary>
         public float[] DifficultyRatios = { 0.9f, 1.05f, 1.25f };
+
+        /// <summary>
+        /// Sổ tay quái rừng (Phase 10.3): hạ đủ số con của 1 loài thì được thưởng Coin, mỗi mốc 1 lần (lần đầu gặp cũng có quà).
+        /// Trùm ít gặp nên mốc thấp hơn.
+        /// </summary>
+        public int[] BookMilestones = { 1, 10, 30, 100 };
+        public int[] BookCoins = { 5, 20, 40, 100 };
+        public int[] BossBookMilestones = { 1, 3, 10, 25 };
+        public int[] BossBookCoins = { 15, 30, 60, 120 };
+    }
+
+    /// <summary>1 phần thưởng sổ tay quái rừng: hạ đủ `Milestone` con loài `Kind` → +`Coins`.</summary>
+    public readonly struct BookReward
+    {
+        public readonly MonsterKind Kind;
+        public readonly int Milestone;
+        public readonly int Coins;
+
+        public BookReward(MonsterKind kind, int milestone, int coins)
+        {
+            Kind = kind;
+            Milestone = milestone;
+            Coins = coins;
+        }
     }
 
     public enum AdventureDifficulty { Easy = 0, Fair = 1, Hard = 2, VeryHard = 3 }
@@ -125,6 +149,13 @@ namespace PawFit.Battle
         }
 
         public AdventureConfig Config => _cfg;
+
+        /// <summary>Nơi cất hạt giống quái rơi ra khi săn (App nối vào vườn rau, Phase 10.3). null = không rơi hạt.</summary>
+        public ISeedBag Seeds { get; set; }
+
+        /// <summary>Luật rơi hạt khi săn quái.</summary>
+        public HuntLootConfig Loot { get; } = new HuntLootConfig();
+
         public IReadOnlyList<AdventureRegion> Regions => _regions;
         public IReadOnlyList<AdventureStage> Stages => _stages;
         public int MaxStars => _stages.Count * 3;
@@ -220,7 +251,78 @@ namespace PawFit.Battle
 
         /// <summary>Đi săn màn này. Gọi <see cref="CanStart"/> trước.</summary>
         public HuntSession StartHunt(int stage, ulong seed, HuntConfig cfg = null) =>
-            new HuntSession(_pets, _evo, this, stage, seed, cfg);
+            new HuntSession(_pets, _evo, this, stage, seed, cfg, null, Seeds, Loot);
+
+        // ------------------------------------------------------------------ sổ tay quái rừng (Phase 10.3)
+
+        private static readonly MonsterKind[] AllKinds = (MonsterKind[])Enum.GetValues(typeof(MonsterKind));
+
+        /// <summary>Mọi loài quái (thứ tự trong sổ tay).</summary>
+        public static IReadOnlyList<MonsterKind> BookKinds => AllKinds;
+
+        public int KillsOf(MonsterKind kind)
+        {
+            AdventureData d = Data;
+            int i = (int)kind;
+            return d != null && i < d.Kills.Count ? Math.Max(0, d.Kills[i]) : 0;
+        }
+
+        /// <summary>Đã gặp (hạ được ít nhất 1 con) chưa: chưa gặp thì sổ tay hiện "???".</summary>
+        public bool HasMet(MonsterKind kind) => KillsOf(kind) > 0;
+
+        public int MetCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (MonsterKind k in AllKinds)
+                    if (HasMet(k)) n++;
+                return n;
+            }
+        }
+
+        private int[] Milestones(MonsterKind kind) => MonsterBook.Get(kind).Boss ? _cfg.BossBookMilestones : _cfg.BookMilestones;
+        private int[] MilestoneCoins(MonsterKind kind) => MonsterBook.Get(kind).Boss ? _cfg.BossBookCoins : _cfg.BookCoins;
+
+        /// <summary>Mốc kế tiếp của loài này: (số con cần hạ, Coin thưởng); hết mốc thì (-1, 0).</summary>
+        public (int kills, int coins) NextMilestone(MonsterKind kind)
+        {
+            AdventureData d = Data;
+            int i = (int)kind;
+            int level = d != null && i < d.BookLevel.Count ? d.BookLevel[i] : 0;
+            int[] m = Milestones(kind), c = MilestoneCoins(kind);
+            return level < m.Length ? (m[level], level < c.Length ? c[level] : 0) : (-1, 0);
+        }
+
+        /// <summary>Ghi số quái vừa hạ (theo loài) vào sổ tay; loài nào vượt mốc thì thưởng Coin (mỗi mốc 1 lần). HuntSession gọi khi hết trận.</summary>
+        public List<BookReward> RecordKills(IReadOnlyList<int> killsByKind)
+        {
+            var rewards = new List<BookReward>();
+            AdventureData d = Data;
+            if (d == null || killsByKind == null) return rewards;
+            bool any = false;
+            for (int i = 0; i < killsByKind.Count && i < AllKinds.Length; i++)
+            {
+                int add = killsByKind[i];
+                if (add <= 0) continue;
+                any = true;
+                while (d.Kills.Count <= i) d.Kills.Add(0);
+                while (d.BookLevel.Count <= i) d.BookLevel.Add(0);
+                d.Kills[i] += add;
+                MonsterKind kind = AllKinds[i];
+                int[] m = Milestones(kind), c = MilestoneCoins(kind);
+                while (d.BookLevel[i] < m.Length && d.Kills[i] >= m[d.BookLevel[i]])
+                {
+                    int level = d.BookLevel[i];
+                    int coins = level < c.Length ? c[level] : 0;
+                    d.BookLevel[i]++;
+                    if (_wallet != null && coins > 0) _wallet.Add(coins, "sổ tay quái: " + MonsterBook.Get(kind).Name + " " + m[level] + " con");
+                    rewards.Add(new BookReward(kind, m[level], _wallet != null ? coins : 0));
+                }
+            }
+            if (any) _pets.Save();
+            return rewards;
+        }
 
         /// <summary>Màn kế tiếp đã mở (nút "Đánh tiếp" ở thẻ kết quả), -1 nếu không có.</summary>
         public int NextAfter(int stage) => stage + 1 < _stages.Count && IsUnlocked(stage + 1) ? stage + 1 : -1;

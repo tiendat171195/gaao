@@ -43,22 +43,22 @@ namespace PawFit.Garden
         {
             new CropDef
             {
-                Kind = CropKind.Strawberry, Name = "Dâu tây", GrowHours = 1.5f, Yield = 3, PackPrice = 15, PackSeeds = 3,
+                Kind = CropKind.Strawberry, Name = CropNames.Of(CropKind.Strawberry), GrowHours = 1.5f, Yield = 3, PackPrice = 15, PackSeeds = 3,
                 Satiety = 15f, Mood = 12f, Effect = "ngọt lịm: bé vui hẳn",
             },
             new CropDef
             {
-                Kind = CropKind.Carrot, Name = "Cà rốt", GrowHours = 3f, Yield = 3, PackPrice = 20, PackSeeds = 3,
+                Kind = CropKind.Carrot, Name = CropNames.Of(CropKind.Carrot), GrowHours = 3f, Yield = 3, PackPrice = 20, PackSeeds = 3,
                 Satiety = 25f, Energy = 12f, Mood = 3f, Effect = "giòn rụm: bé khỏe khoắn (+năng lượng)",
             },
             new CropDef
             {
-                Kind = CropKind.Blueberry, Name = "Việt quất", GrowHours = 6f, Yield = 4, PackPrice = 30, PackSeeds = 3,
+                Kind = CropKind.Blueberry, Name = CropNames.Of(CropKind.Blueberry), GrowHours = 6f, Yield = 4, PackPrice = 30, PackSeeds = 3,
                 Satiety = 12f, Mood = 6f, Train = TrainingAxis.Speed, TrainPoints = 2f, Effect = "bé nhanh nhẹn (tập Tốc độ)",
             },
             new CropDef
             {
-                Kind = CropKind.Pumpkin, Name = "Bí ngô", GrowHours = 10f, Yield = 2, PackPrice = 40, PackSeeds = 2,
+                Kind = CropKind.Pumpkin, Name = CropNames.Of(CropKind.Pumpkin), GrowHours = 10f, Yield = 2, PackPrice = 40, PackSeeds = 2,
                 Satiety = 40f, Mood = 5f, Train = TrainingAxis.Strength, TrainPoints = 3f, Effect = "no lâu, bé khỏe mạnh (tập Sức mạnh)",
             },
         };
@@ -96,7 +96,7 @@ namespace PawFit.Garden
     /// săn quái cũng rơi hạt (Phase 10.3). Không có héo / chết cây: để lâu quả vẫn chờ bạn hái.
     /// Lớn = tính lại từ mốc thời gian đã lưu nên không cần lưu mỗi giây; giờ máy lùi thì cây đứng yên (không tụt).
     /// </summary>
-    public sealed class FarmService
+    public sealed class FarmService : ISeedBag
     {
         private readonly PetService _pets;
         private readonly CareActionService _care;

@@ -195,7 +195,9 @@ namespace PawFit.Tests
             AdventureResult r = s.Result;
             Assert.GreaterOrEqual(r.Stars, 1);
             Assert.Greater(r.Coins, 0);
-            Assert.AreEqual(r.Coins, _wallet.Coins);
+            int book = 0;
+            foreach (BookReward b in s.BookRewards) book += b.Coins;
+            Assert.AreEqual(r.Coins + book, _wallet.Coins, "Coin thắng + quà sổ tay quái rừng (Phase 10.3)");
             Assert.Less(_pets.Current.Needs.Energy, energy, "trận tốn năng lượng");
             Assert.AreEqual(1, won.Count, "báo sự kiện thắng (cho nhiệm vụ ngày)");
             Assert.IsTrue(won[0].FirstClear);

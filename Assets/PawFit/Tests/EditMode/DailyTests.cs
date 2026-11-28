@@ -96,7 +96,8 @@ namespace PawFit.Tests
             Assert.AreEqual(3, q.Count);
             // NUnit của Unity (bản 3.5) chưa có Is.AnyOf: dùng CollectionAssert.Contains
             CollectionAssert.Contains(new[] { QuestKind.Feed, QuestKind.Bathe, QuestKind.Cuddle, QuestKind.Workout }, q[0].Kind, "1 việc chăm");
-            CollectionAssert.Contains(new[] { QuestKind.WinAdventure, QuestKind.AdventureStar, QuestKind.WinBattle, QuestKind.PlayPvp }, q[1].Kind, "1 việc đấu");
+            CollectionAssert.Contains(new[] { QuestKind.WinAdventure, QuestKind.AdventureStar, QuestKind.WinBattle, QuestKind.PlayPvp, QuestKind.Hunt },
+                                      q[1].Kind, "1 việc đấu");
             Assert.AreNotEqual(q[0].Kind, q[2].Kind);
             var kinds = new[] { q[0].Kind, q[1].Kind, q[2].Kind };
             _daily.Dispose();
@@ -113,6 +114,23 @@ namespace PawFit.Tests
                 Assert.AreNotEqual(QuestKind.AdventureStar, noStars.Quests[1].Kind, "hết sao Thám hiểm thì không ra nhiệm vụ kiếm sao");
             }
             noStars.Dispose();
+        }
+
+        [Test]
+        public void Quests_HuntAndHarvest_CountFromEvents()
+        {
+            SetQuests((QuestKind.Hunt, 8), (QuestKind.Harvest, 1), (QuestKind.Feed, 1));
+            _bus.Publish(new MonstersHunted(5));
+            Assert.AreEqual(5, _daily.Quests[0].Progress);
+            _bus.Publish(new MonstersHunted(5));
+            Assert.IsTrue(_daily.Quests[0].Done, "hạ 10 / 8 quái");
+            _bus.Publish(new CropHarvested(CropKind.Carrot, 3));
+            Assert.IsTrue(_daily.Quests[1].Done, "hái 1 luống");
+            StringAssert.Contains("quái", DailyService.QuestText(_daily.Quests[0]));
+            StringAssert.Contains("vườn rau", DailyService.QuestText(_daily.Quests[1]));
+            var farmDaily = new DailyService(_pets, _time, new EventBus(), _wallet, _layout, toLocal: utc => utc, hasFarm: () => true);
+            Assert.AreEqual(3, farmDaily.Quests.Count);
+            farmDaily.Dispose();
         }
 
         [Test]

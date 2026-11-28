@@ -16,6 +16,9 @@ namespace PawFit.Battle
     {
         WaveStart, Spawn, Windup, Interrupted, Hit, Kill, PetHurt, Guarded, PerfectGuard, Dodged, Whiff,
         Strike, Slam, Dash, Ultimate, Shot, ShotGone, Smash, Charge, Summon, Enrage, Combo, RageFull, Won, Lost,
+
+        /// <summary>Quái vừa hạ rơi hạt giống (Phase 10.3, HuntSession thêm vào): Value = CropKind, Amount = số hạt, X = chỗ rơi.</summary>
+        Drop,
     }
 
     /// <summary>1 việc vừa xảy ra trong bước mô phỏng (View chạy hoạt cảnh + tiếng theo).</summary>
@@ -176,6 +179,9 @@ namespace PawFit.Battle
         public float Time { get; private set; }
         public HuntOutcome Outcome { get; private set; }
         public int Kills { get; private set; }
+
+        /// <summary>Số con đã hạ theo loại quái (chỉ số = MonsterKind) — sổ tay quái rừng (Phase 10.3).</summary>
+        public int[] KillsByKind { get; } = new int[Enum.GetValues(typeof(MonsterKind)).Length];
         public int PerfectGuards { get; private set; }
         public int Dodges { get; private set; }
 
@@ -594,6 +600,7 @@ namespace PawFit.Battle
             m.PhaseT = 0f;
             m.WindupLeft01 = -1f;
             Kills++;
+            KillsByKind[(int)m.Kind]++;
             AddRage(_cfg.RageOnKill);
             Emit(HuntEventKind.Kill, m.Id, 0f, false, m.X, 0);
         }

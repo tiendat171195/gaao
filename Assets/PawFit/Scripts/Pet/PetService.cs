@@ -198,6 +198,8 @@ namespace PawFit.Pet
                 if (_game == null) return null;
                 AdventureData a = _game.Adventure ?? (_game.Adventure = new AdventureData());
                 if (a.Stars == null) a.Stars = new List<int>();   // file sửa tay / lỗi: không để null
+                if (a.Kills == null) a.Kills = new List<int>();   // file trước Phase 10.3
+                if (a.BookLevel == null) a.BookLevel = new List<int>();
                 return a;
             }
         }

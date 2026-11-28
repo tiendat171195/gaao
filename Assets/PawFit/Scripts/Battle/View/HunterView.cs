@@ -123,3 +123,46 @@ namespace PawFit.Battle.View
         }
     }
 }
+
+namespace PawFit.Battle.View
+{
+    /// <summary>Túi hạt giống quái rơi ra (Phase 10.3): bật lên khỏi chỗ quái ngã, lơ lửng 1 chút rồi bay vào bé và nhỏ dần.</summary>
+    public sealed class SeedPickup : MonoBehaviour
+    {
+        private System.Func<Vector3> _target;
+        private Vector3 _from;
+        private float _t;
+
+        public static void Spawn(Transform parent, Vector3 at, System.Func<Vector3> target)
+        {
+            var go = new GameObject("SeedPickup");
+            go.transform.SetParent(parent, false);
+            go.transform.position = at;
+            Prim.Make(PrimitiveType.Sphere, go.transform, Vector3.zero, new Vector3(0.2f, 0.24f, 0.2f), Prim.Hex("#C08A4A"), smoothness: 0.2f);
+            Prim.Make(PrimitiveType.Cylinder, go.transform, new Vector3(0f, 0.13f, 0f), new Vector3(0.1f, 0.02f, 0.1f), Prim.Hex("#8A5A2B"));
+            Prim.Make(PrimitiveType.Sphere, go.transform, new Vector3(0.04f, 0.19f, 0f), new Vector3(0.1f, 0.03f, 0.06f), Prim.Hex("#7CC36B"),
+                      rotation: Quaternion.Euler(0f, 0f, 30f));
+            SeedPickup p = go.AddComponent<SeedPickup>();
+            p._from = at;
+            p._target = target;
+        }
+
+        private void Update()
+        {
+            _t += Time.deltaTime;
+            if (_t < 0.45f)   // bật lên + xoay
+            {
+                float k = _t / 0.45f;
+                transform.position = _from + Vector3.up * (Mathf.Sin(k * Mathf.PI * 0.5f) * 0.6f);
+                transform.rotation = Quaternion.Euler(0f, _t * 360f, 0f);
+                return;
+            }
+            float f = Mathf.Clamp01((_t - 0.45f) / 0.4f);   // bay vào bé
+            Vector3 top = _from + Vector3.up * 0.6f;
+            Vector3 to = _target != null ? _target() : top;
+            transform.position = Vector3.Lerp(top, to, f * f);
+            transform.localScale = Vector3.one * (1f - 0.8f * f);
+            if (f >= 1f) Destroy(gameObject);
+        }
+    }
+}

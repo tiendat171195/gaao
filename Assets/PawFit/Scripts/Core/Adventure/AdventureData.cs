@@ -12,6 +12,19 @@ namespace PawFit.Core
 
         public int Wins;
         public int Losses;
+
+        /// <summary>Sổ tay quái rừng (Phase 10.3): số con đã hạ theo loại quái (chỉ số = số của MonsterKind).</summary>
+        public List<int> Kills = new List<int>();
+
+        /// <summary>Sổ tay: mỗi loại quái đã nhận thưởng tới mốc thứ mấy (0 = chưa mốc nào).</summary>
+        public List<int> BookLevel = new List<int>();
+    }
+
+    /// <summary>Vừa đi săn xong: hạ được `Count` quái (nhiệm vụ ngày "hạ N quái rừng" nghe sự kiện này).</summary>
+    public readonly struct MonstersHunted
+    {
+        public readonly int Count;
+        public MonstersHunted(int count) { Count = count; }
     }
 
     /// <summary>Vừa thắng 1 màn Thám hiểm (nhiệm vụ ngày nghe sự kiện này). NewStars = số sao mới có thêm.</summary>

@@ -2,8 +2,15 @@ using System.Collections.Generic;
 
 namespace PawFit.Core
 {
-    /// <summary>Loại nhiệm vụ ngày (Phase 7.3). Chăm: Feed / Bathe / Cuddle / Workout · Đấu: WinAdventure / AdventureStar / WinBattle / PlayPvp · Khám phá: Dig.</summary>
-    public enum QuestKind { Feed = 0, Bathe = 1, Cuddle = 2, Workout = 3, WinAdventure = 4, AdventureStar = 5, WinBattle = 6, PlayPvp = 7, Dig = 8, Play = 9 }
+    /// <summary>
+    /// Loại nhiệm vụ ngày (Phase 7.3). Chăm: Feed / Bathe / Cuddle / Workout / Play / Harvest (vườn rau, Phase 10.3) ·
+    /// Đấu: WinAdventure / AdventureStar / WinBattle / PlayPvp / Hunt (hạ N quái rừng, Phase 10.3) · Khám phá: Dig.
+    /// </summary>
+    public enum QuestKind
+    {
+        Feed = 0, Bathe = 1, Cuddle = 2, Workout = 3, WinAdventure = 4, AdventureStar = 5, WinBattle = 6, PlayPvp = 7, Dig = 8, Play = 9,
+        Hunt = 10, Harvest = 11,
+    }
 
     /// <summary>1 nhiệm vụ của hôm nay: cần làm `Target` lần, đã làm `Progress` lần, thưởng `Coins` khi nhận ở hòm thư.</summary>
     public sealed class QuestState
