@@ -443,7 +443,7 @@ namespace UnityEngine
         public void Expand(float amount) { }
     }
 
-    public class Collider : Component { }
+    public class Collider : Component { public bool enabled { get; set; } }
 
     public sealed class BoxCollider : Collider { public Vector3 size { get; set; } public Vector3 center { get; set; } }
 

@@ -295,6 +295,21 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Hết trận: thẻ kết quả có sao + Coin + "Mở màn / vùng mới", nút **Đánh lại** bên cạnh Về vườn.
   - Lưu ở file game (`GameSave.Adventure`, bản lưu 6). Thú mất vẫn giữ tiến độ: bé mới đi tiếp từ chỗ cũ.
   - Mẹo hướng dẫn: chơi 6,5 phút (sau mẹo sân tập) thì chỉ đường tới biển Thám hiểm.
+- **G16 · Việc mỗi ngày (Phase 7.3, `DailyService` + `DailyConfig`; tôi tự thiết kế để có lý do quay lại mỗi ngày):**
+  - "Ngày" theo giờ trên máy (như lượt quảng cáo). Lưu ở `GameSave.Daily` (bản lưu 7). Thú mất vẫn giữ.
+  - **Quà mở game theo chuỗi ngày** (nhận ở hòm thư): ngày 1–7 = 20 / 25 / 30 / 35 / 40 / 50 / 80 Coin. Sang ngày 8 quay lại ngày 1. Bỏ 1 ngày không mở game thì chuỗi về ngày 1. Mở game mà còn quà chưa nhận thì có dòng nhắc.
+  - **3 nhiệm vụ mỗi ngày** (nhận Coin ở hòm thư), cố định theo ngày + người chơi (mở lại game không đổi được):
+    - 1 việc chăm: cho ăn 3 lần / tắm 1 lần / vuốt ve 5 lần (2 lần vuốt cách nhau ≥ 4 giây) / tập ở sân tập 1 lần (10–15 Coin);
+    - 1 việc đấu: thắng 2 trận Thám hiểm / kiếm 1 sao mới (không ra khi đã đủ 75 sao) / thắng 2 trận bất kỳ / đấu 1 trận PvP (20–25 Coin);
+    - 60% là đào 2 kho báu, còn lại là 1 việc chăm khác (15 Coin).
+    - Xong cả 3: thêm 40 Coin. Đếm qua sự kiện của game (`CareDone`, `AdventureWon`, `BattleEnded`), không phải sửa từng chỗ.
+    - Xong 1 nhiệm vụ: hiện dòng báo ở vườn; xong trong trận thì báo lúc về vườn.
+  - **Kho báu trong vườn:** mỗi ngày 2 ụ đất có dấu X lấp lánh, chọn từ 12 chỗ cỏ trống cố định (`GardenLayout.DigSpots`). Chạm ụ đất = bé chạy tới, tới nơi tự đào (bé phải đứng cách ≤ 1,6 m, đang thức).
+    - Đào được: 70% là 10–25 Coin; 15% bánh thưởng (+15 no, +15 vui) + 5 Coin; 15% nước tăng lực (+15 năng lượng) + 5 Coin.
+    - Phần thưởng cố định theo ngày + điểm + người chơi: mở lại game không đổi được.
+  - **Cờ đỏ hòm thư** dựng lên + dấu "!" nhấp nhô khi có quà / thưởng chờ nhận; nhận hết thì hạ cờ.
+  - Cộng lại 1 ngày chơi đủ ≈ 20–80 (quà) + 45–55 (nhiệm vụ) + 40 (thưởng thêm) + 20–50 (kho báu) ≈ 125–225 Coin, đủ mua 1 món ở quầy sau 1–2 ngày.
+  - Mẹo hướng dẫn: kho báu (sau 100 giây chơi), hòm thư có nhiệm vụ (sau 220 giây).
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

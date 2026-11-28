@@ -112,21 +112,6 @@ namespace PawFit.Battle
         public int UnlockedRegion = -1;
     }
 
-    /// <summary>Vừa thắng 1 màn Thám hiểm (nhiệm vụ ngày nghe sự kiện này).</summary>
-    public readonly struct AdventureWon
-    {
-        public readonly int Stage;
-        public readonly int Stars;
-        public readonly bool FirstClear;
-
-        public AdventureWon(int stage, int stars, bool firstClear)
-        {
-            Stage = stage;
-            Stars = stars;
-            FirstClear = firstClear;
-        }
-    }
-
     /// <summary>
     /// Thám hiểm (Phase 7.2, C# thuần): bản đồ 5 vùng × 5 màn, mỗi màn đấu 1 sinh vật hoang (bot có lối đánh riêng).
     /// Độ khó bám theo giai đoạn tiến hóa (vùng 1 cho Baby ... vùng 5 cho Ultimate): bé lớn lên mới đi xa được.
@@ -325,7 +310,7 @@ namespace PawFit.Battle
             else r.Coins = 0;
             if (s.Boss && r.FirstClear && s.Region + 1 < _regions.Count) r.UnlockedRegion = s.Region + 1;
             _pets.Save();
-            _bus?.Publish(new AdventureWon(stage, stars, r.FirstClear));
+            _bus?.Publish(new AdventureWon(stage, stars, r.NewStars, r.FirstClear));
             return r;
         }
 

@@ -314,8 +314,9 @@ namespace PawFit.Garden.View
                       rotation: Quaternion.Euler(90f, 0f, 0f));   // mái tròn (nửa trên của trụ nằm ngang)
             Prim.Make(PrimitiveType.Cube, m, new Vector3(0f, 1.16f, -0.36f), new Vector3(0.42f, 0.36f, 0.02f), Prim.Hex("#3A78BE"));   // cửa
             Prim.Make(PrimitiveType.Cube, m, new Vector3(0f, 1.38f, -0.37f), new Vector3(0.28f, 0.16f, 0.02f), Color.white);   // phong thư
-            Prim.Make(PrimitiveType.Cube, m, new Vector3(0.26f, 1.35f, 0.12f), new Vector3(0.03f, 0.34f, 0.03f), WoodDark);   // cán cờ
-            Prim.Make(PrimitiveType.Cube, m, new Vector3(0.27f, 1.46f, 0.02f), new Vector3(0.02f, 0.12f, 0.18f), Prim.Hex("#E2463F"));   // cờ
+            Transform flag = Prim.Group(m, "Flag", new Vector3(0.26f, 1.2f, 0.12f));   // xoay quanh chân cán: dựng = có quà (MailboxFlag)
+            Prim.Make(PrimitiveType.Cube, flag, new Vector3(0f, 0.15f, 0f), new Vector3(0.03f, 0.34f, 0.03f), WoodDark);   // cán cờ
+            Prim.Make(PrimitiveType.Cube, flag, new Vector3(0.01f, 0.26f, -0.1f), new Vector3(0.02f, 0.12f, 0.18f), Prim.Hex("#E2463F"));   // cờ
         }
 
         private static void BuildMemorial(GardenZone z, Transform obstacles, Transform decor)

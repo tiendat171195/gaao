@@ -165,6 +165,13 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
 - Mỗi trận tốn năng lượng như đấu Bot. Bé mệt (năng lượng < 15), ốm hoặc đang ngủ thì không đi được.
 - Hết trận có nút **Đánh lại** để thử ngay.
 
+## Việc mỗi ngày (Phase 7.3)
+
+- **Quà mở game:** mở game mỗi ngày nhận quà ở **hòm thư**. Chuỗi 7 ngày liên tiếp: 20 → 25 → 30 → 35 → 40 → 50 → **80 Coin**. Bỏ 1 ngày thì chuỗi về ngày 1.
+- **3 nhiệm vụ mỗi ngày** (hòm thư ▸ Nhiệm vụ hôm nay): 1 việc chăm bé, 1 việc đấu, 1 việc khám phá / chăm. Xong việc nào thì bấm nhận Coin việc đó; xong cả 3 thêm 40 Coin.
+- **Kho báu:** mỗi ngày có 2 **ụ đất có dấu X lấp lánh** trong vườn. Chạm vào, bé chạy tới đào: được Coin, đôi khi bánh thưởng hoặc nước tăng lực.
+- **Cờ đỏ hòm thư** dựng lên (có dấu "!") là đang có quà chờ nhận.
+
 ## Coin, quầy hàng, quảng cáo (Phase 5.1)
 
 - **Ví Coin:** khởi đầu 200 Coin. Ví là của người chơi nên thú mất vẫn còn. Không có nạp tiền.
@@ -261,6 +268,7 @@ Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của ng
   - Tiến hóa: xem giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến. Nút **+1 ngày tuổi**, **Lên giai đoạn**, **Thuộc 1 chiêu**, **+10** từng hướng tập.
   - Nút **Huấn luyện** / **Đấu Bot Thường**: vào sân tập ngay, không cần đi tới hình nộm.
   - Thám hiểm: xem tổng sao + màn kế; nút **Bản đồ**, **Mở hết (1 sao)**, **Xóa tiến độ**.
+  - Việc mỗi ngày: xem ngày, chuỗi, nhiệm vụ, kho báu còn lại; nút **Sang ngày mới**, **Xong hết nhiệm vụ**.
   - Kinh tế: xem Coin, lượt quảng cáo còn lại, tổng đã nhận / đã tiêu. Nút **+100 Coin** / **-100 Coin** / **Trả lượt QC** / **Mở quầy hàng** / **QC: hết hàng** (giả lập không có quảng cáo).
   - Rank: xem bậc / Elo / mùa. Nút **Thắng PvP giả** / **Thua PvP giả** (đổi Elo như thắng / thua 1 người ngang cơ; thắng +30 Coin). Nút **Đấu trường** mở thẻ đấu trường ngay.
   - Phụ kiện / trang trí: xem đang đeo gì, có mấy món. Nút **Có hết đồ (test)** (có hết, không trừ Coin) và **Đổi phụ kiện** (lần lượt từng món).

@@ -6,7 +6,7 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Các mẹo hướng dẫn (vườn không có nút nên người mới cần được chỉ đúng lúc).</summary>
-    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9, Adventure = 10 }
+    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9, Adventure = 10, Dig = 11, Daily = 12 }
 
     public sealed class TipConfig
     {
@@ -20,7 +20,9 @@ namespace PawFit.Garden
         public float IntroWaitSeconds = 40f;
 
         /// <summary>Chơi bấy nhiêu giây thì giới thiệu quầy hàng / sân tập / đấu trường.</summary>
+        public float DigAfterSeconds = 100f;
         public float ShopAfterSeconds = 150f;
+        public float DailyAfterSeconds = 220f;
         public float TrainingAfterSeconds = 300f;
         public float AdventureAfterSeconds = 390f;
         public float ArenaAfterSeconds = 480f;
@@ -126,7 +128,9 @@ namespace PawFit.Garden
             if (!Seen(TipId.Bathe) && n.Hygiene < _expr.DirtyBelowHygiene && !_health.IsIll && !pet.IsSleeping) return TipId.Bathe;
             if (!Seen(TipId.Sleep) && n.Energy < _expr.SleepyBelowEnergy && !pet.IsSleeping) return TipId.Sleep;
             // khám phá
+            if (!Seen(TipId.Dig) && !pet.IsSleeping && _played >= _cfg.DigAfterSeconds) return TipId.Dig;
             if (!Seen(TipId.Shop) && _played >= _cfg.ShopAfterSeconds) return TipId.Shop;
+            if (!Seen(TipId.Daily) && _played >= _cfg.DailyAfterSeconds) return TipId.Daily;
             if (!Seen(TipId.Training) && _health.CanTrain && !pet.IsSleeping &&
                 (_played >= _cfg.TrainingAfterSeconds || _evo.Stage >= EvolutionStage.Child)) return TipId.Training;
             if (!Seen(TipId.Adventure) && Seen(TipId.Training) && _health.CanTrain && _played >= _cfg.AdventureAfterSeconds) return TipId.Adventure;
@@ -155,6 +159,8 @@ namespace PawFit.Garden
                 case TipId.Shop: return "Quầy hàng ở phía trước bên phải: thuốc, bánh, phụ kiện, trang trí, xem quảng cáo lấy Coin.";
                 case TipId.Training: return "Chạm hình nộm ở sân tập (phía sau) để học chiêu bằng cách vuốt, hoặc đấu thử.";
                 case TipId.Arena: return "Cổng đấu trường sau sân tập: đấu PvP 90 giây, thắng được Elo và Coin.";
+                case TipId.Dig: return "Ụ đất có dấu X lấp lánh là kho báu! Chạm vào để bé chạy tới đào. Mỗi ngày có kho báu mới.";
+                case TipId.Daily: return "Hòm thư cạnh cổng đấu trường có quà mỗi ngày + 3 nhiệm vụ. Cờ đỏ dựng lên là có quà chờ nhận.";
                 case TipId.Adventure: return "Biển gỗ góc sau bên trái vườn dẫn đi Thám hiểm: đấu sinh vật hoang, gom sao, nhận Coin. Bé lớn lên sẽ đi được xa hơn.";
                 default: return "";
             }

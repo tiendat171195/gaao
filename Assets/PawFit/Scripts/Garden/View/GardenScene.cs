@@ -25,6 +25,12 @@ namespace PawFit.Garden.View
         private NavMeshBuildSettings _navSettings;
         private Bounds _navBounds;
         private GardenBuildResult _built;
+        private DailyService _daily;
+        private readonly List<TreasureSpotView> _treasures = new List<TreasureSpotView>();
+        private string _treasureDay;
+        private int _pendingDig = -1;
+        private float _pendingDigLeft, _dayCheck;
+        private bool _digging;
         private ServiceLocator _s;
         private GardenLayout _layout;
         private PetService _pets;
@@ -111,6 +117,15 @@ namespace PawFit.Garden.View
             _router.MailboxTapped = () => MailboxTapped?.Invoke();
             _router.ArenaTapped = () => ArenaTapped?.Invoke();
             _router.AdventureTapped = () => AdventureTapped?.Invoke();
+            if (s.TryGet(out _daily))   // việc mỗi ngày (Phase 7.3): điểm đào kho báu + cờ hòm thư
+            {
+                _router.TreasureTapped = OnTreasureTapped;
+                MailboxView box = built.Obstacles.GetComponentInChildren<MailboxView>();
+                Transform flag = box != null ? box.transform.Find("Flag") : null;
+                if (flag != null) box.gameObject.AddComponent<MailboxFlag>().Init(flag, () => _daily.HasSomethingToClaim);
+                RebuildTreasures();
+                _subs.Add(bus.Subscribe<DailyChanged>(_ => RebuildTreasures()));
+            }
             _router.Tips = s.TryGet(out TipService tips) ? tips : null;
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
@@ -128,6 +143,90 @@ namespace PawFit.Garden.View
             _log.Info("[PawFit] Vườn sẵn sàng · chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve · " +
                       "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn · " +
                       "chạm quầy hàng (trước bên phải) = mua đồ / xem quảng cáo · chạm hòm thư (cạnh cổng đấu trường) = cài đặt");
+        }
+
+        // ------------------------------------------------------------------ điểm đào kho báu (Phase 7.3)
+
+        /// <summary>Dựng ụ đất cho các điểm đào hôm nay chưa đào (sang ngày mới thì đổi chỗ).</summary>
+        private void RebuildTreasures()
+        {
+            if (_daily == null || _digging) return;   // đang đào: DoDig tự bỏ ụ đất vừa đào (để kịp chạy hiệu ứng bung)
+            string day = _daily.Today;
+            int alive = 0;
+            foreach (TreasureSpotView t in _treasures)
+                if (t != null) alive++;
+            if (day == _treasureDay && alive == _daily.DigsLeft) return;
+            foreach (TreasureSpotView t in _treasures)
+                if (t != null) Destroy(t.gameObject);
+            _treasures.Clear();
+            _treasureDay = day;
+            _pendingDig = -1;
+            for (int i = 0; i < _daily.DigSpots.Count; i++)
+                if (!_daily.IsDug(i)) _treasures.Add(TreasureSpotView.Create(transform, _daily.DigSpots[i].ToWorld(), i));
+        }
+
+        /// <summary>Chạm ụ đất: bé đứng gần thì đào luôn, xa thì chạy tới rồi tự đào.</summary>
+        private void OnTreasureTapped(int index)
+        {
+            if (_daily == null || Pet == null) return;
+            if (_pets.HasPet && _pets.Current.IsSleeping)
+            {
+                GardenUi.Toast("Bé đang ngủ, dậy rồi hãy đi đào kho báu nhé");
+                return;
+            }
+            NVec2 spot = _daily.DigSpots[index];
+            if (NVec2.Distance(Pet.transform.position.ToGround(), spot) <= _daily.Config.DigReach)
+            {
+                DoDig(index);
+                return;
+            }
+            Pet.MoveTo(spot.ToWorld());
+            _pendingDig = index;
+            _pendingDigLeft = 12f;   // chạy tới không được (bị chắn / bị dắt đi chỗ khác) thì thôi
+        }
+
+        private void DoDig(int index)
+        {
+            _pendingDig = -1;
+            NVec2 pos = Pet.transform.position.ToGround();
+            _digging = true;
+            DigResult r = _daily.Dig(index, pos);
+            _digging = false;
+            if (!r.Ok)
+            {
+                GardenUi.Toast("Chưa đào được: " + r.Reason);
+                return;
+            }
+            Pet.Avatar?.PlayEat();   // cúi đầu bới đất
+            for (int i = _treasures.Count - 1; i >= 0; i--)
+            {
+                if (_treasures[i] == null || _treasures[i].Index != index) continue;
+                _treasures[i].Pop();   // bung lên rồi tự hủy
+                _treasures.RemoveAt(i);
+            }
+            string prize = r.Prize == DigPrize.Treat ? "bánh thưởng (bé no + vui hơn) và " + r.Coins + " Coin"
+                         : r.Prize == DigPrize.Energy ? "nước tăng lực (bé khỏe hơn) và " + r.Coins + " Coin"
+                         : r.Coins + " Coin";
+            GardenUi.Toast("Bé đào được " + prize + "!" + (_daily.DigsLeft > 0 ? " Còn " + _daily.DigsLeft + " kho báu hôm nay" : ""), 3f);
+        }
+
+        private void Update()
+        {
+            if (_daily == null) return;
+            if ((_dayCheck -= Time.deltaTime) <= 0f)   // để qua đêm: sang ngày mới thì đổi chỗ kho báu
+            {
+                _dayCheck = 5f;
+                if (_daily.Today != _treasureDay) RebuildTreasures();
+            }
+            if (_pendingDig < 0 || Pet == null) return;
+            _pendingDigLeft -= Time.deltaTime;
+            if (_pendingDigLeft <= 0f)
+            {
+                _pendingDig = -1;
+                return;
+            }
+            NVec2 spot = _daily.DigSpots[_pendingDig];
+            if (NVec2.Distance(Pet.transform.position.ToGround(), spot) <= _daily.Config.DigReach * 0.8f) DoDig(_pendingDig);
         }
 
         private void SpawnPet(Vector3 at)

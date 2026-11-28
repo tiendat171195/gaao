@@ -36,6 +36,12 @@ namespace PawFit.Garden
         public Vector2 PetSpawn;
         public readonly List<GardenZone> Zones = new List<GardenZone>();
 
+        /// <summary>
+        /// Chỗ có thể hiện điểm đào kho báu (Phase 7.3): bãi cỏ trống, đã chừa khu, cây, đồ trang trí, lối đá.
+        /// Mỗi ngày chọn vài chỗ trong danh sách này.
+        /// </summary>
+        public readonly List<Vector2> DigSpots = new List<Vector2>();
+
         /// <summary>Vườn mặc định: chòi ăn trái, hồ phải, sân tập phía sau, ổ ngủ giữa, tưởng niệm ở góc, quầy hàng phía trước bên phải.</summary>
         public static GardenLayout CreateDefault()
         {
@@ -54,6 +60,12 @@ namespace PawFit.Garden
             l.Zones.Add(new GardenZone(ZoneType.Shop, new Vector2(4.5f, -6.5f), 1.5f, new Vector2(3.85f, -8.3f)));
             // biển chỉ đường Thám hiểm (Phase 7.2) ở góc sau bên trái: lối mòn dẫn ra khe hở hàng rào trái (z 9..11)
             l.Zones.Add(new GardenZone(ZoneType.Adventure, new Vector2(-7.3f, 10.2f), 1f, new Vector2(-6.4f, 9.3f)));
+            l.DigSpots.AddRange(new[]
+            {
+                new Vector2(-3.5f, -4.5f), new Vector2(2.5f, -9.5f), new Vector2(-6.5f, -9.5f), new Vector2(7.5f, -4.5f),
+                new Vector2(-3f, 4f), new Vector2(3.2f, 3.5f), new Vector2(-7.5f, -2f), new Vector2(6.5f, 8f),
+                new Vector2(-4f, 8f), new Vector2(-1.5f, -7.5f), new Vector2(8f, -8f), new Vector2(-1.5f, 5.5f),
+            });
             return l;
         }
 

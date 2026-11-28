@@ -229,6 +229,9 @@ namespace PawFit.Battle
         /// <summary>Số lần phải sửa máu theo máy chủ (0 = 2 máy + máy chủ khớp hoàn toàn).</summary>
         public int HpFixes { get; private set; }
 
+        /// <summary>Có thì hết trận phát <see cref="BattleEnded"/> (nhiệm vụ ngày đếm trận thắng / trận PvP). View / App gắn vào.</summary>
+        public EventBus Events { get; set; }
+
         public BattleMode Mode { get; }
         public BotLevel Level { get; }
         public BattleSimulation Sim { get; }
@@ -472,6 +475,7 @@ namespace PawFit.Battle
                 _pets.Spend(NeedType.Satiety, training ? _sc.TrainingSatietyCost : _sc.FightSatietyCost);
             }
             notes?.Add(new SessionNote { Kind = SessionNoteKind.Finished, Skill = -1 });
+            Events?.Publish(new BattleEnded((int)Mode, Result.PlayerWon));
         }
     }
 }

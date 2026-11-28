@@ -106,7 +106,10 @@ namespace PawFit.App
             Services.Register(new CosmeticsService(_pets, economy, bus, cfg, log));   // phụ kiện + trang trí (Phase 5.2)
             var rank = new RankService(_pets, time, bus, cfg, economy, log);   // rank Elo + mùa giải (Phase 4.3)
             Services.Register(rank);
-            Services.Register(new PawFit.Battle.AdventureService(_pets, evo, health, economy, bus));   // Thám hiểm (Phase 7.2)
+            var adventure = new PawFit.Battle.AdventureService(_pets, evo, health, economy, bus);   // Thám hiểm (Phase 7.2)
+            Services.Register(adventure);
+            Services.Register(new DailyService(_pets, time, bus, economy, layout,   // quà ngày + nhiệm vụ + kho báu (Phase 7.3)
+                                               starsLeft: () => adventure.TotalStars < adventure.MaxStars, log: log));
             // Máy chủ riêng (Phase 4): có địa chỉ máy chủ thì tài khoản khách + giờ + sao lưu + PvP qua máy chủ
             // (máy chủ ghép người thật trước, vắng người thì thả người chơi ảo, tự tính Elo).
             // Không có địa chỉ: mạng giả lập trên máy như trước (người chơi ảo, Elo tính trên máy).

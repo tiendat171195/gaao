@@ -207,6 +207,17 @@ namespace PawFit.App
                 if (GUILayout.Button("Xóa tiến độ", _button)) adv.SetAllForDebug(0);
                 GUILayout.EndHorizontal();
             }
+            if (S.TryGet(out DailyService daily))   // việc mỗi ngày (Phase 7.3)
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (QuestState q in daily.Quests) sb.Append(q.Kind).Append(' ').Append(q.Progress).Append('/').Append(q.Target).Append(q.Claimed ? "✓ " : " ");
+                GUILayout.Label($"Ngày {daily.Today} · chuỗi {daily.Streak} (quà ngày {daily.GiftDay}{(daily.GiftReady ? ", chưa nhận" : "")}) · kho báu còn {daily.DigsLeft}", _small);
+                GUILayout.Label("Nhiệm vụ: " + sb, _small);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Sang ngày mới", _button)) daily.StartNewDayForDebug();
+                if (GUILayout.Button("Xong hết nhiệm vụ", _button)) daily.CompleteAllForDebug();
+                GUILayout.EndHorizontal();
+            }
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("+10 Sức", _button)) evo.Training.Add(TrainingAxis.Strength, 10f);
             if (GUILayout.Button("+10 Tốc", _button)) evo.Training.Add(TrainingAxis.Speed, 10f);

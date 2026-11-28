@@ -38,6 +38,12 @@ namespace PawFit.App
             Garden.MailboxTapped = OpenSettings;
             Garden.ArenaTapped = OpenArena;
             Garden.AdventureTapped = OpenAdventure;
+            if (services.TryGet(out DailyService daily))   // việc mỗi ngày (Phase 7.3): báo xong nhiệm vụ / có quà
+            {
+                SnapshotQuests(daily);
+                services.Get<EventBus>().Subscribe<DailyChanged>(_ => OnDailyChanged(daily));
+                if (daily.GiftReady) GardenUi.Toast("Hòm thư có quà ngày " + daily.GiftDay + "/7 cho bạn!", 3f);
+            }
             if (services.TryGet(out TipService tips))   // vào game sau 1 thời gian vắng: "trong lúc bạn vắng..."
             {
                 string welcome = tips.WelcomeBack(services.Get<PetService>().LastAwayHours);
@@ -79,11 +85,90 @@ namespace PawFit.App
             }
             GardenUi.Close();
             Garden.SetPaused(true);
-            Battle = BattleScene.Enter(_services, mode, level, () =>
+            Battle = BattleScene.Enter(_services, mode, level, BattleClosed);
+        }
+
+        /// <summary>Rời màn đấu (mọi kiểu trận): mở lại vườn, báo nhiệm vụ ngày vừa xong trong trận.</summary>
+        private static void BattleClosed()
+        {
+            Battle = null;
+            if (Garden != null) Garden.SetPaused(false);
+            FlushQuestToast();
+        }
+
+        // ------------------------------------------------------------------
+        // Việc mỗi ngày (Phase 7.3): quà mở game + 3 nhiệm vụ nhận ở hòm thư
+        // ------------------------------------------------------------------
+
+        private static bool[] _questDone = new bool[0];
+        private static string _questDay;
+        private static readonly List<string> _questToasts = new List<string>();
+
+        private static void SnapshotQuests(DailyService daily)
+        {
+            IReadOnlyList<QuestState> q = daily.Quests;
+            _questDay = daily.Today;
+            _questDone = new bool[q.Count];
+            for (int i = 0; i < q.Count; i++) _questDone[i] = q[i].Done;
+        }
+
+        /// <summary>Nhiệm vụ vừa xong: báo ngay ở vườn; đang đấu thì để lúc về vườn mới báo.</summary>
+        private static void OnDailyChanged(DailyService daily)
+        {
+            IReadOnlyList<QuestState> q = daily.Quests;
+            if (daily.Today == _questDay && q.Count == _questDone.Length)
+                for (int i = 0; i < q.Count; i++)
+                    if (q[i].Done && !_questDone[i]) _questToasts.Add(DailyService.QuestText(q[i]));
+            SnapshotQuests(daily);
+            if (Battle == null) FlushQuestToast();
+        }
+
+        private static void FlushQuestToast()
+        {
+            if (_questToasts.Count == 0 || Garden == null) return;
+            GardenUi.Toast("Xong nhiệm vụ: " + string.Join(" · ", _questToasts) + ". Mở hòm thư nhận Coin!", 3.5f);
+            _questToasts.Clear();
+        }
+
+        /// <summary>Thẻ nhiệm vụ hôm nay: mỗi nhiệm vụ 1 dòng (xong thì bấm nhận Coin), thưởng thêm khi xong cả 3.</summary>
+        private static void OpenQuests()
+        {
+            var daily = _services.Get<DailyService>();
+            IReadOnlyList<QuestState> quests = daily.Quests;
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            var actions = new List<Action>();
+            for (int i = 0; i < quests.Count; i++)
             {
-                Battle = null;
-                if (Garden != null) Garden.SetPaused(false);
+                QuestState q = quests[i];
+                int qi = i;
+                string text = DailyService.QuestText(q);
+                if (q.Claimed) labels.Add("Đã nhận: " + text);
+                else if (q.Done) labels.Add("Nhận +" + q.Coins + " Coin: " + text);
+                else labels.Add(text + " · " + q.Progress + "/" + q.Target + " · +" + q.Coins + " Coin");
+                enabled.Add(daily.CanClaim(i));
+                actions.Add(() =>
+                {
+                    int coins = daily.Claim(qi);
+                    if (coins > 0) GardenUi.Toast("+" + coins + " Coin");
+                    OpenQuests();
+                });
+            }
+            labels.Add(daily.BonusReady ? "Nhận thưởng xong cả 3: +" + daily.Config.AllDoneBonusCoins + " Coin"
+                                        : "Xong cả 3 nhiệm vụ: thêm +" + daily.Config.AllDoneBonusCoins + " Coin");
+            enabled.Add(daily.BonusReady);
+            actions.Add(() =>
+            {
+                int coins = daily.ClaimBonus();
+                if (coins > 0) GardenUi.Toast("+" + coins + " Coin · giỏi lắm!");
+                OpenQuests();
             });
+            labels.Add("Quay lại");
+            enabled.Add(true);
+            actions.Add(OpenSettings);
+            string body = "Đã xong " + daily.DoneCount + "/" + quests.Count + " · nhiệm vụ mới mỗi ngày\n" +
+                          "Kho báu trong vườn hôm nay còn " + daily.DigsLeft;
+            GardenUi.ShowChoice("Nhiệm vụ hôm nay", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
         }
 
         // ------------------------------------------------------------------
@@ -208,11 +293,7 @@ namespace PawFit.App
             };
             GardenUi.Close();
             Garden.SetPaused(true);
-            Battle = BattleScene.EnterRanked(_services, view, () =>
-            {
-                Battle = null;
-                if (Garden != null) Garden.SetPaused(false);
-            });
+            Battle = BattleScene.EnterRanked(_services, view, BattleClosed);
         }
 
         private static List<string> AdventureLines(AdventureService adv, AdventureResult r)
@@ -509,8 +590,7 @@ namespace PawFit.App
             Battle = BattleScene.EnterRanked(_services, view, () =>
             {
                 net.LeaveMatch();
-                Battle = null;
-                if (Garden != null) Garden.SetPaused(false);
+                BattleClosed();
             });
         }
 
@@ -558,14 +638,37 @@ namespace PawFit.App
             string dna = pets.DnaCode;
             string body = (dna != null ? "Mã DNA của " + pets.Current.Name + ": " + dna : "Chưa có thú (trứng đang chờ nở)") +
                           "\nPawFit " + Application.version;
-            var labels = new List<string> { "Âm thanh: " + (settings.SoundOn ? "Bật (chạm để tắt)" : "Tắt (chạm để bật)") };
-            var enabled = new List<bool> { true };
-            var actions = new List<Action> { () =>
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            var actions = new List<Action>();
+            if (_services.TryGet(out DailyService daily))   // việc mỗi ngày (Phase 7.3) ở đầu hòm thư
+            {
+                labels.Add(daily.GiftReady ? "Nhận quà ngày " + daily.GiftDay + "/7: +" + daily.GiftCoins + " Coin"
+                                           : "Quà ngày " + daily.GiftDay + "/7: đã nhận · mai quay lại nhé");
+                enabled.Add(daily.GiftReady);
+                actions.Add(() =>
+                {
+                    int coins = daily.ClaimGift();
+                    if (coins > 0) GardenUi.Toast("+" + coins + " Coin · chuỗi " + daily.Streak + " ngày liên tiếp");
+                    OpenSettings();
+                });
+                int claimable = 0;
+                for (int i = 0; i < daily.Quests.Count; i++)
+                    if (daily.CanClaim(i)) claimable++;
+                if (daily.BonusReady) claimable++;
+                labels.Add("Nhiệm vụ hôm nay: xong " + daily.DoneCount + "/" + daily.Quests.Count + (claimable > 0 ? " · " + claimable + " phần thưởng chờ nhận" : ""));
+                enabled.Add(true);
+                actions.Add(OpenQuests);
+                body = "Mở game liên tiếp " + daily.Streak + " ngày · ngày 7 quà to nhất\n" + body;
+            }
+            labels.Add("Âm thanh: " + (settings.SoundOn ? "Bật (chạm để tắt)" : "Tắt (chạm để bật)"));
+            enabled.Add(true);
+            actions.Add(() =>
             {
                 settings.ToggleSound();
                 GardenUi.Toast(settings.SoundOn ? "Đã bật âm thanh" : "Đã tắt âm thanh");
                 OpenSettings();
-            } };
+            });
             if (_services.TryGet(out OnlineService online))   // máy chủ riêng: tài khoản + chuyển máy
             {
                 body += "\nTài khoản: " + (online.Name ?? "chưa có") + " · " +

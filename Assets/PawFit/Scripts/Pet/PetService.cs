@@ -36,9 +36,10 @@ namespace PawFit.Pet
     {
         /// <summary>
         /// 2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). 3 = Phase 5.1 (thêm ví Coin). 4 = Phase 5.2 (thêm phụ kiện + trang trí).
-        /// 5 = Phase 4.3 (thêm rank Elo + mùa giải). 6 = Phase 7.2 (thêm Thám hiểm). File bản cũ vẫn đọc được.
+        /// 5 = Phase 4.3 (thêm rank Elo + mùa giải). 6 = Phase 7.2 (thêm Thám hiểm).
+        /// 7 = Phase 7.3 (nhiệm vụ ngày, quà đăng nhập, điểm đào). File bản cũ vẫn đọc được.
         /// </summary>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
         public int Version = CurrentVersion;
 
         /// <summary>Thú đang sống. null khi thú đã mất và trứng chưa nở.</summary>
@@ -63,6 +64,9 @@ namespace PawFit.Pet
 
         /// <summary>Tiến độ Thám hiểm (sao từng màn). File cũ chưa có thì tạo rỗng khi cần.</summary>
         public AdventureData Adventure;
+
+        /// <summary>Nhiệm vụ ngày + chuỗi ngày đăng nhập + điểm đào hôm nay. File cũ chưa có thì tạo khi cần.</summary>
+        public DailyData Daily;
     }
 
     // ---- Sự kiện (View lắng nghe qua EventBus) ----
@@ -188,6 +192,19 @@ namespace PawFit.Pet
                 AdventureData a = _game.Adventure ?? (_game.Adventure = new AdventureData());
                 if (a.Stars == null) a.Stars = new List<int>();   // file sửa tay / lỗi: không để null
                 return a;
+            }
+        }
+
+        /// <summary>Nhiệm vụ ngày / quà đăng nhập / điểm đào (DailyService đọc / ghi qua đây). null nếu chưa nạp file lưu.</summary>
+        public DailyData Daily
+        {
+            get
+            {
+                if (_game == null) return null;
+                DailyData d = _game.Daily ?? (_game.Daily = new DailyData());
+                if (d.Quests == null) d.Quests = new List<QuestState>();   // file sửa tay / lỗi: không để null
+                if (d.Dug == null) d.Dug = new List<int>();
+                return d;
             }
         }
 

@@ -13,4 +13,21 @@ namespace PawFit.Core
         public int Wins;
         public int Losses;
     }
+
+    /// <summary>Vừa thắng 1 màn Thám hiểm (nhiệm vụ ngày nghe sự kiện này). NewStars = số sao mới có thêm.</summary>
+    public readonly struct AdventureWon
+    {
+        public readonly int Stage;
+        public readonly int Stars;
+        public readonly int NewStars;
+        public readonly bool FirstClear;
+
+        public AdventureWon(int stage, int stars, int newStars, bool firstClear)
+        {
+            Stage = stage;
+            Stars = stars;
+            NewStars = newStars;
+            FirstClear = firstClear;
+        }
+    }
 }

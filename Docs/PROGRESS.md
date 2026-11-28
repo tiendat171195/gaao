@@ -345,6 +345,14 @@
   - Cân bằng: đo bằng bot đánh lần lượt 25 màn ở từng giai đoạn tiến hóa; đã nới 2 lần cho trùm vùng 4–5 bớt dốc.
   - Test: 227 test logic (thêm 9) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 519 thành viên khớp Unity.
 
+- **Phase 7.3 · Việc mỗi ngày** (GDD G16):
+  - Logic `Garden/DailyService.cs` (C# thuần): quà mở game theo chuỗi 7 ngày, 3 nhiệm vụ / ngày (1 chăm + 1 đấu + đào kho báu hoặc 1 việc chăm), thưởng thêm khi xong cả 3, 2 điểm đào / ngày. Đếm qua sự kiện; phần thưởng có seed theo ngày + người chơi.
+  - Sự kiện mới ở Core: `BattleEnded` (BattleSession phát khi hết trận, View gắn `EventBus`), `AdventureWon` chuyển về Core + thêm `NewStars`. Dữ liệu `DailyData` trong `GameSave` (bản lưu 7).
+  - Vườn: ụ đất kho báu (dấu X đỏ + đốm sáng xoay), chạm = bé chạy tới đào; cờ hòm thư dựng / hạ theo quà chờ nhận + dấu "!". 2 mẹo mới.
+  - Hòm thư: dòng nhận quà ngày N/7, dòng "Nhiệm vụ hôm nay" mở thẻ nhiệm vụ (nhận Coin từng nhiệm vụ + thưởng xong cả 3). Báo "Xong nhiệm vụ" ở vườn / lúc rời trận.
+  - Bảng DEV: xem ngày / chuỗi / nhiệm vụ / kho báu; nút **Sang ngày mới**, **Xong hết nhiệm vụ**.
+  - Test: 235 test logic (thêm 8) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 520 thành viên khớp Unity (thêm `Collider.enabled`).
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -368,7 +376,7 @@
 
 - **Đánh thử Phase 7.1 trên điện thoại** — pull code, build Dev, vào sân tập ▸ Đấu hình nộm + Đấu trường. Gửi tôi cảm nhận: ra đòn đã đủ nhanh chưa, vuốt có còn hay bị "sai" không, trận dài / ngắn thế nào. Số chỉnh ở `BattleConfig` / `SwipeConfig`.
 - **Thử Thám hiểm** — chạm biển gỗ góc sau bên trái vườn. Bảng DEV ▸ Lên giai đoạn để thử vùng sau nhanh. Gửi tôi: màn nào quá dễ / quá khó, chữ ★ có hiện đúng không.
-- **Phase 7.3** — nhiệm vụ ngày + chuỗi đăng nhập + đào kho báu (tôi làm tiếp).
+- **Thử việc mỗi ngày** — hòm thư (quà + nhiệm vụ), ụ đất kho báu trong vườn. Bảng DEV ▸ **Sang ngày mới** để thử ngày kế tiếp ngay.
 - **Thử máy chủ** — chạy `dotnet run` trên Mac, điện thoại (bản Dev) gõ địa chỉ ở bảng DEV ▸ Máy chủ (`Docs/BUILD.md` mục 14). Gửi tôi:
   - Console / log nếu không nối được;
   - cảm giác độ trễ khi đánh PvP.

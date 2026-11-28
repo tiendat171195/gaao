@@ -119,6 +119,7 @@ namespace PawFit.Battle.View
                 ICoinWallet wallet = s.TryGet(out ICoinWallet w) ? w : null;   // thắng Bot có Coin (Phase 5.1)
                 _session = new BattleSession(mode, level, _pets, _evo, (ulong)DateTime.UtcNow.Ticks, wallet: wallet);
             }
+            _session.Events = s.TryGet(out EventBus bus) ? bus : null;   // hết trận báo BattleEnded (nhiệm vụ ngày)
             transform.position = ArenaPos;
             BuildArena(match != null ? match.Theme : -1);
 

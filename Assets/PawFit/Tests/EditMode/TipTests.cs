@@ -87,7 +87,7 @@ namespace PawFit.Tests
                 TipId? t = _tips.Update(0.5f);
                 if (t.HasValue) shown.Add(t.Value);
             }
-            CollectionAssert.AreEqual(new[] { TipId.Shop, TipId.Training, TipId.Adventure, TipId.Arena }, shown);
+            CollectionAssert.AreEqual(new[] { TipId.Dig, TipId.Shop, TipId.Daily, TipId.Training, TipId.Adventure, TipId.Arena }, shown);
         }
 
         [Test]
