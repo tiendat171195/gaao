@@ -12,7 +12,8 @@ namespace PawFit.Garden.View
     ///   kéo từ khay đồ ăn thả lên thú = cho ăn
     ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy · chạm hòm thư (cạnh cổng đấu trường) = cài đặt
     ///   chạm biển Thám hiểm (góc sau bên trái) = bản đồ Thám hiểm · chạm ụ đất kho báu = bé chạy tới đào
-    ///   đồ chơi (Phase 8.3): vuốt bóng = ném (chạm = đá nhẹ) · kéo cần lông vũ = bé đuổi · chạm máy bong bóng = thổi, chạm bong bóng = vỡ.
+    ///   đồ chơi (Phase 8.3): vuốt bóng = ném (chạm = đá nhẹ) · kéo cần lông vũ = bé đuổi · chạm máy bong bóng = thổi, chạm bong bóng = vỡ
+    ///   đồ trang trí (Phase 8.4): chạm ghế = bé ra ngồi · chạm đèn lồng = lấp lánh · chạm cối xay gió = bé ra ăn bánh · chạm vòm hoa = gọi bướm.
     /// Phân loại cử chỉ nằm ở PointerGestureClassifier (C# thuần); lớp này chỉ raycast + chuyển lệnh.
     /// </summary>
     public sealed class GardenInputRouter : MonoBehaviour
@@ -48,6 +49,9 @@ namespace PawFit.Garden.View
         /// <summary>Đồ chơi trong vườn (GardenScene gắn). null = chưa có đồ chơi.</summary>
         public ToyPlayground Toys { get; set; }
 
+        /// <summary>Chạm trúng 1 đồ trang trí (Phase 8.4).</summary>
+        public Action<DecorKind> DecorTapped { get; set; }
+
         /// <summary>Mẹo hướng dẫn: báo người chơi đã chạm đất / dắt thú (mẹo đó không hiện nữa). Có thể null.</summary>
         public TipService Tips { get; set; }
 
@@ -62,6 +66,7 @@ namespace PawFit.Garden.View
         private AdventureSignView _downAdventure;
         private TreasureSpotView _downTreasure;
         private ToyHandle _downToy;
+        private DecorHandle _downDecor;
         private PointerGestureClassifier _gestures;
         private readonly StrokeTracker _stroke = new StrokeTracker();
         private bool _leading, _strokingPet;
@@ -129,6 +134,7 @@ namespace PawFit.Garden.View
             _downAdventure = null;
             _downTreasure = null;
             _downToy = null;
+            _downDecor = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -151,6 +157,8 @@ namespace PawFit.Garden.View
                 if (_downTreasure != null) return PointerTarget.Treasure;
                 _downToy = hit.collider.GetComponentInParent<ToyHandle>();
                 if (_downToy != null && Toys != null) return PointerTarget.Toy;
+                _downDecor = hit.collider.GetComponentInParent<DecorHandle>();
+                if (_downDecor != null && DecorTapped != null) return PointerTarget.Decor;
             }
             return PointerTarget.Ground;
         }
@@ -219,6 +227,10 @@ namespace PawFit.Garden.View
                     break;
                 case PointerTarget.Toy:
                     HandleToy(e, screen, onGround, g);
+                    break;
+                case PointerTarget.Decor:   // chạm = dùng đồ trang trí; kéo = kéo camera như trên đất
+                    if (e.Kind == GestureKind.Tap && _downDecor != null) DecorTapped?.Invoke(_downDecor.Kind);
+                    else HandleGround(e, screen, onGround, g);
                     break;
                 default: HandleGround(e, screen, onGround, g); break;
             }
@@ -320,7 +332,7 @@ namespace PawFit.Garden.View
         private void TrackPetDrag(GestureEvent e, bool onGround, Vector3 g)
         {
             Vector2 screen = e.Position.ToUnity();
-            Vector3 center = _pet.transform.position + Vector3.up * 0.5f;
+            Vector3 center = _pet.BodyCenter;   // bé ngồi ghế: tâm ở trên mặt ghế
             Vector3 sc = _cam.WorldToScreenPoint(center);
             Vector3 se = _cam.WorldToScreenPoint(center + _cam.transform.right * 0.6f);   // bán kính thú trên màn hình
             float radius = Mathf.Max(40f, Vector2.Distance(sc, se));

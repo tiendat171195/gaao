@@ -32,6 +32,14 @@ namespace PawFit.Garden
 
         /// <summary>Nhiệm vụ vuốt ve: 2 lần vuốt cách nhau ít nhất bấy nhiêu giây mới tính (như lúc bé được cộng vui).</summary>
         public float CuddleGapSeconds = 4f;
+
+        /// <summary>
+        /// Cối xay gió (Phase 8.4): mỗi ngày xay 1 túi bánh để ở chân cối, bé ăn được no + vui bấy nhiêu.
+        /// Bé đang no quá mức WindmillFullAbove thì để dành (không ăn phí).
+        /// </summary>
+        public float WindmillSatiety = 20f;
+        public float WindmillMood = 10f;
+        public float WindmillFullAbove = 90f;
     }
 
     public enum DigPrize { Coins = 0, Treat = 1, Energy = 2 }
@@ -237,6 +245,35 @@ namespace PawFit.Garden
             Data.BonusClaimed = true;
             Pay(_cfg.AllDoneBonusCoins, "xong cả nhiệm vụ ngày");
             return _cfg.AllDoneBonusCoins;
+        }
+
+        // ------------------------------------------------------------------ cối xay gió (Phase 8.4)
+
+        /// <summary>Hôm nay cối xay gió còn túi bánh (phải có cối xay gió trong vườn).</summary>
+        public bool WindmillReady
+        {
+            get
+            {
+                CosmeticsData c = _pets.Cosmetics;
+                return Data != null && c != null && c.Decor != null && c.Decor.Contains(DecorKind.Windmill) && Data.WindmillDay != Today;
+            }
+        }
+
+        /// <summary>Bé ăn túi bánh của cối xay gió: no + vui, mỗi ngày 1 túi. Không được thì `why` = lý do (để nhắc người chơi).</summary>
+        public bool TakeWindmillTreat(out string why)
+        {
+            why = null;
+            if (!_pets.HasPet) why = "không có thú";
+            else if (!WindmillReady) why = "hôm nay bé ăn bánh rồi, mai cối xay gió lại xay túi mới";
+            else if (_pets.Current.Needs.Satiety > _cfg.WindmillFullAbove) why = "bé đang no căng, để dành bánh lát nữa nhé";
+            if (why != null) return false;
+            Data.WindmillDay = Today;
+            _pets.Care(NeedType.Satiety, _cfg.WindmillSatiety);
+            if (_pets.HasPet) _pets.Care(NeedType.Mood, _cfg.WindmillMood);
+            _pets.Save();
+            _log?.Info("[PawFit] Bé ăn túi bánh cối xay gió");
+            _bus.Publish(new DailyChanged());
+            return true;
         }
 
         /// <summary>Có quà / thưởng nào chờ nhận ở hòm thư không (cờ hòm thư dựng lên).</summary>

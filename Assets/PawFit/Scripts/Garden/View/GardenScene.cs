@@ -36,6 +36,7 @@ namespace PawFit.Garden.View
         private Vector3 _pondPos;
         private ToyPlayground _toys;
         private PlayService _play;
+        private DecorLife _decor;
         private ServiceLocator _s;
         private GardenLayout _layout;
         private PetService _pets;
@@ -69,6 +70,7 @@ namespace PawFit.Garden.View
         {
             _paused = paused;
             if (_toys != null) _toys.Paused = paused;
+            if (_decor != null) _decor.Paused = paused;
             Sfx.Ambience(!paused);
             if (!paused) Sfx.Music(MusicId.Garden);
             else Sfx.Loop(LoopId.Pond, false);
@@ -105,8 +107,9 @@ namespace PawFit.Garden.View
             GardenBuildResult built = GardenBuilder.Build(_layout, transform);
             _built = built;
             CosmeticsData owned = _pets.Cosmetics;   // đồ trang trí đã mua: dựng trước khi nướng NavMesh để thú đi vòng qua
+            var startDecor = new List<KeyValuePair<DecorKind, Transform>>();
             if (owned != null)
-                foreach (DecorKind d in owned.Decor) DecorBuilder.Build(d, built.Obstacles);
+                foreach (DecorKind d in owned.Decor) startDecor.Add(new KeyValuePair<DecorKind, Transform>(d, DecorBuilder.Build(d, built.Obstacles)));
             BakeNavMesh(built, _layout);
             _memorial = MemorialView.Create(transform, _layout, _pets.Memorials);
             _focus = new GameObject("CameraFocus").transform;
@@ -149,6 +152,12 @@ namespace PawFit.Garden.View
                 RebuildTreasures();
                 _subs.Add(bus.Subscribe<DailyChanged>(_ => RebuildTreasures()));
             }
+            // đồ trang trí có tác dụng + bé dùng được (Phase 8.4): ghế ngồi, đèn lồng, túi bánh cối xay gió, bướm ở vòm hoa
+            _decor = new GameObject("DecorLife").AddComponent<DecorLife>();
+            _decor.transform.SetParent(transform, false);
+            _decor.Init(s.Get<PetBrain>(), _play, _daily, () => Pet);
+            foreach (KeyValuePair<DecorKind, Transform> d in startDecor) _decor.Add(d.Key, d.Value);
+            _router.DecorTapped = k => _decor.Tap(k);
             _router.Tips = s.TryGet(out TipService tips) ? tips : null;
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
@@ -165,7 +174,9 @@ namespace PawFit.Garden.View
 
             _log.Info("[PawFit] Vườn sẵn sàng · chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve · " +
                       "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn · " +
-                      "chạm quầy hàng (trước bên phải) = mua đồ / xem quảng cáo · chạm hòm thư (cạnh cổng đấu trường) = cài đặt");
+                      "chạm quầy hàng (trước bên phải) = mua đồ / xem quảng cáo · chạm hòm thư (cạnh cổng đấu trường) = cài đặt · " +
+                      "vuốt bóng = ném cho bé nhặt · kéo cần lông vũ = bé vồ · chạm máy bong bóng = thổi · " +
+                      "chạm ghế = bé ra ngồi · chạm đèn lồng = lấp lánh · chạm cối xay gió = bé ăn bánh · chạm vòm hoa = gọi bướm");
         }
 
         // ------------------------------------------------------------------ điểm đào kho báu (Phase 7.3)
@@ -302,6 +313,7 @@ namespace PawFit.Garden.View
         {
             Transform decor = DecorBuilder.Build(kind, _built.Obstacles, pop: true);
             if (decor == null) yield break;
+            if (_decor != null) _decor.Add(kind, decor);
             GardenUi.Close();
             _focus.position = decor.position;
             _camCtl.SetFollow(_focus);
@@ -310,6 +322,20 @@ namespace PawFit.Garden.View
             yield return new WaitForSeconds(1.8f);
             Transform back = Pet != null ? Pet.transform : (_egg != null ? _egg.transform : null);
             if (back != null) _camCtl.SetFollow(back);
+            GardenUi.Toast(DecorHowTo(kind), 4.5f);
+        }
+
+        /// <summary>Vừa mua đồ trang trí: chỉ cách bé dùng món đó (Phase 8.4).</summary>
+        private static string DecorHowTo(DecorKind kind)
+        {
+            switch (kind)
+            {
+                case DecorKind.Lanterns: return "Tối đèn lồng sẽ sáng, bé ngủ ngon hơn · chạm đèn lồng cho đèn lấp lánh";
+                case DecorKind.Bench: return "Bé mệt sẽ tự ra ghế ngồi nghỉ · chạm ghế (hoặc dắt bé thả lên ghế) để bé ra ngồi";
+                case DecorKind.Windmill: return "Mỗi ngày cối xay gió xay 1 túi bánh · chạm cối xay gió để bé ra ăn";
+                case DecorKind.FlowerArch: return "Bướm sẽ bay ra rủ bé đuổi, bé vui lâu hơn · chạm vòm hoa để gọi bướm";
+                default: return "";
+            }
         }
 
         /// <summary>Trứng nằm trong ổ ngủ (giữa vườn).</summary>

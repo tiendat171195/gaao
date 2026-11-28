@@ -53,8 +53,10 @@ namespace PawFit.Garden
     /// </summary>
     public static class NotificationPlanner
     {
+        /// <param name="perks">Tác dụng của đồ đã mua (Phase 8.4): phải giống lúc tính bù khi mở lại game, không thì báo sai giờ.</param>
         public static List<PlannedNotification> Plan(PetData pet, EggData egg, DateTime nowUtc, TimeSpan localOffset,
-                                                     GameConfig cfg, ExpressionConfig expr, NotificationConfig nc = null)
+                                                     GameConfig cfg, ExpressionConfig expr, NotificationConfig nc = null,
+                                                     CarePerks perks = default)
         {
             if (cfg == null) throw new ArgumentNullException(nameof(cfg));
             expr = expr ?? new ExpressionConfig();
@@ -63,7 +65,7 @@ namespace PawFit.Garden
             string name = pet?.Name;
 
             if (pet != null && pet.Health != null && pet.Health.Stage != HealthStage.Dead && pet.Needs != null)
-                Simulate(pet, nowUtc, cfg, expr, nc, events);
+                Simulate(pet, nowUtc, cfg, expr, nc, perks, events);
             else if (egg != null && egg.ReadyAtUtc > nowUtc)
                 events.Add(new KeyValuePair<DateTime, PetAlertKind>(egg.ReadyAtUtc, PetAlertKind.EggReady));
 
@@ -96,7 +98,7 @@ namespace PawFit.Garden
 
         /// <summary>Chạy tới trước từng bước nhỏ (bước của luật sức khỏe) trên bản sao, ghi lần đầu mỗi chuyện xảy ra.</summary>
         private static void Simulate(PetData pet, DateTime nowUtc, GameConfig cfg, ExpressionConfig expr, NotificationConfig nc,
-                                     List<KeyValuePair<DateTime, PetAlertKind>> events)
+                                     CarePerks perks, List<KeyValuePair<DateTime, PetAlertKind>> events)
         {
             PetNeeds needs = pet.Needs.Clone();
             PetHealth health = pet.Health.Clone();
@@ -116,7 +118,7 @@ namespace PawFit.Garden
             for (double h = step; h <= horizon + 1e-9; h += step)
             {
                 DateTime at = nowUtc.AddHours(h);
-                NeedsSimulator.Advance(needs, step, sleeping, cfg.Needs);
+                NeedsSimulator.Advance(needs, step, sleeping, cfg.Needs, perks);
                 HealthChange change = HealthRules.Step(health, needs, step, at, cfg);
                 if (!hungry && needs.Satiety < expr.HungryBelowSatiety)
                 {
@@ -323,7 +325,7 @@ namespace PawFit.Garden
 
         /// <summary>Lịch sẽ hẹn nếu ẩn app ngay bây giờ (bảng DEV xem trước).</summary>
         public List<PlannedNotification> Preview() =>
-            NotificationPlanner.Plan(_pets.Current, _pets.Egg, _time.UtcNow, _localOffset(), _cfg, _expr, _nc);
+            NotificationPlanner.Plan(_pets.Current, _pets.Egg, _time.UtcNow, _localOffset(), _cfg, _expr, _nc, _pets.Perks);
 
         /// <summary>Ẩn / tắt app: hẹn lịch mới (tắt thông báo thì thôi).</summary>
         public void OnBackground()

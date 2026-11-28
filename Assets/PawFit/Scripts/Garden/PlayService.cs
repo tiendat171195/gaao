@@ -4,20 +4,23 @@ using PawFit.Pet;
 
 namespace PawFit.Garden
 {
-    /// <summary>Trò chơi với bé trong vườn (Phase 8.3).</summary>
-    public enum PlayKind { Fetch = 0, Pounce = 1, BubblePop = 2, SelfPlay = 3 }
+    /// <summary>Trò chơi với bé trong vườn (Phase 8.3). Butterfly (Phase 8.4) = đuổi bướm ở vòm hoa.</summary>
+    public enum PlayKind { Fetch = 0, Pounce = 1, BubblePop = 2, SelfPlay = 3, Butterfly = 4 }
 
     /// <summary>Số liệu trò chơi — GDD G17 (chỉnh ở đây, không phải sửa code).</summary>
     public sealed class PlayConfig
     {
-        /// <summary>Mỗi lần: vui +, điểm Tốc độ +, năng lượng −, no − (theo PlayKind: nhặt bóng / vồ lông vũ / đớp bong bóng / tự chơi).</summary>
-        public float[] Mood = { 6f, 4f, 2.5f, 3f };
-        public float[] SpeedPoints = { 1.5f, 1f, 0.5f, 0.3f };
-        public float[] Energy = { 1.5f, 1f, 0.5f, 0.5f };
-        public float[] Satiety = { 0.6f, 0.4f, 0.2f, 0.2f };
+        /// <summary>
+        /// Mỗi lần: vui +, điểm Tốc độ +, năng lượng −, no − (theo PlayKind: nhặt bóng / vồ lông vũ / đớp bong bóng / tự chơi bóng /
+        /// đuổi bướm).
+        /// </summary>
+        public float[] Mood = { 6f, 4f, 2.5f, 3f, 4f };
+        public float[] SpeedPoints = { 1.5f, 1f, 0.5f, 0.3f, 0.6f };
+        public float[] Energy = { 1.5f, 1f, 0.5f, 0.5f, 0.8f };
+        public float[] Satiety = { 0.6f, 0.4f, 0.2f, 0.2f, 0.3f };
 
         /// <summary>2 lần thưởng cùng kiểu cách nhau ít nhất bấy nhiêu giây (vồ liên tục / đớp bong bóng dồn không cộng mãi).</summary>
-        public float[] CooldownSeconds = { 1f, 1.2f, 0.5f, 8f };
+        public float[] CooldownSeconds = { 1f, 1.2f, 0.5f, 8f, 5f };
 
         /// <summary>Năng lượng dưới mức này thì bé không chịu chơi (mệt, cần ngủ).</summary>
         public float MinEnergy = 10f;
@@ -48,7 +51,7 @@ namespace PawFit.Garden
         private readonly ITimeProvider _time;
         private readonly EventBus _bus;
         private readonly PlayConfig _cfg;
-        private readonly DateTime[] _last = new DateTime[4];
+        private readonly DateTime[] _last = new DateTime[Enum.GetValues(typeof(PlayKind)).Length];
 
         public PlayService(PetService pets, HealthService health, EvolutionService evo, ITimeProvider time, EventBus bus, PlayConfig cfg = null)
         {

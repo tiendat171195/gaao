@@ -131,6 +131,10 @@ namespace PawFit.App
                 if (GUILayout.Button("+25", _button)) pets.SetNeedForDebug(Needs[i], n.Get(Needs[i]) + 25f);
                 GUILayout.EndHorizontal();
             }
+            CarePerks k = pets.Perks;   // tác dụng của đồ đã mua (Phase 8.4)
+            if (k.Any)
+                GUILayout.Label($"Đồ đã mua: hao chậm no {k.SatietyCut:P0} · sạch {k.HygieneCut:P0} · năng lượng {k.EnergyCut:P0} · " +
+                                $"vui {k.MoodCut:P0} · ngủ hồi nhanh {k.SleepBoost:P0}", _small);
         }
 
         private void DrawQuickStates()

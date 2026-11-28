@@ -7,7 +7,8 @@ namespace PawFit.Garden
 {
     /// <summary>Thú đang làm gì trong vườn.</summary>
     /// <summary>Petted = đang được vuốt ve (Phase 8.2). Playing = đang chơi đồ chơi: chạy theo bóng / lông vũ / bong bóng (Phase 8.3).</summary>
-    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping, Training, Petted, Playing }
+    /// <summary>Bé đang làm gì. Resting (Phase 8.4) = ngồi nghỉ trên ghế gỗ.</summary>
+    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping, Training, Petted, Playing, Resting }
 
     /// <summary>
     /// "Bộ não" của thú trong vườn (C# thuần): nhận lệnh người chơi + tự quyết khi rảnh
@@ -93,6 +94,13 @@ namespace PawFit.Garden
         public Func<Vector2?> BallPosition { get; set; }
         public Func<double, bool> WantsSelfPlay { get; set; }
 
+        /// <summary>
+        /// Ghế gỗ trong vườn (Phase 8.4, View đặt khi dựng ghế): chỗ đứng trước ghế (tới đây rồi nhảy lên ngồi) + tâm ghế.
+        /// null = chưa có ghế. Có ghế thì bé hơi mệt hay tự ra ghế ngồi nghỉ; chạm ghế / thả bé lên ghế = bé ra ngồi.
+        /// </summary>
+        public Vector2? BenchStand { get; set; }
+        public Vector2? BenchCenter { get; set; }
+
         // ------------------------------------------------------------------
         // Lệnh từ người chơi
         // ------------------------------------------------------------------
@@ -127,7 +135,9 @@ namespace PawFit.Garden
             if (Activity != PetActivity.Led) return;
             FlushRun();
             ZoneType zone = _layout.ZoneAt(dropPoint);
-            if (zone == ZoneType.Pond || zone == ZoneType.Bed || zone == ZoneType.TrainingGround) GoUse(zone, petPos);
+            if (zone == ZoneType.None && BenchCenter.HasValue && Vector2.Distance(dropPoint, BenchCenter.Value) < _cfg.BenchDropRadius)
+                zone = ZoneType.Bench;   // thả lên ghế gỗ: bé ngồi nghỉ (Phase 8.4)
+            if (zone == ZoneType.Pond || zone == ZoneType.Bed || zone == ZoneType.TrainingGround || zone == ZoneType.Bench) GoUse(zone, petPos);
             else StartMove(PetActivity.MoveTo, _layout.Clamp(dropPoint, 0.6f), false, petPos);
             _playerHold = _cfg.PlayerHoldSeconds;
         }
@@ -251,6 +261,7 @@ namespace PawFit.Garden
                 case PetActivity.Reacting:
                 case PetActivity.Training:
                 case PetActivity.Petted:
+                case PetActivity.Resting:
                     _timer -= dt;
                     if (_timer <= 0f) SetIdle(RandomIdle());
                     break;
@@ -311,6 +322,11 @@ namespace PawFit.Garden
                 else SetIdle(RandomIdle() * 2f);
                 return;
             }
+            if (BenchStand.HasValue && n.Energy < _cfg.BenchRestBelowEnergy && _rng.NextDouble() < _cfg.BenchRestChance)
+            {
+                GoUse(ZoneType.Bench, petPos);   // hơi mệt: ra ghế gỗ ngồi nghỉ (Phase 8.4)
+                return;
+            }
             if (Stage == HealthStage.Tired && _rng.NextDouble() < 0.5)   // mệt: lười đi hơn
             {
                 SetIdle(RandomIdle() * 1.5f);
@@ -342,6 +358,14 @@ namespace PawFit.Garden
                     if (_care.Sleep() == CareResult.Ok) Activity = PetActivity.Sleeping;
                     else SetIdle(RandomIdle());
                     break;
+                case ZoneType.Bench:   // ghế gỗ: nhảy lên ngồi nghỉ (Phase 8.4)
+                    if (_care.RestOnBench() == CareResult.Ok)
+                    {
+                        Activity = PetActivity.Resting;
+                        _timer = _cfg.BenchRestSeconds;
+                    }
+                    else SetIdle(RandomIdle());
+                    break;
                 case ZoneType.TrainingGround:   // đấm hình nộm: Sức mạnh
                     if (_care.Workout() == CareResult.Ok)
                     {
@@ -359,14 +383,14 @@ namespace PawFit.Garden
 
         private void GoUse(ZoneType zone, Vector2 petPos)
         {
-            GardenZone z = _layout.Get(zone);
-            if (z == null)
+            Vector2? use = zone == ZoneType.Bench ? BenchStand : _layout.Get(zone)?.UsePoint;
+            if (!use.HasValue)
             {
                 SetIdle(RandomIdle());
                 return;
             }
             _zoneGoal = zone;
-            StartMove(PetActivity.GoingToZone, z.UsePoint, zone != ZoneType.Bed, petPos);
+            StartMove(PetActivity.GoingToZone, use.Value, zone != ZoneType.Bed && zone != ZoneType.Bench, petPos);   // về ổ / ra ghế: đi thong thả
         }
 
         private void StartMove(PetActivity activity, Vector2 target, bool run, Vector2 petPos)

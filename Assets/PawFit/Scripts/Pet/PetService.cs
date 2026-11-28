@@ -170,6 +170,9 @@ namespace PawFit.Pet
             }
         }
 
+        /// <summary>Tác dụng chăm sóc của đồ đã mua (Phase 8.4): đồ trang trí trong vườn + phụ kiện đang đeo.</summary>
+        public CarePerks Perks => CarePerks.From(_game?.Cosmetics, _cfg.Perks);
+
         /// <summary>Phụ kiện + đồ trang trí đã mua (CosmeticsService đọc / ghi qua đây). null nếu chưa nạp file lưu.</summary>
         public CosmeticsData Cosmetics
         {
@@ -297,12 +300,13 @@ namespace PawFit.Pet
         {
             double step = Math.Max(0.001, _cfg.Health.SimulationStepHours);
             double left = hours;
+            CarePerks perks = Perks;   // đồ trang trí + phụ kiện: hao chậm hơn (Phase 8.4)
             while (left > 1e-9)
             {
                 double dt = Math.Min(step, left);
                 left -= dt;
                 DateTime end = left > 1e-9 ? now.AddHours(-left) : now;
-                NeedsSimulator.Advance(pet.Needs, dt, pet.IsSleeping, _cfg.Needs);
+                NeedsSimulator.Advance(pet.Needs, dt, pet.IsSleeping, _cfg.Needs, perks);
                 HealthStage before = pet.Health.Stage;
                 HealthChange change = HealthRules.Step(pet.Health, pet.Needs, dt, end, _cfg);
                 if (change == HealthChange.Died)

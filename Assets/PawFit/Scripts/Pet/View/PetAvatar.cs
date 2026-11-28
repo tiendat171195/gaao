@@ -53,6 +53,12 @@ namespace PawFit.Pet.View
         /// </summary>
         void SetPetted(float amount);
 
+        /// <summary>
+        /// Ngồi lên chỗ cao (ghế gỗ, Phase 8.4): dời phần hình đi `localOffset` (trục local của thú) so với chỗ đứng, nhảy lên / xuống
+        /// mượt + co chân ngồi. Vector3.zero = đứng trên đất.
+        /// </summary>
+        void SetPerch(Vector3 localOffset);
+
         /// <summary>Hình dáng theo giai đoạn tiến hóa (gọi mỗi frame; đổi mượt).</summary>
         void SetGrowth(GrowthLook look);
 
@@ -122,6 +128,7 @@ namespace PawFit.Pet.View
     public sealed class PlaceholderPetAvatar : MonoBehaviour, IPetAvatar
     {
         private float _petted, _pettedTarget;
+        private Vector3 _perch, _perchGoal;
         private Transform _visual;
         private Transform _head;
         private Transform[] _legs;
@@ -269,6 +276,12 @@ namespace PawFit.Pet.View
         public void SetLook(AvatarLook look) => _look = look;
         public void SetPetted(float amount) => _pettedTarget = Mathf.Clamp01(amount);
 
+        public void SetPerch(Vector3 localOffset)
+        {
+            if ((localOffset - _perchGoal).sqrMagnitude > 0.01f) _hopT = 0f;   // nhảy lên / xuống ghế
+            _perchGoal = localOffset;
+        }
+
         public void PlayTrain(float seconds)
         {
             _trainSeconds = Mathf.Max(0.5f, seconds);
@@ -356,7 +369,8 @@ namespace PawFit.Pet.View
             }
             _grow = Mathf.MoveTowards(_grow, _growTarget, dt * 0.15f);
             float breathe = sleep ? Mathf.Sin(Time.time * 2f) * 0.02f : 0f;
-            _visual.localPosition = new Vector3(0f, bob + hop + (sleep ? -0.1f : 0f), punch * 0.12f);
+            _perch = Vector3.MoveTowards(_perch, _perchGoal, dt * 2.2f);   // lên / xuống ghế gỗ (Phase 8.4)
+            _visual.localPosition = new Vector3(0f, bob + hop + (sleep ? -0.1f : 0f), punch * 0.12f) + _perch;
             _visual.localScale = Vector3.Scale(squash, sleep ? new Vector3(1.08f, 0.8f + breathe, 1.05f) : Vector3.one) * _grow;
             float shiver = _look.Sick >= 0.5f ? Mathf.Sin(Time.time * 55f) * 2.2f * _look.Sick : 0f;   // ốm: run lẩy bẩy
             _petted = Mathf.MoveTowards(_petted, _pettedTarget, dt * 3f);   // được vuốt ve: dụi đầu, lim dim mắt

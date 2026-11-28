@@ -47,6 +47,14 @@ namespace PawFit.Garden.View
         private bool _stroking;
         private Vector3 _hand;
         private float _heartT, _tapGlow, _lastTapTime = -10f;
+        private object _playOwner;
+        private Vector3? _benchSeat;
+        private Vector3 _benchFront = Vector3.back, _admirePoint;
+        private float _admireT;
+        private bool _perched;
+        private Vector3 _perchWorld;
+        private CapsuleCollider _col;
+        private static readonly Vector3 ColCenter = new Vector3(0f, 0.5f, 0.1f);
         private int _tapCount;
 
         public IPetAvatar Avatar => _avatar;
@@ -63,7 +71,7 @@ namespace PawFit.Garden.View
             go.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 180f, 0f));   // nhìn về phía camera
             var col = go.AddComponent<CapsuleCollider>();   // to hơn hình 1 chút cho dễ chạm trúng
             col.direction = 2;
-            col.center = new Vector3(0f, 0.5f, 0.1f);
+            col.center = ColCenter;
             col.radius = 0.45f;
             col.height = 1.5f;
             var agent = go.AddComponent<NavMeshAgent>();
@@ -80,6 +88,7 @@ namespace PawFit.Garden.View
             pc._evo = evo;
             pc._cfg = cfg;
             pc._agent = agent;
+            pc._col = col;
             pc._cam = Camera.main;
             GardenZone hut = layout.Get(ZoneType.FoodHut);
             // điểm nhìn khi đòi ăn = khay đồ ăn (cùng chỗ GardenBuilder đặt khay)
@@ -179,6 +188,9 @@ namespace PawFit.Garden.View
             if (_dead || _brain == null || _avatar == null || !_agent.isOnNavMesh) return;
             float dt = Time.deltaTime;
             _brain.Update(dt, transform.position.ToGround());
+            if (!IsPlaying) _playOwner = null;
+            _admireT -= dt;
+            UpdatePerch();
 
             if (_brain.IsMoving)
             {
@@ -216,6 +228,11 @@ namespace PawFit.Garden.View
                     Sfx.Play(SoundId.Splash, 0.6f);
                 }
                 else if (_brain.Activity == PetActivity.Training) _avatar.PlayTrain(_cfg.WorkoutSeconds);
+                else if (_brain.Activity == PetActivity.Resting)   // lên ghế ngồi: thở phào, tim bay
+                {
+                    Sfx.PlayVaried(SoundId.Happy, 0.3f, 0.1f);
+                    _fx.Hearts(1);
+                }
                 _lastActivity = _brain.Activity;
                 _activityT = 0f;
             }
@@ -234,6 +251,32 @@ namespace PawFit.Garden.View
             UpdateExpression(dt, v);
         }
 
+        /// <summary>
+        /// Ngồi ghế gỗ (Phase 8.4): hình bé nhảy lên mặt ghế (bé vẫn đứng ở chỗ trước ghế trên NavMesh), quay mặt ra trước;
+        /// vùng chạm của bé theo lên ghế để vẫn vuốt ve được.
+        /// </summary>
+        private void UpdatePerch()
+        {
+            if (_avatar == null) return;
+            PetActivity a = _brain.Activity;
+            if (a == PetActivity.Resting && _benchSeat.HasValue && !_dead) _perched = true;
+            else if (a != PetActivity.Petted && a != PetActivity.Reacting) _perched = false;   // được vuốt / chạm trên ghế: vẫn ngồi đó
+            Vector3 local = Vector3.zero;
+            _perchWorld = Vector3.zero;
+            if (_perched && _benchSeat.HasValue)
+            {
+                if (a == PetActivity.Resting) FaceTowards(transform.position + _benchFront);
+                local = transform.InverseTransformPoint(_benchSeat.Value);
+                if (local.magnitude > 1.5f) local = local.normalized * 1.5f;   // an toàn: bé bị đẩy xa ghế thì không bay theo
+                else _perchWorld = _benchSeat.Value - transform.position;
+            }
+            _avatar.SetPerch(local);
+            if (_col != null) _col.center = ColCenter + local;
+        }
+
+        /// <summary>Giữa thân bé đang thấy trên màn hình (ngồi ghế thì ở trên mặt ghế) — để nhận vuốt ve cho đúng chỗ.</summary>
+        public Vector3 BodyCenter => transform.position + _perchWorld + Vector3.up * 0.5f;
+
         /// <summary>Biểu cảm theo nhu cầu: mắt díp, bẩn có ruồi, đói thì nhìn chòi ăn + kêu, ngủ có Zzz.</summary>
         private void UpdateExpression(float dt, float speed)
         {
@@ -247,6 +290,7 @@ namespace PawFit.Garden.View
                 if (speed < 0.15f) FaceTowards(_foodPoint);   // đứng yên thì quay cả người về phía chòi ăn
             }
             else if (_stroking) _avatar.LookAt(_hand);   // được vuốt: ngước nhìn theo tay
+            else if (_admireT > 0f) _avatar.LookAt(_admirePoint);   // ngước nhìn đèn lồng / nhìn món ăn vặt
             else if (_brain.Activity == PetActivity.Reacting && _cam != null) _avatar.LookAt(_cam.transform.position);
             else _avatar.LookAt(null);
             _fx.SetFlies(e.Flies);
@@ -304,7 +348,7 @@ namespace PawFit.Garden.View
         {
             _tapGlow = Mathf.Max(0f, _tapGlow - dt);
             bool asleep = _brain.Activity == PetActivity.Sleeping;
-            _avatar.SetPetted(_stroking ? (asleep ? 0.45f : 1f) : (_tapGlow > 0f ? 0.7f : 0f));
+            _avatar.SetPetted(_stroking ? (asleep ? 0.45f : 1f) : (_tapGlow > 0f ? 0.7f : (IsResting ? 0.3f : 0f)));   // ngồi ghế: lim dim thư thái
             Sfx.Loop(LoopId.Purr, _stroking, asleep ? 0.3f : 0.5f);
             if (!_stroking) return;
             _heartT -= dt;
@@ -409,8 +453,18 @@ namespace PawFit.Garden.View
         public bool IsPlaying => _brain.Activity == PetActivity.Playing;
         public bool SelfPlaying => _brain.SelfPlaying;
 
-        /// <summary>Chạy theo đồ chơi ở `ground` (gọi liên tục khi đồ chơi di chuyển).</summary>
-        public void PlayTo(Vector3 ground, bool selfPlay = false) => _brain.Play(ground.ToGround(), selfPlay);
+        /// <summary>
+        /// Chạy theo đồ chơi ở `ground` (gọi liên tục khi đồ chơi di chuyển). `owner` = ai đang cho bé chơi
+        /// (null = đồ chơi / bộ não; DecorLife = đuổi bướm) để 2 bên không giành nhau điều khiển bé.
+        /// </summary>
+        public void PlayTo(Vector3 ground, bool selfPlay = false, object owner = null)
+        {
+            _playOwner = owner;
+            _brain.Play(ground.ToGround(), selfPlay);
+        }
+
+        /// <summary>Ai đang cho bé chơi (xem PlayTo). null khi bé không chơi hoặc đồ chơi / bộ não cho chơi.</summary>
+        public object PlayOwner => IsPlaying ? _playOwner : null;
 
         public void StopPlay() => _brain.EndPlay();
 
@@ -431,6 +485,45 @@ namespace PawFit.Garden.View
 
         /// <summary>Không chịu (mệt / ốm...): lắc đầu.</summary>
         public void Refuse() => _avatar.PlayRefuse();
+
+        // ---- đồ trang trí (Phase 8.4): DecorLife điều khiển ----
+
+        public bool IsResting => _brain.Activity == PetActivity.Resting;
+
+        /// <summary>Bé đang rảnh (đứng / đi lang thang, không ngủ, không ốm): bướm ở vòm hoa rủ bé chơi được.</summary>
+        public bool IsFree => !_dead && !IsIll && (_brain.Activity == PetActivity.Idle || _brain.Activity == PetActivity.Wander);
+
+        /// <summary>Bé đang đi tới gần `ground` (trong vòng `tolerance` mét) không.</summary>
+        public bool IsGoingTo(Vector3 ground, float tolerance) =>
+            _brain.IsMoving && NVec2.Distance(_brain.Target, ground.ToGround()) <= tolerance;
+
+        /// <summary>Chỗ ghế gỗ: tâm mặt ghế (thế giới) + hướng ghế nhìn ra. Bé ngồi ghế thì nhảy lên đây, quay mặt ra trước.</summary>
+        public void SetBench(Vector3 seat, Vector3 front)
+        {
+            _benchSeat = seat;
+            _benchFront = front;
+        }
+
+        /// <summary>Bé ăn món ăn vặt (túi bánh cối xay gió): đứng nhìn món, cúi ăn 1 lúc, tim bay.</summary>
+        public void EatSnack(Vector3 food)
+        {
+            if (_dead) return;
+            _admirePoint = food;
+            _admireT = 0.8f;
+            _brain.OnFed();   // PetController thấy đổi sang Eating: cúi ăn + tiếng nhai
+            _fx.Hearts(2);
+        }
+
+        /// <summary>Ngước nhìn 1 thứ đẹp (đèn lồng lấp lánh): quay đầu nhìn, nhảy lên, 1 tim. Đang ngủ thì thôi.</summary>
+        public void Admire(Vector3 point)
+        {
+            if (_dead || _brain.Activity == PetActivity.Sleeping) return;
+            _admirePoint = point;
+            _admireT = 1.8f;
+            _avatar.PlayHop();
+            _fx.Hearts(1);
+            Sfx.PlayVaried(SoundId.Happy, 0.35f, 0.1f);
+        }
 
         /// <summary>Có bóng trong vườn: bé rảnh + chán thì tự tới đẩy bóng chơi (luật `wantsSelfPlay` của PlayService).</summary>
         public void SetSelfPlay(Func<NVec2?> ballRest, Func<double, bool> wantsSelfPlay)

@@ -518,6 +518,7 @@ namespace UnityEngine
         public LightType type { get; set; }
         public Color color { get; set; }
         public float intensity { get; set; }
+        public float range { get; set; }
         public LightShadows shadows { get; set; }
         public float shadowStrength { get; set; }
     }

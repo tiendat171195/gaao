@@ -4,7 +4,8 @@ using System.Numerics;
 namespace PawFit.Garden
 {
     /// <summary>Các khu nằm TRÊN MAP vườn (không phải nút UI).</summary>
-    public enum ZoneType { None = 0, FoodHut = 1, Pond = 2, TrainingGround = 3, Bed = 4, Memorial = 5, Shop = 6, Adventure = 7 }
+    /// <summary>Khu trong vườn. Bench (Phase 8.4) = ghế gỗ mua ở quầy: không nằm trong GardenLayout, bộ não giữ chỗ ghế riêng.</summary>
+    public enum ZoneType { None = 0, FoodHut = 1, Pond = 2, TrainingGround = 3, Bed = 4, Memorial = 5, Shop = 6, Adventure = 7, Bench = 8 }
 
     /// <summary>
     /// 1 khu trong vườn. Tọa độ mặt đất dùng Vector2: X = trái/phải, Y = sâu vào trong màn hình
@@ -168,5 +169,19 @@ namespace PawFit.Garden
         public float WipeHygiene = 15f;
         public float WipeMood = 2f;
         public float WipeCooldownSeconds = 3f;
+
+        // ---- Ghế gỗ (Phase 8.4) ----
+        /// <summary>Bé rảnh mà năng lượng dưới mức này thì có lúc (xác suất mỗi lần tự quyết) tự ra ghế ngồi nghỉ bấy nhiêu giây.</summary>
+        public float BenchRestBelowEnergy = 65f;
+        public float BenchRestChance = 0.35f;
+        public float BenchRestSeconds = 9f;
+
+        /// <summary>Mỗi lần ngồi ghế: năng lượng + vui, cộng nhiều nhất mỗi bấy nhiêu phút (ngồi liên tục không cộng mãi).</summary>
+        public float BenchRestEnergy = 4f;
+        public float BenchRestMood = 2f;
+        public float BenchRestCooldownMinutes = 10f;
+
+        /// <summary>Thả bé (đang dắt) cách tâm ghế dưới bấy nhiêu mét = bé lên ghế ngồi.</summary>
+        public float BenchDropRadius = 1.1f;
     }
 }

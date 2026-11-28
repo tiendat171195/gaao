@@ -8,7 +8,7 @@ namespace PawFit.Garden.View
     /// <summary>
     /// Đồ trang trí vườn (Phase 5.2), dựng bằng khối cơ bản ở chỗ cố định của vườn mặc định (tránh các khu, lối đá, cây).
     /// Phần chắc (cột, chân, đế) có collider nằm trong nhóm Obstacles => NavMesh nướng lại thì thú đi vòng qua.
-    /// Chỉ là hình: mua món nào do CosmeticsService quyết định.
+    /// Chỉ là hình: mua món nào do CosmeticsService quyết định; bé dùng đồ (ngồi ghế, ăn bánh, đuổi bướm...) ở DecorLife.
     /// </summary>
     public static class DecorBuilder
     {
@@ -70,7 +70,7 @@ namespace PawFit.Garden.View
                 Prim.Make(PrimitiveType.Cylinder, hang, new Vector3(0f, -0.1f, 0f), new Vector3(0.015f, 0.1f, 0.015f), WoodDark);
                 Prim.Make(PrimitiveType.Cylinder, hang, new Vector3(0f, -0.22f, 0f), new Vector3(0.2f, 0.025f, 0.2f), WoodDark);
                 Prim.Make(PrimitiveType.Sphere, hang, new Vector3(0f, -0.42f, 0f), new Vector3(0.36f, 0.42f, 0.36f), Prim.Hex(colors[i]),
-                          smoothness: 0.35f);
+                          smoothness: 0.35f, name: "Bulb");   // DecorLife tìm theo tên để thắp sáng
                 Prim.Make(PrimitiveType.Cylinder, hang, new Vector3(0f, -0.63f, 0f), new Vector3(0.18f, 0.025f, 0.18f), WoodDark);
                 Prim.Make(PrimitiveType.Cylinder, hang, new Vector3(0f, -0.72f, 0f), new Vector3(0.03f, 0.07f, 0.03f), Prim.Hex("#F2C84B"));
                 DecorMotion m = hang.gameObject.AddComponent<DecorMotion>();

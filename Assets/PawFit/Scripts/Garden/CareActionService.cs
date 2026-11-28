@@ -5,7 +5,7 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Wipe = chạm vào thú đang ốm (lau người). Workout = tập sức mạnh ở sân tập.</summary>
-    public enum CareKind { Feed, Bathe, Pet, Sleep, Wake, Wipe, Workout }
+    public enum CareKind { Feed, Bathe, Pet, Sleep, Wake, Wipe, Workout, Rest }
 
     public enum CareResult { Ok, Refused }
 
@@ -41,6 +41,7 @@ namespace PawFit.Garden
         private DateTime _lastPetMoodUtc = DateTime.MinValue;
         private DateTime _lastStrokeUtc = DateTime.MinValue;
         private DateTime _lastWipeUtc = DateTime.MinValue;
+        private DateTime _lastBenchUtc = DateTime.MinValue;
 
         public CareActionService(PetService pets, HealthService health, EvolutionService evo, GardenConfig cfg, ITimeProvider time,
                                  EventBus bus, ILog log = null)
@@ -132,6 +133,22 @@ namespace PawFit.Garden
             _pets.Care(NeedType.Mood, _cfg.StrokeMood);
             _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CarePet * _cfg.StrokeCareFactor);
             _bus.Publish(new CareDone(CareKind.Pet, CareResult.Ok, "vuốt ve"));   // không ghi log từng lượt (xoa liên tục)
+            return CareResult.Ok;
+        }
+
+        /// <summary>
+        /// Ngồi nghỉ trên ghế gỗ (Phase 8.4): hồi chút năng lượng + vui, cộng nhiều nhất mỗi BenchRestCooldownMinutes phút.
+        /// Trả Ok cả lúc đang chờ (bé vẫn ngồi, chỉ không cộng thêm). Không có thú: Refused.
+        /// </summary>
+        public CareResult RestOnBench()
+        {
+            if (!_pets.HasPet) return CareResult.Refused;
+            DateTime now = _time.UtcNow;
+            if ((now - _lastBenchUtc).TotalMinutes < _cfg.BenchRestCooldownMinutes) return CareResult.Ok;
+            _lastBenchUtc = now;
+            _pets.Care(NeedType.Energy, _cfg.BenchRestEnergy);
+            if (_pets.HasPet) _pets.Care(NeedType.Mood, _cfg.BenchRestMood);
+            _bus.Publish(new CareDone(CareKind.Rest, CareResult.Ok, "ngồi ghế nghỉ"));
             return CareResult.Ok;
         }
 

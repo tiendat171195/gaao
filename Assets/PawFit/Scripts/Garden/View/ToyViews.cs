@@ -524,7 +524,7 @@ namespace PawFit.Garden.View
             IgnoreBallHits(pet);
             Vector3 pp = pet.transform.position;
             pp.y = 0f;
-            bool selfPlay = _ball != null && pet.IsPlaying && pet.SelfPlaying;
+            bool selfPlay = _ball != null && pet.IsPlaying && pet.SelfPlaying && pet.PlayOwner == null;   // không phải đang đuổi bướm
             if (selfPlay && !_selfPlaying)   // bé vừa tự tới chơi bóng
             {
                 _selfPlayLeft = 10f;

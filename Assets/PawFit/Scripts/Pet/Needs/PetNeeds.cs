@@ -79,15 +79,17 @@ namespace PawFit.Pet
     /// <summary>Tính nhu cầu sau 1 khoảng thời gian — dùng cả khi đang chơi lẫn khi tắt app quay lại.</summary>
     public static class NeedsSimulator
     {
-        public static void Advance(PetNeeds needs, double hours, bool sleeping, NeedsConfig cfg)
+        /// <param name="perks">Tác dụng của đồ đã mua (Phase 8.4): hao chậm hơn / ngủ hồi nhanh hơn. Mặc định = không có.</param>
+        public static void Advance(PetNeeds needs, double hours, bool sleeping, NeedsConfig cfg, CarePerks perks = default)
         {
             if (needs == null) throw new ArgumentNullException(nameof(needs));
             if (hours <= 0) return;
             float h = (float)hours;
-            needs.Add(NeedType.Satiety, -cfg.SatietyDecayPerHour * h);
-            needs.Add(NeedType.Hygiene, -cfg.HygieneDecayPerHour * h);
-            needs.Add(NeedType.Mood, -cfg.MoodDecayPerHour * h);
-            needs.Add(NeedType.Energy, sleeping ? cfg.EnergyRegenPerHour * h : -cfg.EnergyDecayPerHour * h);
+            needs.Add(NeedType.Satiety, -cfg.SatietyDecayPerHour * (1f - perks.SatietyCut) * h);
+            needs.Add(NeedType.Hygiene, -cfg.HygieneDecayPerHour * (1f - perks.HygieneCut) * h);
+            needs.Add(NeedType.Mood, -cfg.MoodDecayPerHour * (1f - perks.MoodCut) * h);
+            needs.Add(NeedType.Energy, sleeping ? cfg.EnergyRegenPerHour * (1f + perks.SleepBoost) * h
+                                                : -cfg.EnergyDecayPerHour * (1f - perks.EnergyCut) * h);
         }
     }
 }

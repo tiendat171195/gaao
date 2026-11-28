@@ -104,8 +104,8 @@ for (n, t), members in sorted(used.items(), key=lambda kv: ((kv[0][0] or ""), kv
     for name, stub_line in members:
         pat = re.compile(r'^[^\n]*\bpublic\b[^\n;]*\b' + re.escape(name) + r'\b[^\n]*$', re.M)
         hits = [h.strip() for h in pat.findall(blob)][:2]
-        if not hits:   # enum value / thành viên không có chữ public trên cùng dòng
-            hits = [h.strip() for h in re.findall(r'^[^\n]*\b' + re.escape(name) + r'\b\s*(?:=|,|\(|;)[^\n]*$', blob, re.M)][:1]
+        if not hits:   # enum value / thành viên không có chữ public trên cùng dòng (giá trị enum cuối cùng: không có dấu phẩy)
+            hits = [h.strip() for h in re.findall(r'^[^\n]*\b' + re.escape(name) + r'\b\s*(?:=|,|\(|;|$)[^\n]*$', blob, re.M)][:1]
         if not hits:
             problems.append("THÀNH VIÊN KHÔNG THẤY: %s.%s.%s   (stub: %s)" % (n, t, name, stub_line[:110]))
         else:

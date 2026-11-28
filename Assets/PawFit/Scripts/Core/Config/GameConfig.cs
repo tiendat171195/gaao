@@ -15,8 +15,42 @@ namespace PawFit.Core
         public EconomyConfig Economy = new EconomyConfig();
         public RankConfig Rank = new RankConfig();
         public MatchmakingConfig Matchmaking = new MatchmakingConfig();
+        public PerksConfig Perks = new PerksConfig();
 
         public static GameConfig CreateDefault() => new GameConfig();
+    }
+
+    /// <summary>
+    /// Tác dụng của đồ đã mua (Phase 8.4) — GDD G18. "Cắt" = nhu cầu hao chậm đi bấy nhiêu phần (0,15 = chậm 15%).
+    /// Chỉ đổi chuyện chăm sóc trong vườn, KHÔNG đổi chỉ số trận (PvP công bằng). Áp dụng cả lúc tắt app (tính bù) và lúc hẹn thông báo.
+    /// </summary>
+    public sealed class PerksConfig
+    {
+        // ---- đồ trang trí: có trong vườn là có tác dụng ----
+        /// <summary>Ghế gỗ: bé hay ra ghế ngồi nghỉ => năng lượng (lúc thức) hao chậm hơn.</summary>
+        public float BenchEnergyCut = 0.15f;
+
+        /// <summary>Vòm hoa: hoa thơm, bướm bay quanh vườn => vui hao chậm hơn.</summary>
+        public float FlowerArchMoodCut = 0.15f;
+
+        /// <summary>Dây đèn lồng: ánh đèn ấm, bé ngủ ngon => ngủ hồi năng lượng nhanh hơn bấy nhiêu phần.</summary>
+        public float LanternsSleepBoost = 0.25f;
+
+        // ---- phụ kiện: chỉ món đang đeo ----
+        /// <summary>Nơ: bé thấy mình xinh => vui hao chậm hơn.</summary>
+        public float BowMoodCut = 0.1f;
+
+        /// <summary>Mũ len: ấm đầu => năng lượng hao chậm hơn.</summary>
+        public float BeanieEnergyCut = 0.1f;
+
+        /// <summary>Khăn quàng: ấm bụng => no hao chậm hơn.</summary>
+        public float ScarfSatietyCut = 0.1f;
+
+        /// <summary>Vương miện: cả 4 nhu cầu hao chậm hơn 1 chút.</summary>
+        public float CrownAllCut = 0.05f;
+
+        /// <summary>Nhiều món cộng dồn thì mỗi nhu cầu cắt tối đa bấy nhiêu.</summary>
+        public float MaxCut = 0.4f;
     }
 
     /// <summary>4 nhu cầu ẩn (thang 0–100), giảm theo giờ thực — GDD mục G1, G2.</summary>

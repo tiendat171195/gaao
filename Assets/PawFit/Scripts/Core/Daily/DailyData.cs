@@ -41,6 +41,9 @@ namespace PawFit.Core
 
         /// <summary>Số ngẫu nhiên riêng của người chơi: mỗi người 1 bộ nhiệm vụ / điểm đào khác nhau mỗi ngày.</summary>
         public uint Salt;
+
+        /// <summary>Ngày bé đã ăn túi bánh của cối xay gió (Phase 8.4). Khác hôm nay = hôm nay cối xay gió còn bánh.</summary>
+        public string WindmillDay;
     }
 
     /// <summary>Vừa hết 1 trận. Mode = số của BattleMode (0 Huấn luyện, 1 Đấu Bot, 2 PvP, 3 Thám hiểm). Nhiệm vụ ngày nghe sự kiện này.</summary>

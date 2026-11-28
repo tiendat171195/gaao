@@ -126,6 +126,7 @@ namespace PawFit.Pet.View
         private float _lookYaw, _lookPitch, _appliedClosed = -1f, _appliedDirt = -1f, _appliedPale = -1f;
         private float _hopT = -1f, _eatT = -1f, _batheT = -1f, _refuseT = -1f, _cryT = -1f, _yawnT = -1f;
         private float _petted, _pettedTarget;
+        private Vector3 _perch, _perchGoal;
         private float _blinkTimer = 2f, _blinkT = -1f, _earFlickTimer = 5f, _earFlickT = -1f;
         private int _earFlickIndex;
         private System.Random _rnd = new System.Random(1);
@@ -533,6 +534,12 @@ namespace PawFit.Pet.View
         }
         public void SetLook(AvatarLook look) => _look = look;
         public void SetPetted(float amount) => _pettedTarget = Mathf.Clamp01(amount);
+
+        public void SetPerch(Vector3 localOffset)
+        {
+            if ((localOffset - _perchGoal).sqrMagnitude > 0.01f) _hopT = 0f;   // nhảy lên / xuống ghế
+            _perchGoal = localOffset;
+        }
         public void LookAt(Vector3? worldPoint) => _lookAt = worldPoint;
 
         // ==================================================================
@@ -569,14 +576,16 @@ namespace PawFit.Pet.View
             }
             float wiggle = Step(ref _batheT, 2.4f, out float tb) ? Mathf.Sin(tb * 45f) * 14f * (1f - tb) : 0f;
             float breathe = Mathf.Sin(time * Mathf.Lerp(2.2f, 1.3f, _sleepBlend)) * Mathf.Lerp(0.012f, 0.025f, _sleepBlend);
-            _visual.localPosition = new Vector3(0f, bob + hop + punch * 0.04f - _sleepBlend * 0.11f, punch * 0.12f);
+            _perch = Vector3.MoveTowards(_perch, _perchGoal, dt * 2.2f);   // lên / xuống ghế gỗ (Phase 8.4)
+            float sit = Mathf.Clamp01(_perch.y / 0.35f);                  // đang ngồi trên ghế: co chân, hạ người
+            _visual.localPosition = new Vector3(0f, bob + hop + punch * 0.04f - _sleepBlend * 0.11f - sit * 0.05f, punch * 0.12f) + _perch;
             _visual.localScale = Vector3.Scale(squash, new Vector3(1f + 0.04f * _sleepBlend, 1f + breathe - 0.06f * _sleepBlend, 1f));
             float shiver = _look.Sick >= 0.5f ? Mathf.Sin(time * 55f) * 2.2f * _look.Sick * (1f - 0.5f * _sleepBlend) : 0f;
             _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver + nuzzle * 4f);   // ốm: run lẩy bẩy; được vuốt: đung đưa theo tay
 
             // ---- chân: bước chéo (trước phải + sau trái cùng nhịp), gập lại khi ngủ ----
             float swing = Mathf.Sin(_phase) * moving * Mathf.Lerp(28f, 20f, grown) + punch * 22f;
-            float fold = _sleepBlend * 55f;
+            float fold = _sleepBlend * 55f + sit * (1f - _sleepBlend) * 28f;
             if (_legs != null)
             {
                 _legs[0]?.Set(swing + fold, 0f);

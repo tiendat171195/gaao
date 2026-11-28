@@ -25,6 +25,36 @@ namespace PawFit.App
         private static readonly string[] DecorNames = { "", "Dây đèn lồng", "Ghế gỗ", "Cối xay gió", "Vòm hoa" };
         private static readonly string[] ToyNames = { "", "Bóng cao su", "Cần lông vũ", "Máy thổi bong bóng" };
         private static readonly string[] ToyUses = { "", "vuốt để ném, bé chạy nhặt mang về", "kéo đi khắp vườn, bé đuổi theo vồ", "chạm để thổi, bé nhảy lên đớp" };
+
+        private static int Pct(float cut) => (int)Math.Round(cut * 100f);
+
+        /// <summary>Tác dụng của đồ trang trí (Phase 8.4) — số lấy từ PerksConfig / DailyConfig nên chỉnh số là chữ đổi theo.</summary>
+        private static string DecorUse(DecorKind d)
+        {
+            PerksConfig p = _services.Get<PetService>().Config.Perks;
+            switch (d)
+            {
+                case DecorKind.Lanterns: return "tối sáng ấm, bé ngủ hồi sức nhanh hơn " + Pct(p.LanternsSleepBoost) + "%";
+                case DecorKind.Bench: return "bé ra ngồi nghỉ, năng lượng hao chậm " + Pct(p.BenchEnergyCut) + "%";
+                case DecorKind.Windmill: return "mỗi ngày 1 túi bánh cho bé (no + vui)";
+                case DecorKind.FlowerArch: return "bướm bay cho bé đuổi, vui hao chậm " + Pct(p.FlowerArchMoodCut) + "%";
+                default: return "";
+            }
+        }
+
+        /// <summary>Tác dụng của phụ kiện đang đeo (Phase 8.4). Không đổi chỉ số trận.</summary>
+        private static string AccessoryUse(AccessoryKind a)
+        {
+            PerksConfig p = _services.Get<PetService>().Config.Perks;
+            switch (a)
+            {
+                case AccessoryKind.Bow: return "vui hao chậm " + Pct(p.BowMoodCut) + "%";
+                case AccessoryKind.Beanie: return "năng lượng hao chậm " + Pct(p.BeanieEnergyCut) + "%";
+                case AccessoryKind.Scarf: return "no hao chậm " + Pct(p.ScarfSatietyCut) + "%";
+                case AccessoryKind.Crown: return "cả 4 nhu cầu hao chậm " + Pct(p.CrownAllCut) + "%";
+                default: return "";
+            }
+        }
         private static ServiceLocator _services;
 
         public static GardenScene Garden { get; private set; }
@@ -845,7 +875,7 @@ namespace PawFit.App
                 if (cos.Owns(a))
                 {
                     bool wearing = cos.Equipped == a;
-                    labels.Add(name + (wearing ? " · đang đeo (chạm để tháo)" : " · đã có (chạm để đeo)"));
+                    labels.Add(name + (wearing ? " · đang đeo (chạm để tháo)" : " · đã có (chạm để đeo)") + " · " + AccessoryUse(a));
                     enabled.Add(true);
                     actions.Add(() =>
                     {
@@ -855,14 +885,15 @@ namespace PawFit.App
                     continue;
                 }
                 CosmeticRefusal r = cos.CheckBuy(a);
-                labels.Add(name + " · " + cos.PriceOf(a) + " Coin" + (r == CosmeticRefusal.NotEnoughCoins ? " (thiếu Coin)" : ""));
+                labels.Add(name + " · " + cos.PriceOf(a) + " Coin · " + AccessoryUse(a) + (r == CosmeticRefusal.NotEnoughCoins ? " (thiếu Coin)" : ""));
                 enabled.Add(r == CosmeticRefusal.None);
                 actions.Add(() => BuyAccessory(a));
             }
             labels.Add("Quay lại");
             enabled.Add(true);
             actions.Add(OpenShop);
-            string body = "Bạn có " + _services.Get<EconomyService>().Coins + " Coin · mỗi lúc đeo 1 món\nChỉ để đẹp, không đổi chỉ số";
+            string body = "Bạn có " + _services.Get<EconomyService>().Coins + " Coin · mỗi lúc đeo 1 món\n" +
+                          "Món đang đeo giúp bé đỡ hao nhu cầu · không đổi chỉ số trận (đấu công bằng)";
             if (!_services.Get<PetService>().HasPet) body += " · thú mới nở sẽ đeo";
             GardenUi.ShowChoice("Phụ kiện", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
         }
@@ -922,15 +953,16 @@ namespace PawFit.App
             {
                 string name = DecorNames[(int)d];
                 CosmeticRefusal r = cos.CheckBuy(d);
-                labels.Add(r == CosmeticRefusal.AlreadyOwned ? name + " (đã có trong vườn)"
-                               : name + " · " + cos.PriceOf(d) + " Coin" + (r == CosmeticRefusal.NotEnoughCoins ? " (thiếu Coin)" : ""));
+                labels.Add(r == CosmeticRefusal.AlreadyOwned ? name + " (đã có: " + DecorUse(d) + ")"
+                               : name + " · " + cos.PriceOf(d) + " Coin · " + DecorUse(d) + (r == CosmeticRefusal.NotEnoughCoins ? " (thiếu Coin)" : ""));
                 enabled.Add(r == CosmeticRefusal.None);
                 actions.Add(() => BuyDecor(d));
             }
             labels.Add("Quay lại");
             enabled.Add(true);
             actions.Add(OpenShop);
-            string body = "Bạn có " + _services.Get<EconomyService>().Coins + " Coin\nMua 1 lần là có mãi, mỗi món có chỗ riêng trong vườn";
+            string body = "Bạn có " + _services.Get<EconomyService>().Coins + " Coin\n" +
+                          "Mua 1 lần là có mãi, mỗi món có chỗ riêng trong vườn và bé dùng được (chạm vào món đó để thử)";
             GardenUi.ShowChoice("Trang trí vườn", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
         }
 
