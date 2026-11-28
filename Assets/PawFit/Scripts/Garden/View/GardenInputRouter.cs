@@ -11,7 +11,8 @@ namespace PawFit.Garden.View
     ///   xoa qua lại trên người thú = vuốt ve (Phase 8.2) · kéo thú ra chỗ khác = dắt đi (thả vào hồ = tắm, vào ổ = ngủ)
     ///   kéo từ khay đồ ăn thả lên thú = cho ăn
     ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy · chạm hòm thư (cạnh cổng đấu trường) = cài đặt
-    ///   chạm biển Thám hiểm (góc sau bên trái) = bản đồ Thám hiểm · chạm ụ đất kho báu = bé chạy tới đào.
+    ///   chạm biển Thám hiểm (góc sau bên trái) = bản đồ Thám hiểm · chạm ụ đất kho báu = bé chạy tới đào
+    ///   đồ chơi (Phase 8.3): vuốt bóng = ném (chạm = đá nhẹ) · kéo cần lông vũ = bé đuổi · chạm máy bong bóng = thổi, chạm bong bóng = vỡ.
     /// Phân loại cử chỉ nằm ở PointerGestureClassifier (C# thuần); lớp này chỉ raycast + chuyển lệnh.
     /// </summary>
     public sealed class GardenInputRouter : MonoBehaviour
@@ -44,6 +45,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm trúng ụ đất kho báu (tham số = chỉ số điểm đào hôm nay).</summary>
         public Action<int> TreasureTapped { get; set; }
 
+        /// <summary>Đồ chơi trong vườn (GardenScene gắn). null = chưa có đồ chơi.</summary>
+        public ToyPlayground Toys { get; set; }
+
         /// <summary>Mẹo hướng dẫn: báo người chơi đã chạm đất / dắt thú (mẹo đó không hiện nữa). Có thể null.</summary>
         public TipService Tips { get; set; }
 
@@ -57,6 +61,7 @@ namespace PawFit.Garden.View
         private ArenaGateView _downArena;
         private AdventureSignView _downAdventure;
         private TreasureSpotView _downTreasure;
+        private ToyHandle _downToy;
         private PointerGestureClassifier _gestures;
         private readonly StrokeTracker _stroke = new StrokeTracker();
         private bool _leading, _strokingPet;
@@ -123,6 +128,7 @@ namespace PawFit.Garden.View
             _downArena = null;
             _downAdventure = null;
             _downTreasure = null;
+            _downToy = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -143,6 +149,8 @@ namespace PawFit.Garden.View
                 if (_downAdventure != null) return PointerTarget.Adventure;
                 _downTreasure = hit.collider.GetComponentInParent<TreasureSpotView>();
                 if (_downTreasure != null) return PointerTarget.Treasure;
+                _downToy = hit.collider.GetComponentInParent<ToyHandle>();
+                if (_downToy != null && Toys != null) return PointerTarget.Toy;
             }
             return PointerTarget.Ground;
         }
@@ -209,6 +217,9 @@ namespace PawFit.Garden.View
                     if (e.Kind == GestureKind.Tap && _downTreasure != null) TreasureTapped?.Invoke(_downTreasure.Index);
                     else HandleGround(e, screen, onGround, g);
                     break;
+                case PointerTarget.Toy:
+                    HandleToy(e, screen, onGround, g);
+                    break;
                 default: HandleGround(e, screen, onGround, g); break;
             }
         }
@@ -270,6 +281,38 @@ namespace PawFit.Garden.View
                     }
                     else _pet.Tap();
                     _leading = _strokingPet = false;
+                    break;
+            }
+        }
+
+        /// <summary>Đồ chơi: bóng (kéo = cầm, thả = ném, chạm = đá), lông vũ (kéo = bé đuổi), máy bong bóng (chạm = thổi), bong bóng (chạm = vỡ).</summary>
+        private void HandleToy(GestureEvent e, Vector2 screen, bool onGround, Vector3 g)
+        {
+            ToyHandle h = _downToy;
+            if (h == null || Toys == null) return;
+            if (h.Bubble != null)   // bong bóng đang bay: chạm = vỡ, kéo = kéo camera
+            {
+                if (e.Kind == GestureKind.Tap) Toys.BubbleTap(h.Bubble);
+                else HandleGround(e, screen, onGround, g);
+                return;
+            }
+            switch (h.Kind)
+            {
+                case ToyKind.Ball:
+                    if (e.Kind == GestureKind.Tap) Toys.BallTap();
+                    else if (e.Kind == GestureKind.DragStart) Toys.BallGrab();
+                    else if (e.Kind == GestureKind.DragMove && onGround) Toys.BallHold(g);
+                    else if (e.Kind == GestureKind.DragEnd) Toys.BallThrow();
+                    break;
+                case ToyKind.Feather:
+                    if (e.Kind == GestureKind.Tap) GardenUi.Toast("Giữ cần lông vũ rồi kéo đi, bé sẽ đuổi theo vồ");
+                    else if (e.Kind == GestureKind.DragStart && onGround) Toys.FeatherGrab(g);
+                    else if (e.Kind == GestureKind.DragMove && onGround) Toys.FeatherHold(g);
+                    else if (e.Kind == GestureKind.DragEnd) Toys.FeatherRelease();
+                    break;
+                default:
+                    if (e.Kind == GestureKind.Tap) Toys.MachineTap();
+                    else HandleGround(e, screen, onGround, g);
                     break;
             }
         }

@@ -211,6 +211,9 @@ namespace PawFit.Core
 
         /// <summary>Giá trang trí vườn theo thứ tự DecorKind: Đèn lồng, Ghế gỗ, Cối xay gió, Vòm hoa.</summary>
         public int[] DecorPrices = { 150, 120, 300, 200 };
+
+        /// <summary>Giá đồ chơi theo thứ tự ToyKind: Bóng, Cần lông vũ, Máy bong bóng (Phase 8.3).</summary>
+        public int[] ToyPrices = { 60, 90, 140 };
     }
 
     /// <summary>Rank Elo + bậc + mùa giải — GDD mục G10 (Phase 4.3).</summary>

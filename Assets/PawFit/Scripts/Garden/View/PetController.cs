@@ -403,5 +403,40 @@ namespace PawFit.Garden.View
         }
 
         public Vector3 MouthPosition => _avatar.MouthPosition;
+
+        // ---- chơi đồ chơi (Phase 8.3): ToyPlayground điều khiển, luật ở PlayService ----
+
+        public bool IsPlaying => _brain.Activity == PetActivity.Playing;
+        public bool SelfPlaying => _brain.SelfPlaying;
+
+        /// <summary>Chạy theo đồ chơi ở `ground` (gọi liên tục khi đồ chơi di chuyển).</summary>
+        public void PlayTo(Vector3 ground, bool selfPlay = false) => _brain.Play(ground.ToGround(), selfPlay);
+
+        public void StopPlay() => _brain.EndPlay();
+
+        /// <summary>Vồ / nhảy đớp: nhảy lên + tiếng "vụt".</summary>
+        public void Pounce()
+        {
+            _avatar.PlayHop();
+            Sfx.PlayVaried(SoundId.Pounce, 0.45f);
+        }
+
+        /// <summary>Chơi trúng: tim bay + kêu vui.</summary>
+        public void Cheer(int hearts)
+        {
+            _fx.Hearts(hearts);
+            _tapGlow = 0.6f;
+            Sfx.PlayVaried(SoundId.Happy, 0.45f, 0.12f);
+        }
+
+        /// <summary>Không chịu (mệt / ốm...): lắc đầu.</summary>
+        public void Refuse() => _avatar.PlayRefuse();
+
+        /// <summary>Có bóng trong vườn: bé rảnh + chán thì tự tới đẩy bóng chơi (luật `wantsSelfPlay` của PlayService).</summary>
+        public void SetSelfPlay(Func<NVec2?> ballRest, Func<double, bool> wantsSelfPlay)
+        {
+            _brain.BallPosition = ballRest;
+            _brain.WantsSelfPlay = wantsSelfPlay;
+        }
     }
 }

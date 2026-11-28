@@ -34,6 +34,8 @@ namespace PawFit.Garden.View
         private bool _digging;
         private bool _paused;
         private Vector3 _pondPos;
+        private ToyPlayground _toys;
+        private PlayService _play;
         private ServiceLocator _s;
         private GardenLayout _layout;
         private PetService _pets;
@@ -66,6 +68,7 @@ namespace PawFit.Garden.View
         public void SetPaused(bool paused)
         {
             _paused = paused;
+            if (_toys != null) _toys.Paused = paused;
             Sfx.Ambience(!paused);
             if (!paused) Sfx.Music(MusicId.Garden);
             else Sfx.Loop(LoopId.Pond, false);
@@ -128,6 +131,15 @@ namespace PawFit.Garden.View
             _router.MailboxTapped = () => MailboxTapped?.Invoke();
             _router.ArenaTapped = () => ArenaTapped?.Invoke();
             _router.AdventureTapped = () => AdventureTapped?.Invoke();
+            if (s.TryGet(out _play))   // đồ chơi trong vườn (Phase 8.3)
+            {
+                _toys = new GameObject("Toys").AddComponent<ToyPlayground>();
+                _toys.transform.SetParent(transform, false);
+                _toys.Init(_play, () => Pet, _pets.Cosmetics);
+                _router.Toys = _toys;
+                HookSelfPlay();
+                _subs.Add(bus.Subscribe<ToyAdded>(e => StartCoroutine(ShowNewToy(e.Kind))));
+            }
             if (s.TryGet(out _daily))   // việc mỗi ngày (Phase 7.3): điểm đào kho báu + cờ hòm thư
             {
                 _router.TreasureTapped = OnTreasureTapped;
@@ -243,6 +255,30 @@ namespace PawFit.Garden.View
             if (NVec2.Distance(Pet.transform.position.ToGround(), spot) <= _daily.Config.DigReach * 0.8f) DoDig(_pendingDig);
         }
 
+        /// <summary>Bé (mới) biết tự tới chơi bóng khi rảnh.</summary>
+        private void HookSelfPlay()
+        {
+            if (Pet != null && _toys != null && _play != null) Pet.SetSelfPlay(() => _toys.BallRest, roll => _play.WantsSelfPlay(roll));
+        }
+
+        /// <summary>Vừa mua đồ chơi: camera lia tới, món đó bật lên, bé chạy tới xem, rồi camera về lại bé.</summary>
+        private IEnumerator ShowNewToy(ToyKind kind)
+        {
+            Transform toy = _toys != null ? _toys.Build(kind) : null;
+            if (toy == null) yield break;
+            toy.gameObject.AddComponent<PopIn>();
+            GardenUi.Close();
+            _focus.position = toy.position;
+            _camCtl.SetFollow(_focus);
+            if (Pet != null) Pet.MoveTo(toy.position + new Vector3(0.8f, 0f, -0.8f));
+            yield return new WaitForSeconds(2.2f);
+            Transform back = Pet != null ? Pet.transform : (_egg != null ? _egg.transform : null);
+            if (back != null) _camCtl.SetFollow(back);
+            GardenUi.Toast(kind == ToyKind.Ball ? "Vuốt quả bóng để ném, bé sẽ chạy nhặt mang về cho bạn!"
+                         : kind == ToyKind.Feather ? "Giữ cần lông vũ rồi kéo đi khắp vườn, bé sẽ đuổi theo vồ!"
+                         : "Chạm máy để thổi bong bóng, bé sẽ nhảy lên đớp!", 4f);
+        }
+
         /// <summary>Tiếng nước hồ to dần khi bé (camera bám theo bé) tới gần hồ.</summary>
         private void UpdatePondSound()
         {
@@ -324,6 +360,7 @@ namespace PawFit.Garden.View
             _egg = null;
             _s.Get<PetBrain>().Reset();
             SpawnPet(at);
+            HookSelfPlay();
             _router.SetPet(Pet);
             _camCtl.SetFollow(Pet.transform);
             Pet.Avatar.PlayHop();

@@ -23,6 +23,8 @@ namespace PawFit.App
         private static readonly string[] DummyNames = { "Hình nộm Dễ", "Hình nộm Thường", "Hình nộm Khó" };
         private static readonly string[] AccessoryNames = { "", "Nơ hồng", "Mũ len", "Khăn quàng", "Vương miện" };
         private static readonly string[] DecorNames = { "", "Dây đèn lồng", "Ghế gỗ", "Cối xay gió", "Vòm hoa" };
+        private static readonly string[] ToyNames = { "", "Bóng cao su", "Cần lông vũ", "Máy thổi bong bóng" };
+        private static readonly string[] ToyUses = { "", "vuốt để ném, bé chạy nhặt mang về", "kéo đi khắp vườn, bé đuổi theo vồ", "chạm để thổi, bé nhảy lên đớp" };
         private static ServiceLocator _services;
 
         public static GardenScene Garden { get; private set; }
@@ -336,6 +338,9 @@ namespace PawFit.App
                 enabled.Add(r == ShopRefusal.None);
                 actions.Add(() => Buy(item));
             }
+            labels.Add("Đồ chơi cho bé...");
+            enabled.Add(true);
+            actions.Add(OpenToys);
             labels.Add("Phụ kiện cho bé...");
             enabled.Add(true);
             actions.Add(OpenAccessories);
@@ -869,6 +874,40 @@ namespace PawFit.App
             CosmeticRefusal r = cos.Buy(a);
             GardenUi.Toast(r == CosmeticRefusal.None
                                ? "Bé đeo " + AccessoryNames[(int)a] + " · -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin"
+                               : "Chưa mua được: " + Why(r));
+        }
+
+        /// <summary>Thẻ Đồ chơi (Phase 8.3): mua 1 lần, món đó nằm trong vườn để chơi với bé (camera lia tới + chỉ cách chơi).</summary>
+        private static void OpenToys()
+        {
+            var cos = _services.Get<CosmeticsService>();
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            var actions = new List<Action>();
+            foreach (ToyKind t in CosmeticsService.Toys)
+            {
+                string name = ToyNames[(int)t];
+                CosmeticRefusal r = cos.CheckBuy(t);
+                labels.Add(r == CosmeticRefusal.AlreadyOwned ? name + " (có trong vườn: " + ToyUses[(int)t] + ")"
+                               : name + " · " + cos.PriceOf(t) + " Coin · " + ToyUses[(int)t] + (r == CosmeticRefusal.NotEnoughCoins ? " (thiếu Coin)" : ""));
+                enabled.Add(r == CosmeticRefusal.None);
+                actions.Add(() => BuyToy(t));
+            }
+            labels.Add("Quay lại");
+            enabled.Add(true);
+            actions.Add(OpenShop);
+            string body = "Bạn có " + _services.Get<EconomyService>().Coins + " Coin · mua 1 lần là có mãi\n" +
+                          "Mỗi lượt chơi: bé vui lên + tập Tốc độ (tốn chút sức) · bé chán thì tự đẩy bóng chơi";
+            GardenUi.ShowChoice("Đồ chơi", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
+        }
+
+        private static void BuyToy(ToyKind t)
+        {
+            var cos = _services.Get<CosmeticsService>();
+            int price = cos.PriceOf(t);
+            CosmeticRefusal r = cos.Buy(t);   // vườn nghe ToyAdded: bày món mới + camera lia tới + chỉ cách chơi
+            GardenUi.Toast(r == CosmeticRefusal.None
+                               ? ToyNames[(int)t] + " đã vào vườn · -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin"
                                : "Chưa mua được: " + Why(r));
         }
 

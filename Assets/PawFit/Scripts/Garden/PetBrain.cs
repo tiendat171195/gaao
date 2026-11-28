@@ -6,8 +6,8 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Thú đang làm gì trong vườn.</summary>
-    /// <summary>Petted = đang được vuốt ve (đứng yên tận hưởng, Phase 8.2).</summary>
-    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping, Training, Petted }
+    /// <summary>Petted = đang được vuốt ve (Phase 8.2). Playing = đang chơi đồ chơi: chạy theo bóng / lông vũ / bong bóng (Phase 8.3).</summary>
+    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping, Training, Petted, Playing }
 
     /// <summary>
     /// "Bộ não" của thú trong vườn (C# thuần): nhận lệnh người chơi + tự quyết khi rảnh
@@ -81,7 +81,17 @@ namespace PawFit.Garden
         /// <summary>Thú có đang cần di chuyển tới Target không.</summary>
         public bool IsMoving =>
             Activity == PetActivity.Wander || Activity == PetActivity.MoveTo ||
-            Activity == PetActivity.Led || Activity == PetActivity.GoingToZone;
+            Activity == PetActivity.Led || Activity == PetActivity.GoingToZone || Activity == PetActivity.Playing;
+
+        /// <summary>Đang tự chơi bóng (bé tự quyết lúc rảnh), khác với người chơi ném bóng cho bé.</summary>
+        public bool SelfPlaying { get; private set; }
+
+        /// <summary>
+        /// Có bóng trong vườn thì View đặt hàm này (trả vị trí bóng). Bé rảnh + chán + còn khỏe thì thỉnh thoảng tự chạy tới đẩy bóng chơi.
+        /// `WantsSelfPlay(roll)` = luật của PlayService.
+        /// </summary>
+        public Func<Vector2?> BallPosition { get; set; }
+        public Func<double, bool> WantsSelfPlay { get; set; }
 
         // ------------------------------------------------------------------
         // Lệnh từ người chơi
@@ -182,6 +192,30 @@ namespace PawFit.Garden
             _playerHold = Math.Max(_playerHold, 2f);
         }
 
+        /// <summary>
+        /// Chơi đồ chơi: chạy theo `target` (View gọi liên tục khi bóng / lông vũ / bong bóng di chuyển).
+        /// View thôi gọi quá 4 giây thì bé tự thôi chơi.
+        /// </summary>
+        public void Play(Vector2 target, bool selfPlay = false)
+        {
+            if (!_pets.HasPet || _pets.Current.IsSleeping) return;
+            Activity = PetActivity.Playing;
+            SelfPlaying = selfPlay;
+            Target = _layout.Clamp(target, 0.6f);
+            Run = !Ill;
+            _timer = Math.Max(_timer, 4f);
+            if (!selfPlay) _playerHold = Math.Max(_playerHold, 4f);
+        }
+
+        /// <summary>Thôi chơi (bé nhặt bóng về rồi / người chơi thả lông vũ): vui vẻ phản ứng 1 chút.</summary>
+        public void EndPlay()
+        {
+            if (Activity != PetActivity.Playing) return;
+            SelfPlaying = false;
+            Activity = PetActivity.Reacting;
+            _timer = _cfg.ReactSeconds;
+        }
+
         /// <summary>Đã cho ăn thành công: đứng ăn 1 lúc.</summary>
         public void OnFed()
         {
@@ -232,6 +266,15 @@ namespace PawFit.Garden
                     if (Arrived(petPos) || _moveTimeout <= 0f) UseZone(_zoneGoal);
                     break;
 
+                case PetActivity.Playing:   // View cập nhật Target theo đồ chơi; thôi cập nhật thì tự thôi chơi
+                    _timer -= dt;
+                    if (_timer <= 0f)
+                    {
+                        SelfPlaying = false;
+                        SetIdle(RandomIdle());
+                    }
+                    break;
+
                 case PetActivity.Led:   // View cập nhật Target theo ngón tay; chạy theo tay = tập Tốc độ
                     if (_hasLedPos) _ledMeters += Vector2.Distance(petPos, _lastLedPos);
                     _lastLedPos = petPos;
@@ -271,6 +314,13 @@ namespace PawFit.Garden
             if (Stage == HealthStage.Tired && _rng.NextDouble() < 0.5)   // mệt: lười đi hơn
             {
                 SetIdle(RandomIdle() * 1.5f);
+                return;
+            }
+            Vector2? ball = BallPosition?.Invoke();   // rảnh + chán: tự chạy tới đẩy bóng chơi (Phase 8.3)
+            if (ball.HasValue && WantsSelfPlay != null && WantsSelfPlay(_rng.NextDouble()))
+            {
+                Play(ball.Value, true);
+                _timer = 10f;
                 return;
             }
             StartMove(PetActivity.Wander, RandomWanderPoint(petPos), _rng.NextDouble() < 0.15, petPos);

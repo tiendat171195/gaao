@@ -84,6 +84,9 @@ namespace PawFit.Garden
             new QuestDef(QuestKind.Cuddle, 5, 10), new QuestDef(QuestKind.Workout, 1, 15),
         };
 
+        /// <summary>Có đồ chơi thì thêm vào nhóm việc chăm (Phase 8.3).</summary>
+        private static readonly QuestDef PlayQuest = new QuestDef(QuestKind.Play, 3, 15);
+
         private static readonly QuestDef[] BattleQuests =
         {
             new QuestDef(QuestKind.WinAdventure, 2, 25), new QuestDef(QuestKind.AdventureStar, 1, 25),
@@ -98,6 +101,7 @@ namespace PawFit.Garden
         private readonly DailyConfig _cfg;
         private readonly Func<DateTime, DateTime> _toLocal;
         private readonly Func<bool> _starsLeft;
+        private readonly Func<bool> _hasToys;
         private readonly ILog _log;
         private readonly List<IDisposable> _subs = new List<IDisposable>();
         private readonly List<Vector2> _spots = new List<Vector2>();
@@ -106,8 +110,10 @@ namespace PawFit.Garden
 
         /// <param name="toLocal">Đổi giờ UTC ra giờ trên máy để tính "ngày" (mặc định ToLocalTime).</param>
         /// <param name="starsLeft">Thám hiểm còn sao để kiếm không (hết sao thì không ra nhiệm vụ "kiếm sao mới"). null = còn.</param>
+        /// <param name="hasToys">Người chơi có đồ chơi chưa (có thì có thể ra nhiệm vụ "chơi với bé"). null = chưa.</param>
         public DailyService(PetService pets, ITimeProvider time, EventBus bus, ICoinWallet wallet, GardenLayout layout,
-                            DailyConfig cfg = null, Func<DateTime, DateTime> toLocal = null, Func<bool> starsLeft = null, ILog log = null)
+                            DailyConfig cfg = null, Func<DateTime, DateTime> toLocal = null, Func<bool> starsLeft = null, ILog log = null,
+                            Func<bool> hasToys = null)
         {
             _pets = pets ?? throw new ArgumentNullException(nameof(pets));
             _time = time ?? throw new ArgumentNullException(nameof(time));
@@ -117,7 +123,9 @@ namespace PawFit.Garden
             _cfg = cfg ?? new DailyConfig();
             _toLocal = toLocal ?? (utc => utc.ToLocalTime());
             _starsLeft = starsLeft;
+            _hasToys = hasToys;
             _log = log;
+            _subs.Add(bus.Subscribe<PlayDone>(e => Count(QuestKind.Play, 1)));
             _subs.Add(bus.Subscribe<CareDone>(OnCare));
             _subs.Add(bus.Subscribe<AdventureWon>(e =>
             {
@@ -256,6 +264,7 @@ namespace PawFit.Garden
                 case QuestKind.AdventureStar: return "Kiếm " + t + " sao mới ở Thám hiểm";
                 case QuestKind.WinBattle: return "Thắng " + t + " trận bất kỳ (hình nộm, PvP, Thám hiểm)";
                 case QuestKind.PlayPvp: return "Đấu " + t + " trận PvP ở đấu trường";
+                case QuestKind.Play: return "Chơi với bé " + t + " lần (bóng, lông vũ, bong bóng)";
                 default: return "Đào " + t + " kho báu trong vườn";
             }
         }
@@ -447,13 +456,15 @@ namespace PawFit.Garden
         {
             var rng = new SeededRandom(Hash(day) ^ salt, 11UL);
             var list = new List<QuestState>();
-            int care = rng.Next(CareQuests.Length);
-            list.Add(New(CareQuests[care]));
+            var cares = new List<QuestDef>(CareQuests);
+            if (_hasToys != null && _hasToys()) cares.Add(PlayQuest);
+            int care = rng.Next(cares.Count);
+            list.Add(New(cares[care]));
             var battles = new List<QuestDef>(BattleQuests);
             if (_starsLeft != null && !_starsLeft()) battles.RemoveAll(q => q.Kind == QuestKind.AdventureStar);
             list.Add(New(battles[rng.Next(battles.Count)]));
             if (rng.NextDouble() < 0.6) list.Add(New(new QuestDef(QuestKind.Dig, Math.Max(1, _cfg.DigSpotsPerDay), 15)));
-            else list.Add(New(CareQuests[(care + 1 + rng.Next(CareQuests.Length - 1)) % CareQuests.Length]));
+            else list.Add(New(cares[(care + 1 + rng.Next(cares.Count - 1)) % cares.Count]));
             return list;
         }
 

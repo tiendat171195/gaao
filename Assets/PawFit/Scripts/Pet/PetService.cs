@@ -179,6 +179,7 @@ namespace PawFit.Pet
                 CosmeticsData c = _game.Cosmetics ?? (_game.Cosmetics = new CosmeticsData());
                 if (c.Accessories == null) c.Accessories = new List<AccessoryKind>();   // file sửa tay / lỗi: không để null
                 if (c.Decor == null) c.Decor = new List<DecorKind>();
+                if (c.Toys == null) c.Toys = new List<ToyKind>();   // file trước Phase 8.3
                 return c;
             }
         }

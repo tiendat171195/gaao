@@ -10,13 +10,15 @@ namespace PawFit.Economy
     /// <summary>
     /// Phụ kiện + đồ trang trí (C# thuần, Phase 5.2). Bán ở quầy hàng, mua 1 lần là có mãi (của người chơi, thú mất vẫn còn).
     /// Phụ kiện: mua xong tự đeo, mỗi lúc đeo 1 món, chạm lại món đang đeo để tháo. Trang trí: mua xong hiện luôn trong vườn.
-    /// Chỉ để đẹp: không đổi chỉ số, không đổi luật chăm sóc.
+    /// Đồ chơi (Phase 8.3): mua xong bày trong vườn, chơi cùng bé (luật chơi ở PlayService).
+    /// Không đổi chỉ số đấu (PvP công bằng); tác dụng chăm sóc của đồ ở CarePerks (Phase 8.4).
     /// </summary>
     public sealed class CosmeticsService
     {
         /// <summary>Thứ tự bày trong quầy.</summary>
         public static readonly AccessoryKind[] Accessories = { AccessoryKind.Bow, AccessoryKind.Beanie, AccessoryKind.Scarf, AccessoryKind.Crown };
         public static readonly DecorKind[] Decorations = { DecorKind.Lanterns, DecorKind.Bench, DecorKind.Windmill, DecorKind.FlowerArch };
+        public static readonly ToyKind[] Toys = { ToyKind.Ball, ToyKind.Feather, ToyKind.Bubbles };
 
         private readonly PetService _pets;
         private readonly ICoinWallet _wallet;
@@ -40,9 +42,31 @@ namespace PawFit.Economy
 
         public int PriceOf(AccessoryKind kind) => Price(_cfg.AccessoryPrices, (int)kind);
         public int PriceOf(DecorKind kind) => Price(_cfg.DecorPrices, (int)kind);
+        public int PriceOf(ToyKind kind) => Price(_cfg.ToyPrices, (int)kind);
 
         public bool Owns(AccessoryKind kind) => Data != null && Data.Accessories.Contains(kind);
         public bool Owns(DecorKind kind) => Data != null && Data.Decor.Contains(kind);
+        public bool Owns(ToyKind kind) => Data != null && Data.Toys.Contains(kind);
+
+        public CosmeticRefusal CheckBuy(ToyKind kind)
+        {
+            if (kind == ToyKind.None || PriceOf(kind) < 0 || Data == null) return CosmeticRefusal.Invalid;
+            if (Owns(kind)) return CosmeticRefusal.AlreadyOwned;
+            return _wallet.Coins >= PriceOf(kind) ? CosmeticRefusal.None : CosmeticRefusal.NotEnoughCoins;
+        }
+
+        /// <summary>Mua 1 đồ chơi: trừ Coin, vườn bày thêm món đó (chơi cùng bé được ngay).</summary>
+        public CosmeticRefusal Buy(ToyKind kind)
+        {
+            CosmeticRefusal r = CheckBuy(kind);
+            if (r != CosmeticRefusal.None) return r;
+            if (!_wallet.TrySpend(PriceOf(kind), "đồ chơi " + kind)) return CosmeticRefusal.NotEnoughCoins;
+            Data.Toys.Add(kind);
+            _pets.Save();
+            _log.Info("[PawFit] Mua đồ chơi " + kind);
+            _bus.Publish(new ToyAdded(kind));
+            return CosmeticRefusal.None;
+        }
 
         public CosmeticRefusal CheckBuy(AccessoryKind kind)
         {
@@ -113,6 +137,13 @@ namespace PawFit.Economy
                 d.Decor.Add(k);
                 _pets.Save();
                 _bus.Publish(new DecorAdded(k));
+            }
+            foreach (ToyKind t in Toys)
+            {
+                if (d.Toys.Contains(t)) continue;
+                d.Toys.Add(t);
+                _pets.Save();
+                _bus.Publish(new ToyAdded(t));
             }
         }
 

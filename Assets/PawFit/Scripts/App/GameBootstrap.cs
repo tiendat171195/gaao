@@ -108,8 +108,10 @@ namespace PawFit.App
             Services.Register(rank);
             var adventure = new PawFit.Battle.AdventureService(_pets, evo, health, economy, bus);   // Thám hiểm (Phase 7.2)
             Services.Register(adventure);
+            Services.Register(new PlayService(_pets, health, evo, time, bus));   // đồ chơi + trò chơi trong vườn (Phase 8.3)
             Services.Register(new DailyService(_pets, time, bus, economy, layout,   // quà ngày + nhiệm vụ + kho báu (Phase 7.3)
-                                               starsLeft: () => adventure.TotalStars < adventure.MaxStars, log: log));
+                                               starsLeft: () => adventure.TotalStars < adventure.MaxStars, log: log,
+                                               hasToys: () => _pets.Cosmetics != null && _pets.Cosmetics.Toys.Count > 0));
             // Máy chủ riêng (Phase 4): có địa chỉ máy chủ thì tài khoản khách + giờ + sao lưu + PvP qua máy chủ
             // (máy chủ ghép người thật trước, vắng người thì thả người chơi ảo, tự tính Elo).
             // Không có địa chỉ: mạng giả lập trên máy như trước (người chơi ảo, Elo tính trên máy).

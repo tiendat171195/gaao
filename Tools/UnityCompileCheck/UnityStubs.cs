@@ -28,6 +28,7 @@ namespace UnityEngine
         public T GetComponent<T>() => default;
         public T GetComponentInParent<T>() => default;
         public T GetComponentInChildren<T>() => default;
+        public T[] GetComponentsInChildren<T>() => new T[0];
     }
 
     public class Behaviour : Component { public bool enabled { get; set; } }
@@ -82,6 +83,7 @@ namespace UnityEngine
         public Vector3 TransformDirection(Vector3 direction) => direction;
         public Vector3 TransformVector(Vector3 vector) => vector;
         public void Rotate(float xAngle, float yAngle, float zAngle) { }
+        public void Rotate(Vector3 eulers, Space relativeTo) { }
         public Vector3 position { get; set; }
         public Vector3 localPosition { get; set; }
         public Quaternion rotation { get; set; }
@@ -119,6 +121,7 @@ namespace UnityEngine
         public static Vector3 up => new Vector3(0, 1, 0);
         public static Vector3 right => new Vector3(1, 0, 0);
         public static Vector3 forward => new Vector3(0, 0, 1);
+        public static Vector3 back => new Vector3(0, 0, -1);
         public Vector3 normalized => this;
         public float magnitude => 0f;
         public float sqrMagnitude => 0f;
@@ -130,7 +133,10 @@ namespace UnityEngine
         public static Vector3 operator -(Vector3 a, Vector3 b) => a;
         public static Vector3 operator *(Vector3 a, float d) => a;
         public static Vector3 operator *(float d, Vector3 a) => a;
+        public static Vector3 operator /(Vector3 a, float d) => a;
     }
+
+    public enum Space { World = 0, Self = 1 }
 
     public struct Quaternion
     {
@@ -443,7 +449,11 @@ namespace UnityEngine
 
     public struct RaycastHit { public Collider collider => null; public Vector3 point { get; set; } }
 
-    public static class Physics { public static bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance) { hitInfo = default; return false; } }
+    public static class Physics
+    {
+        public static bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance) { hitInfo = default; return false; }
+        public static void IgnoreCollision(Collider collider1, Collider collider2, bool ignore = true) { }
+    }
 
     public struct Bounds
     {
@@ -451,7 +461,41 @@ namespace UnityEngine
         public void Expand(float amount) { }
     }
 
-    public class Collider : Component { public bool enabled { get; set; } }
+    public class Collider : Component { public bool enabled { get; set; } public bool isTrigger { get; set; } public PhysicsMaterial sharedMaterial { get; set; } }
+
+    public enum ForceMode { Force = 0, Acceleration = 5, Impulse = 1, VelocityChange = 2 }
+    public enum RigidbodyInterpolation { None = 0, Interpolate = 1, Extrapolate = 2 }
+    public enum CollisionDetectionMode { Discrete = 0, Continuous = 1, ContinuousDynamic = 2, ContinuousSpeculative = 3 }
+    public enum PhysicsMaterialCombine { Average = 0, Multiply, Minimum, Maximum }
+
+    public class PhysicsMaterial : Object
+    {
+        public PhysicsMaterial() { }
+        public PhysicsMaterial(string name) { }
+        public float bounciness { get; set; }
+        public float dynamicFriction { get; set; }
+        public float staticFriction { get; set; }
+        public PhysicsMaterialCombine frictionCombine { get; set; }
+        public PhysicsMaterialCombine bounceCombine { get; set; }
+    }
+
+    public sealed class Rigidbody : Component
+    {
+        public Vector3 position { get; set; }
+        public Vector3 linearVelocity { get; set; }
+        public Vector3 angularVelocity { get; set; }
+        public float linearDamping { get; set; }
+        public float angularDamping { get; set; }
+        public float mass { get; set; }
+        public bool isKinematic { get; set; }
+        public bool useGravity { get; set; }
+        public RigidbodyInterpolation interpolation { get; set; }
+        public CollisionDetectionMode collisionDetectionMode { get; set; }
+        public void AddForce(Vector3 force, ForceMode mode) { }
+        public void AddTorque(Vector3 torque, ForceMode mode) { }
+    }
+
+    public class Collision { public Vector3 relativeVelocity => default; }
 
     public sealed class BoxCollider : Collider { public Vector3 size { get; set; } public Vector3 center { get; set; } }
 
@@ -625,6 +669,17 @@ namespace UnityEngine.UI
 
 namespace UnityEngine.AI
 {
+    public enum NavMeshObstacleShape { Capsule = 0, Box = 1 }
+
+    public sealed class NavMeshObstacle : Behaviour
+    {
+        public bool carving { get; set; }
+        public bool carveOnlyStationary { get; set; }
+        public NavMeshObstacleShape shape { get; set; }
+        public Vector3 center { get; set; }
+        public Vector3 size { get; set; }
+    }
+
     public sealed class NavMeshAgent : Behaviour
     {
         public float radius { get; set; }
