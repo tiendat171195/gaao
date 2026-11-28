@@ -39,6 +39,7 @@ namespace PawFit.Garden
         private readonly EventBus _bus;
         private readonly ILog _log;
         private DateTime _lastPetMoodUtc = DateTime.MinValue;
+        private DateTime _lastStrokeUtc = DateTime.MinValue;
         private DateTime _lastWipeUtc = DateTime.MinValue;
 
         public CareActionService(PetService pets, HealthService health, EvolutionService evo, GardenConfig cfg, ITimeProvider time,
@@ -115,6 +116,23 @@ namespace PawFit.Garden
                 _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CarePet);
             }
             return Done(CareKind.Pet, CareResult.Ok, null);
+        }
+
+        /// <summary>
+        /// 1 lượt vuốt ve (xoa trên người thú, Phase 8.2): vui lên chút + điểm Chăm sóc, cộng nhiều nhất mỗi StrokeCooldownSeconds.
+        /// Đang ngủ vẫn được vuốt (không bị đánh thức). Thú ốm: = lau người. Trả Ok cả lúc đang chờ (để View vẫn chạy hiệu ứng).
+        /// </summary>
+        public CareResult Stroke()
+        {
+            if (!_pets.HasPet) return CareResult.Refused;
+            if (_health.IsIll) return Pet();   // ốm: xoa = lau người (có thời gian chờ riêng)
+            DateTime now = _time.UtcNow;
+            if ((now - _lastStrokeUtc).TotalSeconds < _cfg.StrokeCooldownSeconds) return CareResult.Ok;
+            _lastStrokeUtc = now;
+            _pets.Care(NeedType.Mood, _cfg.StrokeMood);
+            _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CarePet * _cfg.StrokeCareFactor);
+            _bus.Publish(new CareDone(CareKind.Pet, CareResult.Ok, "vuốt ve"));   // không ghi log từng lượt (xoa liên tục)
+            return CareResult.Ok;
         }
 
         /// <summary>

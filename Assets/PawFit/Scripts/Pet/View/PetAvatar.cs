@@ -47,6 +47,12 @@ namespace PawFit.Pet.View
         /// <summary>Tập ở sân tập (đấm hình nộm) trong `seconds` giây.</summary>
         void PlayTrain(float seconds);
 
+        /// <summary>
+        /// Đang được vuốt ve (0 = không, 1 = đang vuốt; đổi mượt): nhắm mắt lim dim, nghiêng đầu dụi theo tay,
+        /// vẫy đuôi nhanh, tai thả lỏng (Phase 8.2).
+        /// </summary>
+        void SetPetted(float amount);
+
         /// <summary>Hình dáng theo giai đoạn tiến hóa (gọi mỗi frame; đổi mượt).</summary>
         void SetGrowth(GrowthLook look);
 
@@ -115,6 +121,7 @@ namespace PawFit.Pet.View
     /// </summary>
     public sealed class PlaceholderPetAvatar : MonoBehaviour, IPetAvatar
     {
+        private float _petted, _pettedTarget;
         private Transform _visual;
         private Transform _head;
         private Transform[] _legs;
@@ -260,6 +267,7 @@ namespace PawFit.Pet.View
         public void PlayCry() => _cryT = 0f;
         public void PlayYawn() => _yawnT = 0f;
         public void SetLook(AvatarLook look) => _look = look;
+        public void SetPetted(float amount) => _pettedTarget = Mathf.Clamp01(amount);
 
         public void PlayTrain(float seconds)
         {
@@ -351,9 +359,11 @@ namespace PawFit.Pet.View
             _visual.localPosition = new Vector3(0f, bob + hop + (sleep ? -0.1f : 0f), punch * 0.12f);
             _visual.localScale = Vector3.Scale(squash, sleep ? new Vector3(1.08f, 0.8f + breathe, 1.05f) : Vector3.one) * _grow;
             float shiver = _look.Sick >= 0.5f ? Mathf.Sin(Time.time * 55f) * 2.2f * _look.Sick : 0f;   // ốm: run lẩy bẩy
-            _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver);
-            _head.localRotation = Quaternion.Euler(headPitch + (sleep ? 20f : 0f), headYaw, 0f);
-            float open = sleep ? 0f : Mathf.Clamp01(_look.EyeOpen);
+            _petted = Mathf.MoveTowards(_petted, _pettedTarget, dt * 3f);   // được vuốt ve: dụi đầu, lim dim mắt
+            float nuzzle = Mathf.Sin(Time.time * 1.6f) * 14f * _petted;
+            _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver + nuzzle * 0.3f);
+            _head.localRotation = Quaternion.Euler(headPitch + (sleep ? 20f : 0f) - _petted * 6f, headYaw, nuzzle);
+            float open = sleep ? 0f : Mathf.Clamp01(_look.EyeOpen) * (1f - 0.75f * _petted);
             Vector3 eye = new Vector3(_eyeScale.x, _eyeScale.y * Mathf.Lerp(0.15f, 1f, open), _eyeScale.z);   // ngủ: nhắm mắt
             foreach (Transform e in _eyes) e.localScale = eye;
         }

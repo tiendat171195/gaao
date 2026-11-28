@@ -430,6 +430,7 @@ namespace UnityEngine
         public CameraClearFlags clearFlags { get; set; }
         public Color backgroundColor { get; set; }
         public Ray ScreenPointToRay(Vector3 pos) => default;
+        public Vector3 WorldToScreenPoint(Vector3 position) => default;
     }
 
     public struct Ray { public Vector3 GetPoint(float distance) => default; }
@@ -440,7 +441,7 @@ namespace UnityEngine
         public bool Raycast(Ray ray, out float enter) { enter = 0f; return false; }
     }
 
-    public struct RaycastHit { public Collider collider => null; }
+    public struct RaycastHit { public Collider collider => null; public Vector3 point { get; set; } }
 
     public static class Physics { public static bool Raycast(Ray ray, out RaycastHit hitInfo, float maxDistance) { hitInfo = default; return false; } }
 

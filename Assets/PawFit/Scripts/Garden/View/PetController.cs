@@ -43,6 +43,12 @@ namespace PawFit.Garden.View
         private float _stepT, _activityT;
         private int _step;
 
+        // ---- vuốt ve + chạm (Phase 8.2) ----
+        private bool _stroking;
+        private Vector3 _hand;
+        private float _heartT, _tapGlow, _lastTapTime = -10f;
+        private int _tapCount;
+
         public IPetAvatar Avatar => _avatar;
 
         /// <summary>Thú đang ốm / nguy kịch (khay đồ ăn đưa bát cháo thay quả táo).</summary>
@@ -193,7 +199,9 @@ namespace PawFit.Garden.View
                 _sentTarget = NoTarget;
             }
 
-            if (_brain.Activity == PetActivity.Reacting) FaceTowards(_cam != null ? _cam.transform.position : transform.position);
+            if (_brain.Activity == PetActivity.Reacting || _brain.Activity == PetActivity.Petted)
+                FaceTowards(_cam != null ? _cam.transform.position : transform.position);
+            UpdatePetting(dt);
             if (_brain.Activity == PetActivity.Training) FaceTowards(_trainPoint);
             if (_brain.Activity != _lastActivity)
             {
@@ -238,6 +246,7 @@ namespace PawFit.Garden.View
                 _avatar.LookAt(_foodPoint);
                 if (speed < 0.15f) FaceTowards(_foodPoint);   // đứng yên thì quay cả người về phía chòi ăn
             }
+            else if (_stroking) _avatar.LookAt(_hand);   // được vuốt: ngước nhìn theo tay
             else if (_brain.Activity == PetActivity.Reacting && _cam != null) _avatar.LookAt(_cam.transform.position);
             else _avatar.LookAt(null);
             _fx.SetFlies(e.Flies);
@@ -290,6 +299,20 @@ namespace PawFit.Garden.View
             Sfx.Loop(LoopId.Sleep, a == PetActivity.Sleeping, 0.32f);
         }
 
+        /// <summary>Đang được vuốt: lim dim + dụi đầu, tim bay đều, gừ gừ. Vừa được chạm: mắt híp vui 1 chút.</summary>
+        private void UpdatePetting(float dt)
+        {
+            _tapGlow = Mathf.Max(0f, _tapGlow - dt);
+            bool asleep = _brain.Activity == PetActivity.Sleeping;
+            _avatar.SetPetted(_stroking ? (asleep ? 0.45f : 1f) : (_tapGlow > 0f ? 0.7f : 0f));
+            Sfx.Loop(LoopId.Purr, _stroking, asleep ? 0.3f : 0.5f);
+            if (!_stroking) return;
+            _heartT -= dt;
+            if (_heartT > 0f) return;
+            _heartT = 0.75f;
+            _fx.Hearts(1);
+        }
+
         private static void StopLoops()
         {
             Sfx.Loop(LoopId.Bath, false);
@@ -307,14 +330,58 @@ namespace PawFit.Garden.View
 
         // ---- Lệnh từ input (chỉ chuyển tiếp sang bộ não) ----
 
+        /// <summary>
+        /// Chạm vào bé: bé quay lại nhìn, nhảy lên mừng, mắt híp, tim bay + tiếng kêu vui.
+        /// Chạm 3 lần liền = cù: cười khúc khích, lắc mình. Ốm: chỉ được lau, không nhảy.
+        /// </summary>
         public void Tap()
         {
             _brain.OnTapped();
-            if (_brain.Activity == PetActivity.Reacting && !IsIll)   // ốm: chỉ được lau, không nhảy
+            if (_brain.Activity != PetActivity.Reacting || IsIll) return;
+            float now = Time.time;
+            _tapCount = now - _lastTapTime < 1.2f ? _tapCount + 1 : 1;
+            _lastTapTime = now;
+            _tapGlow = 0.9f;
+            if (_tapCount >= 3)
             {
-                _avatar.PlayHop();
-                Sfx.PlayVaried(SoundId.Happy, 0.55f, 0.1f);
+                _tapCount = 0;
+                _avatar.PlayBathe();   // lắc mình cười
+                _fx.Hearts(3);
+                Sfx.PlayVaried(SoundId.Giggle, 0.55f, 0.08f);
+                return;
             }
+            _avatar.PlayHop();
+            _fx.Hearts(1);
+            Sfx.PlayVaried(SoundId.Happy, 0.55f, 0.1f);
+        }
+
+        /// <summary>Bắt đầu xoa trên người bé (vuốt ve): bé đứng yên tận hưởng.</summary>
+        public void BeginStroke()
+        {
+            if (_stroking) return;
+            _stroking = true;
+            _heartT = 0.2f;
+            _brain.BeginPetting();
+        }
+
+        /// <summary>Đang xoa ở điểm `handWorld` (trên người bé), vừa xoa thêm `passes` lượt (mỗi lượt cộng vui).</summary>
+        public void StrokeAt(Vector3 handWorld, int passes)
+        {
+            if (!_stroking) return;
+            _hand = handWorld;
+            for (int i = 0; i < passes; i++) _brain.Stroke();
+        }
+
+        /// <summary>Thả tay sau khi vuốt: bé nhảy lên vui, tim bay, kêu "mi!".</summary>
+        public void EndStroke()
+        {
+            if (!_stroking) return;
+            _stroking = false;
+            _brain.EndPetting();
+            if (_brain.Activity == PetActivity.Sleeping || IsIll) return;
+            _avatar.PlayHop();
+            _fx.Hearts(2);
+            Sfx.PlayVaried(SoundId.Happy, 0.5f, 0.1f);
         }
 
         public void MoveTo(Vector3 ground) => _brain.CommandMoveTo(ground.ToGround(), transform.position.ToGround());

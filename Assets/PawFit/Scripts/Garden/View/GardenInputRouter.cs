@@ -7,8 +7,9 @@ namespace PawFit.Garden.View
 {
     /// <summary>
     /// Đổi chạm / kéo thành lệnh (không có nút nào):
-    ///   chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve (đang ngủ thì dậy)
-    ///   kéo thú = dắt đi (thả vào hồ = tắm, vào ổ = ngủ) · kéo từ khay đồ ăn thả lên thú = cho ăn
+    ///   chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = bé mừng (đang ngủ thì dậy)
+    ///   xoa qua lại trên người thú = vuốt ve (Phase 8.2) · kéo thú ra chỗ khác = dắt đi (thả vào hồ = tắm, vào ổ = ngủ)
+    ///   kéo từ khay đồ ăn thả lên thú = cho ăn
     ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy · chạm hòm thư (cạnh cổng đấu trường) = cài đặt
     ///   chạm biển Thám hiểm (góc sau bên trái) = bản đồ Thám hiểm · chạm ụ đất kho báu = bé chạy tới đào.
     /// Phân loại cử chỉ nằm ở PointerGestureClassifier (C# thuần); lớp này chỉ raycast + chuyển lệnh.
@@ -57,6 +58,8 @@ namespace PawFit.Garden.View
         private AdventureSignView _downAdventure;
         private TreasureSpotView _downTreasure;
         private PointerGestureClassifier _gestures;
+        private readonly StrokeTracker _stroke = new StrokeTracker();
+        private bool _leading, _strokingPet;
         private GardenCamera _camCtl;
         private PetController _pet;
         private GardenConfig _cfg;
@@ -234,6 +237,10 @@ namespace PawFit.Garden.View
             }
         }
 
+        /// <summary>
+        /// Chạm = bé mừng. Kéo bắt đầu trên người bé: StrokeTracker quyết định — xoa qua lại / vòng vòng trên người bé = vuốt ve,
+        /// kéo ra khỏi người bé = dắt đi. Kéo ngắn chưa rõ ý mà nhấc tay = coi như chạm.
+        /// </summary>
         private void HandlePet(GestureEvent e, bool onGround, Vector3 g)
         {
             if (_pet == null) return;
@@ -243,17 +250,64 @@ namespace PawFit.Garden.View
                     _pet.Tap();
                     break;
                 case GestureKind.DragStart:
-                    if (onGround) _pet.BeginLead(g);
-                    _camCtl.ResumeFollow();
+                    _leading = _strokingPet = false;
+                    _stroke.Begin(e.StartPosition);
+                    TrackPetDrag(e, onGround, g);
                     break;
                 case GestureKind.DragMove:
-                    if (onGround) _pet.LeadTo(g);
+                    TrackPetDrag(e, onGround, g);
                     break;
                 case GestureKind.DragEnd:
-                    if (onGround) _pet.EndLead(g);
-                    Tips?.Done(TipId.Lead);
+                    if (_leading)
+                    {
+                        if (onGround) _pet.EndLead(g);
+                        Tips?.Done(TipId.Lead);
+                    }
+                    else if (_strokingPet)
+                    {
+                        _pet.EndStroke();
+                        Tips?.Done(TipId.Pet);
+                    }
+                    else _pet.Tap();
+                    _leading = _strokingPet = false;
                     break;
             }
+        }
+
+        private void TrackPetDrag(GestureEvent e, bool onGround, Vector3 g)
+        {
+            Vector2 screen = e.Position.ToUnity();
+            Vector3 center = _pet.transform.position + Vector3.up * 0.5f;
+            Vector3 sc = _cam.WorldToScreenPoint(center);
+            Vector3 se = _cam.WorldToScreenPoint(center + _cam.transform.right * 0.6f);   // bán kính thú trên màn hình
+            float radius = Mathf.Max(40f, Vector2.Distance(sc, se));
+            DragIntent intent = _stroke.Move(e.Position, new System.Numerics.Vector2(sc.x, sc.y), radius);
+            if (intent == DragIntent.Stroke)
+            {
+                if (!_strokingPet)
+                {
+                    _strokingPet = true;
+                    _pet.BeginStroke();
+                }
+                Vector3 hand = Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f) &&
+                               hit.collider.GetComponentInParent<PetController>() != null ? hit.point : center;
+                _pet.StrokeAt(hand, _stroke.TakePasses());
+                return;
+            }
+            if (intent != DragIntent.Lead) return;
+            if (_strokingPet)   // đang vuốt mà kéo hẳn ra xa: chuyển sang dắt
+            {
+                _strokingPet = false;
+                _pet.EndStroke();
+            }
+            if (!onGround) return;
+            if (!_leading)
+            {
+                _leading = true;
+                _pet.BeginLead(g);
+                _camCtl.ResumeFollow();
+            }
+            else _pet.LeadTo(g);
         }
 
         private void HandleFood(GestureEvent e, bool onGround, Vector3 g)

@@ -149,8 +149,8 @@ namespace PawFit.Garden
             switch (id)
             {
                 case TipId.Move: return "Chạm xuống đất để bé chạy tới chỗ đó. Kéo trên mặt đất để xem chỗ khác trong vườn.";
-                case TipId.Pet: return "Chạm vào bé để vuốt ve, bé sẽ vui hơn.";
-                case TipId.Lead: return "Giữ và kéo bé để dắt đi. Thả vào hồ = tắm, thả vào ổ = đi ngủ.";
+                case TipId.Pet: return "Xoa qua lại trên người bé để vuốt ve: bé lim dim, gừ gừ, vui lắm. Chạm nhẹ thì bé nhảy lên mừng.";
+                case TipId.Lead: return "Giữ bé rồi kéo ra chỗ khác để dắt đi. Thả vào hồ = tắm, thả vào ổ = đi ngủ.";
                 case TipId.Feed: return "Bé đói rồi! Kéo quả táo ở khay chòi ăn (bên trái) thả lên bé.";
                 case TipId.Bathe: return "Bé bẩn rồi! Dắt bé thả xuống hồ (bên phải) để tắm.";
                 case TipId.Sleep: return "Bé buồn ngủ! Dắt bé vào ổ giữa vườn.";

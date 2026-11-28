@@ -6,7 +6,8 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Thú đang làm gì trong vườn.</summary>
-    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping, Training }
+    /// <summary>Petted = đang được vuốt ve (đứng yên tận hưởng, Phase 8.2).</summary>
+    public enum PetActivity { Idle, Wander, MoveTo, Led, GoingToZone, Eating, Bathing, Reacting, Sleeping, Training, Petted }
 
     /// <summary>
     /// "Bộ não" của thú trong vườn (C# thuần): nhận lệnh người chơi + tự quyết khi rảnh
@@ -154,6 +155,33 @@ namespace PawFit.Garden
             _playerHold = Math.Max(_playerHold, 2f);
         }
 
+        /// <summary>Bắt đầu được vuốt ve: đứng yên tận hưởng. Đang ngủ thì vẫn ngủ (vuốt nhẹ không đánh thức).</summary>
+        public void BeginPetting()
+        {
+            if (!_pets.HasPet || _pets.Current.IsSleeping) return;
+            Activity = PetActivity.Petted;
+            _timer = 30f;   // an toàn: View quên báo thả tay thì tự thôi
+            Run = false;
+            _playerHold = Math.Max(_playerHold, 3f);
+        }
+
+        /// <summary>1 lượt xoa trên người thú (mỗi lượt cộng vui, có thời gian chờ ở CareActionService).</summary>
+        public void Stroke()
+        {
+            if (!_pets.HasPet) return;
+            _care.Stroke();
+            if (Activity == PetActivity.Petted) _timer = Math.Max(_timer, 5f);
+        }
+
+        /// <summary>Thả tay sau khi vuốt: vui vẻ phản ứng 1 chút rồi làm việc khác.</summary>
+        public void EndPetting()
+        {
+            if (Activity != PetActivity.Petted) return;
+            Activity = PetActivity.Reacting;
+            _timer = _cfg.ReactSeconds;
+            _playerHold = Math.Max(_playerHold, 2f);
+        }
+
         /// <summary>Đã cho ăn thành công: đứng ăn 1 lúc.</summary>
         public void OnFed()
         {
@@ -188,6 +216,7 @@ namespace PawFit.Garden
                 case PetActivity.Bathing:
                 case PetActivity.Reacting:
                 case PetActivity.Training:
+                case PetActivity.Petted:
                     _timer -= dt;
                     if (_timer <= 0f) SetIdle(RandomIdle());
                     break;

@@ -32,6 +32,7 @@ namespace PawFit.Pet.View
         private Camera _cam;
         private readonly List<Fly> _flies = new List<Fly>();
         private readonly List<Glyph> _zs = new List<Glyph>();
+        private readonly List<Glyph> _hearts = new List<Glyph>();
         private Transform _bubble;
         private float _bubbleT = -1f;
         private bool _sleeping;
@@ -104,6 +105,15 @@ namespace PawFit.Pet.View
         }
 
         public void Yawn() => Sfx.PlayVaried(SoundId.Yawn, 0.5f);
+
+        /// <summary>Được chạm / vuốt ve: `count` trái tim hồng bay lên từ đầu (Phase 8.2).</summary>
+        public void Hearts(int count)
+        {
+            if (_root == null || _avatar == null) return;
+            Vector3 head = _avatar.HeadTop;
+            for (int i = 0; i < count; i++)
+                _hearts.Add(new Glyph { T = MakeHeart(), Start = head + new Vector3(Random.Range(-0.18f, 0.18f), 0.05f, Random.Range(-0.08f, 0.08f)), Age = -i * 0.12f });
+        }
 
         /// <summary>Tiến hóa: quầng sáng nở ra + tia lấp lánh bắn tung tóe + tiếng chuông.</summary>
         public void Evolve(bool ultimate)
@@ -183,6 +193,26 @@ namespace PawFit.Pet.View
                     _zTimer = 1.15f;
                     _zs.Add(new Glyph { T = MakeZ(), Start = head + new Vector3(0.12f, 0.05f, 0f) });
                 }
+            }
+            for (int i = _hearts.Count - 1; i >= 0; i--)   // tim: nảy ra, bay lên lắc lư, mờ dần
+            {
+                Glyph h = _hearts[i];
+                h.Age += dt;
+                if (h.Age < 0f)
+                {
+                    h.T.localScale = Vector3.zero;
+                    continue;
+                }
+                float t = h.Age / 1.3f;
+                if (t >= 1f)
+                {
+                    Destroy(h.T.gameObject);
+                    _hearts.RemoveAt(i);
+                    continue;
+                }
+                h.T.position = h.Start + new Vector3(Mathf.Sin(t * 9f + i) * 0.06f, 0.55f * t, 0f);
+                h.T.localScale = Vector3.one * (t < 0.15f ? EaseOutBack(t / 0.15f) : 1f) * (t > 0.75f ? (1f - t) / 0.25f : 1f);
+                Billboard(h.T);
             }
             for (int i = _zs.Count - 1; i >= 0; i--)
             {
@@ -414,6 +444,19 @@ namespace PawFit.Pet.View
                       rotation: Quaternion.Euler(0f, 0f, 25f));
             b.localScale = Vector3.zero;
             return b;
+        }
+
+        /// <summary>Trái tim hồng: 2 quả cầu + 1 khối vuông xoay 45°.</summary>
+        private Transform MakeHeart()
+        {
+            Transform h = Prim.Group(_root, "Heart");
+            Color c = Prim.Hex("#FF6F91");
+            Prim.Make(PrimitiveType.Sphere, h, new Vector3(-0.034f, 0.025f, 0f), Vector3.one * 0.075f, c, smoothness: 0.6f);
+            Prim.Make(PrimitiveType.Sphere, h, new Vector3(0.034f, 0.025f, 0f), Vector3.one * 0.075f, c, smoothness: 0.6f);
+            Prim.Make(PrimitiveType.Cube, h, new Vector3(0f, -0.012f, 0f), new Vector3(0.068f, 0.068f, 0.05f), c, smoothness: 0.6f,
+                      rotation: Quaternion.Euler(0f, 0f, 45f));
+            h.localScale = Vector3.zero;
+            return h;
         }
 
         /// <summary>Chữ Z ghép từ 3 thanh.</summary>

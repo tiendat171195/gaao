@@ -131,6 +131,14 @@ namespace PawFit.Garden
         /// <summary>Vuốt ve liên tục chỉ cộng vui mỗi bấy nhiêu giây.</summary>
         public float PetMoodCooldownSeconds = 4f;
 
+        /// <summary>
+        /// Vuốt ve = xoa qua lại trên người thú (Phase 8.2): mỗi lượt xoa cộng bấy nhiêu vui + điểm Chăm sóc,
+        /// 2 lượt được cộng cách nhau ≥ StrokeCooldownSeconds. Xoa 10 giây ≈ +20 vui (chạm đơn: +3 mỗi 4 giây).
+        /// </summary>
+        public float StrokeMood = 1.5f;
+        public float StrokeCooldownSeconds = 0.6f;
+        public float StrokeCareFactor = 0.5f;
+
         // ---- Tự quyết của thú ----
         public float SleepyBelowEnergy = 20f;
         public float NotSleepyAboveEnergy = 95f;

@@ -125,6 +125,7 @@ namespace PawFit.Pet.View
         private float _speed, _phase, _tailPhase, _sleepBlend;
         private float _lookYaw, _lookPitch, _appliedClosed = -1f, _appliedDirt = -1f, _appliedPale = -1f;
         private float _hopT = -1f, _eatT = -1f, _batheT = -1f, _refuseT = -1f, _cryT = -1f, _yawnT = -1f;
+        private float _petted, _pettedTarget;
         private float _blinkTimer = 2f, _blinkT = -1f, _earFlickTimer = 5f, _earFlickT = -1f;
         private int _earFlickIndex;
         private System.Random _rnd = new System.Random(1);
@@ -531,6 +532,7 @@ namespace PawFit.Pet.View
             _trainT = 0f;
         }
         public void SetLook(AvatarLook look) => _look = look;
+        public void SetPetted(float amount) => _pettedTarget = Mathf.Clamp01(amount);
         public void LookAt(Vector3? worldPoint) => _lookAt = worldPoint;
 
         // ==================================================================
@@ -543,6 +545,8 @@ namespace PawFit.Pet.View
             float dt = Time.deltaTime, time = Time.time;
             bool sleep = _pose == AvatarPose.Sleep;
             UpdateGrowth(dt);
+            _petted = Mathf.MoveTowards(_petted, _pettedTarget, dt * 3f);   // được vuốt ve (Phase 8.2)
+            float nuzzle = Mathf.Sin(time * 1.6f) * _petted;
             // tập ở sân tập: lao người tới đấm hình nộm liên tục
             float punch = 0f;
             if (Step(ref _trainT, _trainSeconds, out float tt))
@@ -568,7 +572,7 @@ namespace PawFit.Pet.View
             _visual.localPosition = new Vector3(0f, bob + hop + punch * 0.04f - _sleepBlend * 0.11f, punch * 0.12f);
             _visual.localScale = Vector3.Scale(squash, new Vector3(1f + 0.04f * _sleepBlend, 1f + breathe - 0.06f * _sleepBlend, 1f));
             float shiver = _look.Sick >= 0.5f ? Mathf.Sin(time * 55f) * 2.2f * _look.Sick * (1f - 0.5f * _sleepBlend) : 0f;
-            _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver);   // ốm: run lẩy bẩy
+            _visual.localRotation = Quaternion.Euler(0f, wiggle, shiver + nuzzle * 4f);   // ốm: run lẩy bẩy; được vuốt: đung đưa theo tay
 
             // ---- chân: bước chéo (trước phải + sau trái cùng nhịp), gập lại khi ngủ ----
             float swing = Mathf.Sin(_phase) * moving * Mathf.Lerp(28f, 20f, grown) + punch * 22f;
@@ -603,16 +607,16 @@ namespace PawFit.Pet.View
             float refuse = Step(ref _refuseT, 0.7f, out float tr) ? Mathf.Sin(tr * Mathf.PI * 6f) * 28f * (1f - tr) : 0f;
             float cry = Step(ref _cryT, 0.8f, out float tc) ? Mathf.Sin(tc * Mathf.PI) : 0f;
             float yawn = Step(ref _yawnT, 1.4f, out float ty) ? Mathf.Sin(ty * Mathf.PI) : 0f;
-            float pitch = _lookPitch + eat * 26f - cry * 22f - yawn * 16f + _sleepBlend * 16f + _look.Droop * 5f + punch * 14f;
+            float pitch = _lookPitch + eat * 26f - cry * 22f - yawn * 16f + _sleepBlend * 16f + _look.Droop * 5f + punch * 14f - _petted * 6f;
             float yaw = _lookYaw * (1f - _sleepBlend) + refuse;
-            float roll = Mathf.Sin(time * 0.5f) * 3f * (1f - moving) * (1f - _sleepBlend);
+            float roll = Mathf.Sin(time * 0.5f) * 3f * (1f - moving) * (1f - _sleepBlend) + nuzzle * 14f;   // dụi đầu vào tay
             _neck?.Set(pitch * 0.4f, yaw * 0.35f);
             _head?.Set(pitch * 0.6f, yaw * 0.65f, roll);
 
             // ---- đuôi: vẫy (buồn ngủ thì chậm + cụp), chạy thì vểnh lên ----
             float droop = Mathf.Max(_look.Droop, _sleepBlend);
-            _tailPhase += dt * Mathf.Lerp(7f, 2.5f, droop) * (1f + moving * 0.6f);
-            float wag = Mathf.Sin(_tailPhase) * Mathf.Lerp(16f, 4f, droop) * (1f - _sleepBlend);
+            _tailPhase += dt * Mathf.Lerp(7f, 2.5f, droop) * (1f + moving * 0.6f + _petted * 0.9f);   // được vuốt: vẫy đuôi rối rít
+            float wag = Mathf.Sin(_tailPhase) * Mathf.Lerp(16f, 4f, droop) * (1f - _sleepBlend) * (1f + 0.7f * _petted);
             _tail?.Set(-(droop * 24f) + moving * 8f, wag);
 
             // ---- tai: cụp ra ngoài khi buồn ngủ / ngủ, thỉnh thoảng giật nhẹ ----
@@ -627,7 +631,7 @@ namespace PawFit.Pet.View
             for (int i = 0; i < _ears.Count; i++)
             {
                 float side = _earSide[i];
-                float r = -side * (droop * 32f + (i == _earFlickIndex ? flick : 0f));
+                float r = -side * (droop * 32f + _petted * 10f + (i == _earFlickIndex ? flick : 0f));   // được vuốt: tai thả lỏng
                 _ears[i].Set(0f, 0f, r);
             }
 
@@ -639,7 +643,7 @@ namespace PawFit.Pet.View
                 _blinkTimer = 2.5f + (float)_rnd.NextDouble() * 3.5f;
             }
             float blink = Step(ref _blinkT, 0.16f, out float tbl) ? Mathf.Sin(tbl * Mathf.PI) : 0f;
-            float closed = Mathf.Max(1f - Mathf.Clamp01(_look.EyeOpen), Mathf.Max(blink, yawn * 0.85f));
+            float closed = Mathf.Max(Mathf.Max(1f - Mathf.Clamp01(_look.EyeOpen), _petted * 0.8f), Mathf.Max(blink, yawn * 0.85f));   // lim dim khi được vuốt
             ApplyEyes(Mathf.Lerp(closed, 1f, _sleepBlend));
 
             // ---- miệng há ----
