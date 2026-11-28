@@ -353,6 +353,37 @@
   - Bảng DEV: xem ngày / chuỗi / nhiệm vụ / kho báu; nút **Sang ngày mới**, **Xong hết nhiệm vụ**.
   - Test: 235 test logic (thêm 8) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 520 thành viên khớp Unity (thêm `Collider.enabled`).
 
+- **Phase 8.1 · Âm thanh** (bạn góp ý: "chưa nghe âm thanh, lâu lâu mới nghe 1 lần; cần nhạc nền, di chuyển, gió, lá cỏ, tắm, ăn, ngủ"; GDD G17):
+  - `Core/Audio/SoundSynth.cs` (C# thuần): tạo bằng code mọi tiếng (bước chân, nước, nhai, ngáp, gừ gừ, chim, tiếng trận...), 5 vòng lặp (gió, hồ, tắm, ngủ, gừ gừ) và 2 bài nhạc (vườn 90 nhịp, trận 128 nhịp). Vòng lặp + nhạc nối liền mạch.
+  - `Core/Unity/Sfx.cs` thay `SynthAudio`: tạo sẵn ở luồng nền lúc mở game, 12 nguồn phát 1 lần + 2 nguồn nhạc hòa chéo + vòng lặp có fade; gió + chim ngẫu nhiên khi ở vườn.
+  - Gắn tiếng: vườn (nhạc, gió, chim, nước hồ to dần khi tới gần), bé (bước chân theo tốc độ, tắm, ăn, ngủ, ngáp, kêu, vuốt ve), trận (nhạc, gong, vung đòn, trúng, đỡ, combo, Nộ, hạ gục, thắng / thua), giao diện (mở thẻ, bấm nút, Coin).
+  - Hòm thư có thêm bật / tắt **Nhạc nền** (`SettingsService.MusicOn`).
+  - Kiểm chứng không cần nghe: xuất WAV + ảnh phổ từng tiếng; tạo tiếng vườn ~85 ms, trận ~38 ms trên máy bàn.
+  - Test: 239 test logic (thêm 4) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 527 thành viên khớp Unity.
+
+- **Phase 8.2 · Vuốt ve rõ ràng** (bạn góp ý: "vuốt giống di chuyển hơn, bấm vào pet không giống đang chăm sóc"; GDD G18):
+  - `Garden/StrokeTracker.cs` (C# thuần): phân biệt xoa trên người bé (vuốt ve) với kéo bé đi (dắt) theo bán kính bé trên màn hình.
+  - `CareActionService.Stroke`: mỗi lượt xoa +1,5 vui (cách nhau ≥ 0,6 giây) + điểm Chăm sóc. `PetBrain` có trạng thái `Petted` (đứng yên tận hưởng).
+  - Hình: `IPetAvatar.SetPetted` — lim dim, nghiêng đầu dụi tay, vẫy đuôi nhanh, tai thả lỏng; tim bay đều + gừ gừ. Chạm 1 lần: nhảy mừng + mắt híp + tim; 3 lần = cù.
+  - Test: 245 test logic (thêm 6) + 8 test máy chủ, đều qua. Soát API 529 thành viên khớp Unity.
+
+- **Phase 8.3 · Trò chơi trong vườn** (bạn góp ý: "làm vài trò chơi với pet, ví dụ ném banh"; GDD G19):
+  - Logic `Garden/PlayService.cs` (C# thuần): mỗi lượt chơi cộng vui + điểm Tốc độ, trừ chút sức; có thời gian chờ theo trò; bé ngủ / ốm / mệt không chơi; bé chán thì tự chơi bóng. Sự kiện `PlayDone` (nhiệm vụ ngày "Chơi với bé").
+  - Quầy hàng ▸ **Đồ chơi cho bé...**: bóng 60, cần lông vũ 90, máy bong bóng 140 Coin (`CosmeticsData.Toys`).
+  - `Garden/View/ToyViews.cs`: bóng có vật lý thật (vuốt để ném, nảy, lăn, bé nhặt mang về), cần lông vũ (kéo đi, bé vồ), máy bong bóng (chạm thổi, bé nhảy đớp). Vừa mua: camera lia tới + chỉ cách chơi.
+  - Đã xử lý trước các lỗi sẽ gặp khi chạy thật: thân bé không va vật lý với bóng (nếu không bé chạy tới là đẩy bóng văng), bong bóng là trigger (bóng bay xuyên), chậu lông vũ + máy bong bóng khoét NavMesh (bé đi vòng).
+  - Stub mới (đều soát với mã nguồn Unity): `Rigidbody`, `PhysicsMaterial`, `Collision`, `Physics.IgnoreCollision`, `NavMeshObstacle`, `Transform.Rotate(Vector3, Space)`...
+  - Test: 252 test logic (thêm 7) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua.
+
+- **Phase 8.4 · Đồ mua có tác dụng + bé dùng được** (bạn góp ý: "mua trang trí không có ý nghĩa, ít ra thú phải tương tác được"; GDD G20):
+  - Logic `Pet/Needs/CarePerks.cs` (C# thuần): đồ trang trí trong vườn + phụ kiện đang đeo làm nhu cầu hao chậm hơn / ngủ hồi nhanh hơn. Dùng chung cho `PetService` (trong game + tính bù lúc vắng) và `NotificationPlanner` (giờ báo khớp).
+  - Cối xay gió: mỗi ngày 1 túi bánh (`DailyService.TakeWindmillTreat`, lưu `DailyData.WindmillDay`).
+  - Ghế gỗ: `PetBrain` có trạng thái `Resting` — bé hơi mệt tự ra ghế ngồi; chạm ghế / thả bé lên ghế cũng được (`CareActionService.RestOnBench`, 10 phút cộng 1 lần).
+  - `Garden/View/DecorLife.cs`: bé nhảy lên mặt ghế ngồi (`IPetAvatar.SetPerch`, vẫn vuốt ve được), đèn lồng sáng về đêm + lấp lánh khi chạm, túi bánh ở chân cối xay gió, 3 con bướm ở vòm hoa rủ bé đuổi (`PlayKind.Butterfly`). Vùng chạm đồ trang trí là trigger ngoài nhóm vật cản (không đổi NavMesh).
+  - Quầy hàng ghi tác dụng từng món; vừa mua có dòng chỉ cách dùng. Bảng DEV có dòng tác dụng đang có.
+  - Sửa công cụ soát API: trước đây báo nhầm giá trị enum cuối cùng (không có dấu phẩy) là "không thấy".
+  - Test: 262 test logic (thêm 10) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 580 thành viên khớp Unity.
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -361,7 +392,7 @@
 - Thú trong game Phase 1.3: thân mượt kiểu thú bông (vertex color + viền sáng), chưa có lông. Lông shell làm ở Phase 6.
 - Điện thoại dùng LOD1, PC / Editor dùng LOD0 (đổi được trong bảng DEV).
 - Ốm mà chăm đủ thì bệnh dừng nặng thêm nhưng không tự khỏi; phải chăm kỹ hoặc uống thuốc (G4). Thuốc mua ở quầy hàng bằng Coin (Phase 5.1).
-- Phụ kiện + trang trí chỉ để đẹp, không đổi chỉ số (PvP công bằng). Đồ trang trí có chỗ cố định, không cho tự kéo thả.
+- Phụ kiện + trang trí không đổi chỉ số trận (PvP công bằng). Từ Phase 8.4 chúng giúp việc chăm bé (hao chậm 5–15%, túi bánh mỗi ngày) và bé dùng được (G20). Đồ trang trí có chỗ cố định, không cho tự kéo thả.
 - Phase 5.1 làm trước Phase 4 (bạn chọn). Quầy hàng bán đồ dùng ngay, không có túi đồ. Ví nằm chung file lưu game (Phase 4.1 đồng bộ cùng hồ sơ người chơi).
 - Quảng cáo đếm "ngày" theo `ITimeProvider`. Có máy chủ thì đó là giờ máy chủ (`ServerClock`), offline thì là giờ máy.
 - Máy chủ riêng thay Firebase + Photon (bạn chốt). Firebase chỉ dùng FCM. Photon để dành khi đông người.
@@ -373,6 +404,13 @@
 - Giả định GDD G1–G11: tạm dùng, bạn sửa khi cần.
 
 ## Tiếp theo
+
+- **Thử Phase 8 trên điện thoại** — pull code, build Dev:
+  - Nghe: nhạc nền vườn / trận, gió + chim, bước chân, tắm, ăn, ngủ. Hòm thư bật / tắt nhạc riêng. Gửi tôi: tiếng nào to / nhỏ / chói quá.
+  - Vuốt ve: xoa qua lại trên người bé (bé lim dim, tim bay, gừ gừ) và kéo bé ra xa (dắt đi). Gửi tôi: có còn bị nhầm 2 kiểu không.
+  - Đồ chơi: bảng DEV ▸ +100 Coin, quầy ▸ Đồ chơi cho bé. Vuốt bóng để ném, kéo cần lông vũ, chạm máy bong bóng.
+  - Đồ trang trí: mua ghế / đèn lồng / cối xay gió / vòm hoa, chạm vào từng món. Chỉnh giờ máy sang tối để xem đèn lồng sáng.
+  - Đây là phần tôi chưa chạy được trong Unity thật (vật lý bóng, bé ngồi ghế, bướm bay): gửi tôi ảnh / video nếu trông lạ.
 
 - **Đánh thử Phase 7.1 trên điện thoại** — pull code, build Dev, vào sân tập ▸ Đấu hình nộm + Đấu trường. Gửi tôi cảm nhận: ra đòn đã đủ nhanh chưa, vuốt có còn hay bị "sai" không, trận dài / ngắn thế nào. Số chỉnh ở `BattleConfig` / `SwipeConfig`.
 - **Thử Thám hiểm** — chạm biển gỗ góc sau bên trái vườn. Bảng DEV ▸ Lên giai đoạn để thử vùng sau nhanh. Gửi tôi: màn nào quá dễ / quá khó, chữ ★ có hiện đúng không.

@@ -21,7 +21,7 @@ namespace PawFit.Core
     }
 
     /// <summary>
-    /// Tác dụng của đồ đã mua (Phase 8.4) — GDD G18. "Cắt" = nhu cầu hao chậm đi bấy nhiêu phần (0,15 = chậm 15%).
+    /// Tác dụng của đồ đã mua (Phase 8.4) — GDD G20. "Cắt" = nhu cầu hao chậm đi bấy nhiêu phần (0,15 = chậm 15%).
     /// Chỉ đổi chuyện chăm sóc trong vườn, KHÔNG đổi chỉ số trận (PvP công bằng). Áp dụng cả lúc tắt app (tính bù) và lúc hẹn thông báo.
     /// </summary>
     public sealed class PerksConfig

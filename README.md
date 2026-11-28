@@ -30,8 +30,13 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 |---|---|
 | Chạm xuống đất | Thú chạy tới đó |
 | Kéo trên mặt đất | Kéo camera. Thả tay khoảng 2,5 giây thì camera quay lại theo thú |
-| Chạm vào thú | Thú nhảy lên (vuốt ve). Đang ngủ thì thức dậy |
-| Kéo thú | Thú chạy theo ngón tay. Thả vào **hồ** thì tắm, thả vào **ổ** thì ngủ (nếu đã buồn ngủ) |
+| Chạm vào thú | Thú quay lại nhìn, nhảy mừng, mắt híp, tim bay. Chạm 3 lần liền = cù (cười khúc khích). Đang ngủ thì thức dậy |
+| Xoa qua lại trên người thú | Vuốt ve: thú đứng yên lim dim, dụi đầu theo tay, vẫy đuôi, tim bay, gừ gừ (+ vui). Đang ngủ vẫn vuốt được |
+| Kéo thú ra xa | Thú chạy theo ngón tay (dắt). Thả vào **hồ** thì tắm, thả vào **ổ** thì ngủ (nếu đã buồn ngủ), thả lên **ghế gỗ** thì ngồi nghỉ |
+| Vuốt **quả bóng** (đồ chơi) | Ném bóng: thú chạy nhặt, ngậm mang về chỗ bạn ném. Chạm bóng = đá nhẹ |
+| Giữ + kéo **cần lông vũ** | Chùm lông bay theo ngón tay, thú đuổi theo vồ |
+| Chạm **máy bong bóng** / chạm bong bóng | Thổi 8 bong bóng, thú nhảy đớp / bong bóng vỡ |
+| Chạm **ghế gỗ** · **đèn lồng** · **cối xay gió** · **vòm hoa** | Thú ra ghế ngồi · đèn lấp lánh, thú ngước nhìn · thú ra ăn túi bánh (mỗi ngày 1 túi) · bướm bay tới rủ thú đuổi |
 | Kéo quả táo từ **khay ở chòi ăn** (bên trái) thả lên thú | Cho ăn. No rồi thì thú lắc đầu |
 | Chạm vào khay đồ ăn | Thú chạy tới chòi ăn |
 | Chạm vào **quầy hàng** (phía trước bên phải, có lối đá dẫn tới) | Mở quầy: mua thuốc / bánh / nước, xem quảng cáo lấy thưởng |
@@ -39,7 +44,7 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 | Chạm vào **hòm thư** (cạnh cổng đấu trường, sau sân tập) | Cài đặt: bật / tắt âm thanh, bật / tắt thông báo nhắc chăm bé (trên điện thoại), tài khoản (biệt danh, mã chuyển máy) khi có máy chủ, xem lại hướng dẫn, copy mã DNA, phiên bản game |
 | Chạm vào **cổng đấu trường** (sau sân tập) | Thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút **Tìm trận** PvP |
 
-Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ.
+Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ; hơi mệt thì ra ghế gỗ ngồi (nếu có); chán thì tự đẩy bóng chơi (nếu có bóng); bướm ở vòm hoa bay tới thì đuổi theo.
 
 **Mẹo hướng dẫn:**
 - Khung "Mẹo" nền vàng hiện ở dưới màn hình đúng lúc cần. Mỗi mẹo hiện 1 lần, tự làm trước thì mẹo đó bỏ qua. Các mẹo cách nhau tối thiểu 25 giây.
@@ -227,9 +232,33 @@ Có 2 chế độ, tự chọn theo file `Assets/PawFit/Resources/PawFitServer.t
   - Thẻ kết quả hiện Elo trước → sau, lên / xuống bậc, thắng +30 Coin. **Bỏ cuộc** tính là thua.
 - Thú ốm / đang ngủ không đấu được. Bậc cao nhất của thú được ghi lên bia mộ khi thú mất.
 
-## Phụ kiện + trang trí vườn (Phase 5.2)
+## Đồ chơi (Phase 8.3)
 
-Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của người chơi nên thú mất vẫn còn, thú mới nở vẫn đeo được. Chỉ để đẹp, không đổi chỉ số hay luật chăm sóc.
+Quầy hàng ▸ **Đồ chơi cho bé...**, mua 1 lần là có mãi, nằm sẵn trong vườn:
+
+| Món | Giá | Chơi thế nào |
+|---|---|---|
+| Bóng cao su | 60 | Vuốt để ném (vuốt nhanh = ném xa), bóng nảy + lăn thật. Thú nhặt mang về. Thú chán thì tự đẩy bóng chơi |
+| Cần lông vũ | 90 | Giữ cần rồi kéo đi khắp vườn, thú đuổi theo vồ |
+| Máy thổi bong bóng | 140 | Chạm = thổi bong bóng, thú nhảy đớp |
+
+- Mỗi lượt chơi: thú vui lên + thêm điểm Tốc độ, tốn chút năng lượng + no. Thú ngủ / ốm / quá mệt thì không chơi (có dòng nhắc lý do).
+- Có đồ chơi thì có ngày ra nhiệm vụ "Chơi với bé 3 lần". Số liệu: GDD G19, `PlayConfig`.
+
+## Phụ kiện + trang trí vườn (Phase 5.2, có tác dụng từ Phase 8.4)
+
+Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của người chơi nên thú mất vẫn còn, thú mới nở vẫn đeo được. Không đổi chỉ số trận (đấu công bằng), nhưng mỗi món giúp chăm thú và thú dùng được (bảng dưới, chi tiết GDD G20):
+
+| Món | Tác dụng | Thú dùng thế nào |
+|---|---|---|
+| Ghế gỗ | Năng lượng hao chậm 15% | Hơi mệt thì ra ghế nhảy lên ngồi nghỉ (+ năng lượng, + vui). Chạm ghế / dắt thú thả lên ghế cũng được |
+| Dây đèn lồng | Ngủ hồi năng lượng nhanh hơn 25% | Tối (18:00–6:00) đèn sáng ấm. Chạm = đèn lấp lánh, thú ngước nhìn |
+| Cối xay gió | Mỗi ngày 1 túi bánh (+20 no, +10 vui) | Chạm cối xay gió = thú chạy ra ăn |
+| Vòm hoa | Vui hao chậm 15% | Bướm bay quanh vòm, thỉnh thoảng rủ thú đuổi. Chạm vòm = gọi bướm |
+| Nơ · Mũ len · Khăn quàng (đang đeo) | Vui · năng lượng · no hao chậm 10% | |
+| Vương miện (đang đeo) | Cả 4 nhu cầu hao chậm 5% | |
+
+Tác dụng tính cả lúc tắt app. Quầy hàng ghi tác dụng ngay cạnh giá.
 
 - **Phụ kiện** (nút **Phụ kiện cho bé...** trong quầy):
 
@@ -254,7 +283,7 @@ Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của ng
 
   - Mua xong camera lia tới, món đó bật lên từ mặt đất, rồi camera quay về thú.
   - Thú đi vòng qua đồ trang trí, không đi xuyên.
-- **Âm thanh:** "ting-ting" khi nhận Coin, "cạch-ting" khi tiêu Coin. Quầy hàng và hình nộm nảy nhẹ khi chạm.
+- **Âm thanh (Phase 8.1, GDD G17):** nhạc nền vườn + trận, gió + lá + chim, nước hồ, bước chân, tắm, ăn, ngủ, gừ gừ khi vuốt, tiếng trận, "ting-ting" khi nhận Coin, "cạch-ting" khi tiêu. Tất cả tạo bằng code, không có file âm thanh. Hòm thư bật / tắt âm thanh và nhạc nền riêng. Quầy hàng và hình nộm nảy nhẹ khi chạm.
 - Giá nằm ở `EconomyConfig.AccessoryPrices` / `DecorPrices`.
 
 ## Công cụ test (chỉ Editor / bản Development)
@@ -298,9 +327,10 @@ dotnet build Tools/UnityCompileCheck
 | Thư mục | Nội dung |
 |---|---|
 | `Assets/PawFit/Scripts/Core` | Service nền, C# thuần: ServiceLocator, EventBus, thời gian, random có seed, lưu JSON, config |
-| `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ, âm thanh tạo bằng code `SynthAudio` |
-| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx`, phụ kiện `AccessoryView` |
-| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
+| `Assets/PawFit/Scripts/Core/Audio` | `SoundSynth` (C# thuần): tạo nhạc nền + mọi tiếng bằng code |
+| `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ, phát âm thanh `Sfx` |
+| `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu + tác dụng của đồ đã mua `CarePerks`, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx`, phụ kiện `AccessoryView` |
+| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo, vuốt ve hay dắt `StrokeTracker`, trò chơi `PlayService`, việc mỗi ngày `DailyService` (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder` + thú dùng đồ trang trí `DecorLife`, đồ chơi `ToyViews`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
 | `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt |
 | `Assets/PawFit/Scripts/Economy` | Kinh tế (C# thuần): ví Coin + quảng cáo `EconomyService`, quầy hàng `ShopService`, phụ kiện + trang trí `CosmeticsService`, cổng quảng cáo `IAdService` + bản giả lập `MockAdService` |
 | `Assets/PawFit/Scripts/Online` | Phase 4 phần không cần tài khoản (C# thuần): rank Elo + bậc + mùa giải `RankService`, luật ghép trận + hàng chờ `Matchmaker`, người chơi ảo `BotPlayers`, cổng mạng `INetworkManager` + bản giả lập `LocalNetworkManager` |

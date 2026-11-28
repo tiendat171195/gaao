@@ -1,6 +1,6 @@
 # PawFit — GDD ngắn
 
-Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G13). Mọi số nằm trong config, chỉnh được.
+Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G20). Mọi số nằm trong config, chỉnh được.
 
 ## 1. Lõi
 
@@ -8,7 +8,8 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
 - **Vườn (màn dọc):** 1 vườn cố định nhưng rộng, không có nút, không có thanh chỉ số.
   - Trạng thái hiện bằng hình ảnh.
   - Bố trí: chòi ăn bên trái, hồ tắm bên phải, sân tập phía sau, ổ ngủ ở giữa, tưởng niệm ở góc.
-  - Điều khiển: chạm đất thì thú chạy tới; kéo thú để dắt; chạm thú thì thú phản ứng; kéo đồ ăn thả cho thú để cho ăn; kéo thú ra hồ để tắm.
+  - Điều khiển: chạm đất thì thú chạy tới; kéo thú để dắt; xoa qua lại trên người thú = vuốt ve (G18); chạm thú thì thú phản ứng; kéo đồ ăn thả cho thú để cho ăn; kéo thú ra hồ để tắm.
+  - Đồ chơi để chơi với bé (G19); đồ trang trí + phụ kiện có tác dụng, bé dùng được (G20).
 - **Thú:** 1 base mesh + DNA, sinh lúc chạy bằng blendshape + material (+ shader lông ở Gen 2). Style ngầu + cute, không cartoon phẳng.
 - **Tiến hóa:** Baby (ngày 0) → Child (3) → Teen (7) → Adult (14) → Ultimate (30, nếu đủ điều kiện).
   - Đầu vào: CareScore 7 ngày + TrainingVector (Sức mạnh / Tốc độ / Chăm sóc / Bóng tối) + seed và tính cách ẩn (10–20%).
@@ -22,7 +23,7 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
 - **Ranking:** ghép đối thủ theo Elo ±100 và Lực chiến ±10%. Bậc Bronze → Silver → Gold → Diamond → Master. Mùa giải 30 ngày.
 - **Kinh tế:** Coin; không nạp tiền. Quảng cáo tự nguyện, tối đa 5 lần/ngày (`IAdService` + `MockAdService`).
 
-## 2. Số liệu & giả định (G1–G11)
+## 2. Số liệu & giả định (G1–G20)
 
 - **G1 · Nhu cầu ẩn:** No bụng, Sạch, Năng lượng, Vui (0–100). Đang cài đặt ở `NeedsConfig`: no −4/h, sạch −3/h, năng lượng −4/h khi thức và +15/h khi ngủ, vui −3.5/h, lúc nở = 80.
 - **G1b · Biểu cảm (Phase 1.3, `ExpressionConfig`):**
@@ -231,7 +232,7 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Thắng hình nộm Dễ / Thường / Khó: +5 / +10 / +15 Coin. Bỏ cuộc và Huấn luyện không có Coin.
   - Số tôi điền thêm: thưởng Coin khi thắng Bot (để có nguồn Coin trước khi có PvP), giá + tác dụng của bánh và nước.
 - **G12 · Phụ kiện + trang trí (Phase 5.2, `CosmeticsService`, giá ở `EconomyConfig`):** phần này tôi tự thiết kế vì GDD gốc chưa có, bạn sửa thoải mái.
-  - Chỉ để đẹp: không đổi chỉ số (PvP công bằng), không đổi luật chăm sóc.
+  - Không đổi chỉ số trận (PvP công bằng). Lúc đầu chỉ để đẹp; từ Phase 8.4 mỗi món giúp việc chăm bé + bé dùng được (G20).
   - Mua 1 lần là có mãi. Đồ là của người chơi: thú mất vẫn còn, thú mới nở vẫn đeo. File lưu bản 4 (`GameSave.Cosmetics`).
   - Phụ kiện gắn vào tâm đầu (`IPetAvatar.HeadAnchor`), cỡ theo bán kính đầu, nên vừa cả Baby lẫn Adult. Gen 2 chỉ cần cài lại `HeadAnchor`.
 
@@ -310,6 +311,65 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - **Cờ đỏ hòm thư** dựng lên + dấu "!" nhấp nhô khi có quà / thưởng chờ nhận; nhận hết thì hạ cờ.
   - Cộng lại 1 ngày chơi đủ ≈ 20–80 (quà) + 45–55 (nhiệm vụ) + 40 (thưởng thêm) + 20–50 (kho báu) ≈ 125–225 Coin, đủ mua 1 món ở quầy sau 1–2 ngày.
   - Mẹo hướng dẫn: kho báu (sau 100 giây chơi), hòm thư có nhiệm vụ (sau 220 giây).
+- **G17 · Âm thanh (Phase 8.1; bạn góp ý "chưa nghe âm thanh, lâu lâu mới nghe 1 lần"):**
+  - Mọi âm thanh tạo bằng code (`SoundSynth`, C# thuần, 22.050 Hz), không cần file âm thanh. Tạo sẵn ở luồng nền lúc mở game nên không giật.
+  - Nhạc nền: vườn (90 nhịp / phút, nhẹ nhàng) và trận đấu (128 nhịp / phút). Lặp liền mạch, đổi màn thì nhạc hòa dần sang bài kia.
+  - Vườn: gió + lá xào xạc lặp liên tục, chim hót ngẫu nhiên 4–12 giây / lần. Tiếng nước hồ to dần khi bé tới gần hồ.
+  - Bé:
+    - bước chân trên cỏ (đi nhanh thì dồn + to hơn);
+    - tắm: nước sủi liên tục; ăn: nhai liên tục + nuốt; ngủ: tiếng thở;
+    - ngáp, kêu đói, khóc, kêu vui, cười khúc khích khi bị cù, gừ gừ khi được vuốt.
+  - Trận: tiếng vung đòn theo loại chiêu, trúng nhẹ / mạnh / chí mạng, đỡ, phản đòn, combo 2–5, Nộ đầy, hạ gục, thắng / thua, gong bắt đầu.
+  - Giao diện: mở thẻ, bấm nút, nhận / tiêu Coin.
+  - Hòm thư: bật / tắt **âm thanh** và **nhạc nền** riêng (lưu ở file cài đặt của máy).
+- **G18 · Vuốt ve + chạm vào bé (Phase 8.2; bạn góp ý "vuốt giống di chuyển hơn, bấm vào pet không giống đang chăm sóc"; `StrokeTracker`):**
+  - Kéo bắt đầu trên người bé được phân loại theo bán kính bé trên màn hình (r):
+    - xoa qua lại (đổi hướng ≥ 1 lần, đi ≥ 0,5 r) hoặc xoa vòng (≥ 1,6 r) = **vuốt ve**;
+    - kéo ra khỏi người bé (1,15 r) khi chưa rõ ý = **dắt đi**; đang vuốt mà kéo xa quá 2,4 r = chuyển sang dắt.
+  - Mỗi 0,8 r đường xoa = 1 lượt: +1,5 vui (2 lượt cách nhau ≥ 0,6 giây) + nửa điểm Chăm sóc của 1 lần chạm.
+  - Được vuốt: bé đứng yên lim dim, nghiêng đầu dụi theo tay, vẫy đuôi nhanh, tai thả lỏng, tim bay đều, gừ gừ. Đang ngủ vẫn vuốt được (không đánh thức).
+  - Chạm 1 lần: bé quay lại nhìn, nhảy mừng, mắt híp, tim + kêu vui. Chạm 3 lần liền = cù: cười khúc khích, lắc mình. Bé ốm: chạm = lau người.
+- **G19 · Đồ chơi + trò chơi trong vườn (Phase 8.3, `PlayService` + `PlayConfig`; bạn góp ý "làm vài trò chơi với pet, ví dụ ném banh"):**
+  - Mua ở quầy ▸ **Đồ chơi cho bé...**, mua 1 lần là có mãi (`CosmeticsData.Toys`, thú mất vẫn còn):
+
+    | Đồ chơi | Giá | Chỗ | Chơi thế nào |
+    |---|---|---|---|
+    | Bóng cao su | 60 | gần ổ ngủ, bên phải | Vuốt quả bóng để ném (hướng + lực theo ngón tay, vật lý thật: nảy, lăn, đụng rào bật lại). Bé chạy nhặt, ngậm mang về chỗ bạn ném. Chạm bóng = đá nhẹ ra xa, bé cũng chạy nhặt |
+    | Cần lông vũ | 90 | gần ổ ngủ, bên trái | Giữ cần rồi kéo đi khắp vườn: chùm lông bay theo ngón tay, bé đuổi theo vồ |
+    | Máy thổi bong bóng | 140 | giữa ổ ngủ và sân tập | Chạm máy = thổi 8 bong bóng (chờ 4 giây). Bong bóng vọt lên rồi chìm dần, bé nhảy đớp quả thấp (≤ 1,7 m). Bạn chạm bong bóng cũng vỡ |
+
+  - Mỗi lượt chơi (bé phải thức, khỏe, năng lượng ≥ 10):
+
+    | Trò | Vui | Điểm Tốc độ | Năng lượng | No | 2 lượt cách nhau |
+    |---|---|---|---|---|---|
+    | Nhặt bóng mang về (ném dưới 2 m không tính) | +6 | +1,5 | −1,5 | −0,6 | 1 giây |
+    | Vồ lông vũ | +4 | +1 | −1 | −0,4 | 1,2 giây |
+    | Đớp bong bóng | +2,5 | +0,5 | −0,5 | −0,2 | 0,5 giây |
+    | Bé tự đẩy bóng chơi | +3 | +0,3 | −0,5 | −0,2 | 8 giây |
+    | Đuổi bướm ở vòm hoa (G20) | +4 | +0,6 | −0,8 | −0,3 | 5 giây |
+
+  - Bé tự chơi: có bóng mà bé rảnh + chán (vui < 75, năng lượng > 25) thì mỗi lần tự quyết có 20% tới hất bóng 3 lần.
+  - Nhiệm vụ ngày mới (chỉ ra khi đã có đồ chơi): "Chơi với bé 3 lần" (15 Coin).
+- **G20 · Đồ mua có tác dụng (Phase 8.4, `CarePerks` + `PerksConfig`; bạn góp ý "mua trang trí không có ý nghĩa, ít ra thú phải tương tác được"):**
+  - Không đổi chỉ số trận (PvP công bằng), chỉ giúp việc chăm bé. Tác dụng tính cả lúc tắt app (tính bù khi mở lại) và lúc hẹn thông báo, nên giờ báo vẫn khớp.
+
+    | Đồ trang trí | Tác dụng | Bé dùng thế nào |
+    |---|---|---|
+    | Ghế gỗ | Năng lượng (lúc thức) hao chậm 15% | Bé năng lượng < 65 thì có lúc (35% mỗi lần tự quyết) ra ghế, nhảy lên ngồi nghỉ 9 giây: +4 năng lượng, +2 vui (10 phút tối đa 1 lần). Chạm ghế, hoặc dắt bé thả lên ghế = bé ra ngồi. Vuốt ve bé trên ghế được |
+    | Dây đèn lồng | Ngủ hồi năng lượng nhanh hơn 25% | 18:00–6:00 (giờ trên máy) đèn sáng ấm. Chạm = từng lồng lóe sáng + chuông, bé ngước nhìn, nhảy lên |
+    | Cối xay gió | Mỗi ngày 1 túi bánh: +20 no, +10 vui | Túi bánh + sao lấp lánh ở chân cối. Chạm cối = bé chạy tới ăn. Bé no > 90 thì để dành. Vào vườn còn bánh thì có dòng nhắc |
+    | Vòm hoa | Vui hao chậm 15% | 3 con bướm bay quanh vòm. 30–60 giây 1 lần (bé rảnh, cách vòm < 16 m) 1 con bay tới rủ bé đuổi: vồ trúng 2 lần = 1 lượt chơi. Chạm vòm = gọi bướm ngay |
+
+    | Phụ kiện (chỉ món đang đeo) | Tác dụng |
+    |---|---|
+    | Nơ | Vui hao chậm 10% |
+    | Mũ len | Năng lượng hao chậm 10% |
+    | Khăn quàng | No hao chậm 10% |
+    | Vương miện | Cả 4 nhu cầu hao chậm 5% |
+
+  - Nhiều món cộng dồn, mỗi nhu cầu cắt tối đa 40%. Ví dụ ghế + mũ len: năng lượng hao 4 → 3/giờ.
+  - Quầy hàng ghi tác dụng từng món. Vừa mua có dòng chỉ cách dùng. Bảng DEV có dòng "Đồ đã mua: hao chậm ...".
+  - Túi bánh lưu ngày đã ăn ở `GameSave.Daily.WindmillDay` (trường mới có mặc định, file cũ vẫn đọc được).
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

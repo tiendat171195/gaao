@@ -7,7 +7,7 @@ namespace PawFit.Garden
     /// <summary>Trò chơi với bé trong vườn (Phase 8.3). Butterfly (Phase 8.4) = đuổi bướm ở vòm hoa.</summary>
     public enum PlayKind { Fetch = 0, Pounce = 1, BubblePop = 2, SelfPlay = 3, Butterfly = 4 }
 
-    /// <summary>Số liệu trò chơi — GDD G17 (chỉnh ở đây, không phải sửa code).</summary>
+    /// <summary>Số liệu trò chơi — GDD G19 (chỉnh ở đây, không phải sửa code).</summary>
     public sealed class PlayConfig
     {
         /// <summary>

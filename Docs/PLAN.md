@@ -47,6 +47,10 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 7.1 | Cảm giác đánh (bạn góp ý sau lần build đầu): sửa lỗi thú đứng yên, bộ đệm vuốt, nhịp nhanh hơn, combo, thanh Nộ cho Tuyệt chiêu, nhận dạng vuốt dễ hơn, hình ra đòn thấy ngay (GDD G9d) | ✅ Chờ bạn đánh thử trên điện thoại |
 | 7.2 | Thám hiểm (PvE): 5 vùng × 5 màn đấu sinh vật hoang (trùm cuối vùng), 1–3 sao, Coin, độ khó bám theo tiến hóa, tốn năng lượng; biển chỉ đường trong vườn (GDD G15) | ✅ Chờ bạn thử trên điện thoại |
 | 7.3 | Giữ chân người chơi: quà mở game theo chuỗi 7 ngày + 3 nhiệm vụ mỗi ngày (nhận ở hòm thư, cờ đỏ báo có quà) + 2 kho báu mỗi ngày trong vườn (GDD G16) | ✅ Chờ bạn thử trên điện thoại |
+| 8.1 | Âm thanh (bạn góp ý "lâu lâu mới nghe 1 lần"): nhạc nền vườn / trận, gió + lá + chim, bước chân, nước hồ, tắm, ăn, ngủ, vuốt ve, trận đấu, bật / tắt nhạc riêng (GDD G17) | ✅ Chờ bạn nghe thử trên điện thoại |
+| 8.2 | Vuốt ve rõ ràng (xoa qua lại = vuốt, kéo đi = dắt) + chạm vào bé ra dáng chăm sóc (tim, mắt híp, cù 3 lần) (GDD G18) | ✅ Như trên |
+| 8.3 | Trò chơi trong vườn: bóng (vuốt để ném, bé nhặt mang về), cần lông vũ (bé đuổi vồ), máy bong bóng (bé nhảy đớp), bé tự chơi bóng; nhiệm vụ ngày "chơi với bé" (GDD G19) | ✅ Như trên |
+| 8.4 | Đồ mua có tác dụng: trang trí + phụ kiện làm nhu cầu hao chậm / ngủ ngon hơn; bé ngồi ghế, ăn túi bánh cối xay gió, ngắm đèn lồng, đuổi bướm ở vòm hoa (GDD G20) | ✅ Như trên |
 
 ## Kiến trúc thư mục
 
@@ -58,12 +62,15 @@ gaao/                            ← gốc repo = gốc project Unity
 │   │   ├── Pet/    [PawFit.Pet,  C# thuần]   Dna/, Needs/, Health/, Lifecycle/, Evolution/, PetService
 │   │   │   └── View/ [Unity]                 IPetAvatar, Gen1PetAvatar, PlaceholderPetAvatar (thú tạm), PetMoodFx, DnaVisuals,
 │   │   │                                     AccessoryView (phụ kiện)
-│   │   ├── Core/Unity/ [Unity]               MaterialFactory, Prim, VecExt (dùng chung cho View)
+│   │   ├── Core/Audio/ [C# thuần]            SoundSynth (tạo nhạc + tiếng bằng code)
+│   │   ├── Core/Unity/ [Unity]               MaterialFactory, Prim, VecExt, Sfx (phát âm thanh) — dùng chung cho View
 │   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, PetExpressionService, CareActionService, PointerGestures,
+│   │   │                                     StrokeTracker (vuốt ve hay dắt), PlayService (trò chơi), DailyService (việc mỗi ngày),
 │   │   │                                     TipService (mẹo), NotificationPlanner + NotificationService (thông báo nhắc chăm thú)
 │   │   │   └── View/ [Unity]                 GardenScene, GardenBuilder, GardenCamera, GardenInputRouter, PetController,
 │   │   │                                     MemorialView, EggView, PetDeathFx, GardenUi (bảng đặt tên / thẻ / toast),
-│   │   │                                     ShopStallView (quầy hàng), DecorBuilder (đồ trang trí)
+│   │   │                                     ShopStallView (quầy hàng), DecorBuilder (đồ trang trí), DecorLife (bé dùng đồ trang trí),
+│   │   │                                     ToyViews (bóng, cần lông vũ, máy bong bóng + ToyPlayground)
 │   │   ├── Battle/ [PawFit.Battle, C# thuần] SwipeRecognizer, BattleSimulation, BattleBot, BattleSession
 │   │   │   └── View/ [Unity]                 BattleScene (màn ngang), BattleHud, FighterRig, DummyBuilder
 │   │   ├── Economy/ [PawFit.Economy, C# thuần] EconomyService (ví Coin + quảng cáo 5 lần/ngày), ShopService,
