@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using PawFit.Core.Audio;
+using PawFit.Core.Unity;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -361,7 +363,11 @@ namespace PawFit.Battle.View
             Place(rt, anchor, pos, size);
             var b = rt.gameObject.AddComponent<Button>();
             b.targetGraphic = rt.GetComponent<Image>();
-            b.onClick.AddListener(() => onClick?.Invoke());
+            b.onClick.AddListener(() =>
+            {
+                Sfx.Play(SoundId.UiTap, 0.3f);
+                onClick?.Invoke();
+            });
             Label(rt, label, 38, new Vector2(0.5f, 0.5f), Vector2.zero, size, TextAnchor.MiddleCenter, new Color(0.2f, 0.2f, 0.25f));
             return rt;
         }

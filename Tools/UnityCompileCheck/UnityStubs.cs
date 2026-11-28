@@ -292,6 +292,13 @@ namespace UnityEngine
         public float spatialBlend { get; set; }
         public float volume { get; set; }
         public float pitch { get; set; }
+        public float panStereo { get; set; }
+        public bool loop { get; set; }
+        public AudioClip clip { get; set; }
+        public bool isPlaying => false;
+        public void Play() { }
+        public void Stop() { }
+        public void Pause() { }
         public void PlayOneShot(AudioClip clip) { }
     }
 

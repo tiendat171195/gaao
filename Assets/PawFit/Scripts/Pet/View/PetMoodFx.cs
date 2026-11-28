@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PawFit.Core.Audio;
 using PawFit.Core.Unity;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace PawFit.Pet.View
     /// Hiệu ứng "nói bằng hình" quanh thú (không có chữ / thanh số):
     ///   ruồi bay quanh khi bẩn · bong bóng có quả táo khi đòi ăn · chữ Z bay lên khi ngủ · tiếng kêu / ngáp
     ///   ốm: túi chườm trên đầu, nguy kịch có đám mây mưa nhỏ, đắp chăn khi nằm, khăn lau, dấu + xanh khi đang hồi phục.
-    /// Dựng bằng khối cơ bản + âm thanh tạo bằng code, không cần asset.
+    /// Dựng bằng khối cơ bản; tiếng phát qua Sfx (âm tạo bằng code, không cần asset).
     /// </summary>
     public sealed class PetMoodFx : MonoBehaviour
     {
@@ -26,12 +27,9 @@ namespace PawFit.Pet.View
             public Vector3 Start;
         }
 
-        private static AudioClip _chirp, _yawn, _chime;
-
         private IPetAvatar _avatar;
         private Transform _root;
         private Camera _cam;
-        private AudioSource _audio;
         private readonly List<Fly> _flies = new List<Fly>();
         private readonly List<Glyph> _zs = new List<Glyph>();
         private Transform _bubble;
@@ -59,13 +57,6 @@ namespace PawFit.Pet.View
         {
             _avatar = avatar;
             if (_root == null) _root = new GameObject("PetFx").transform;   // không làm con của thú: thú xoay thì hiệu ứng không xoay theo
-            if (_audio == null)
-            {
-                _audio = gameObject.AddComponent<AudioSource>();
-                _audio.playOnAwake = false;
-                _audio.spatialBlend = 0f;
-                _audio.volume = 0.55f;
-            }
         }
 
         public void SetFlies(int count)
@@ -109,10 +100,10 @@ namespace PawFit.Pet.View
             if (_root == null) return;
             if (_bubble == null) _bubble = MakeFoodBubble();
             _bubbleT = 0f;
-            Play(ref _chirp, "pawfit_chirp", MakeChirp);
+            Sfx.PlayVaried(SoundId.Cry, 0.55f);
         }
 
-        public void Yawn() => Play(ref _yawn, "pawfit_yawn", MakeYawn);
+        public void Yawn() => Sfx.PlayVaried(SoundId.Yawn, 0.5f);
 
         /// <summary>Tiến hóa: quầng sáng nở ra + tia lấp lánh bắn tung tóe + tiếng chuông.</summary>
         public void Evolve(bool ultimate)
@@ -133,7 +124,7 @@ namespace PawFit.Pet.View
             if (_glow == null)
                 _glow = Prim.Make(PrimitiveType.Sphere, _root, Vector3.zero, Vector3.zero, Prim.Hex("#FFFBEA"), smoothness: 0.95f).transform;
             _evolveT = 0f;
-            Play(ref _chime, "pawfit_chime", MakeChime);
+            Sfx.Play(SoundId.Chime, 0.6f);
         }
 
         /// <summary>Ultimate: 3 đốm vàng bay chậm quanh thú.</summary>
@@ -442,60 +433,5 @@ namespace PawFit.Pet.View
             float u = t - 1f;
             return 1f + c3 * u * u * u + c1 * u * u;
         }
-
-        // ------------------------------------------------------------------
-        // Âm thanh tạo bằng code (không cần file âm thanh)
-        // ------------------------------------------------------------------
-
-        private void Play(ref AudioClip clip, string name, System.Func<string, AudioClip> make)
-        {
-            if (_audio == null) return;
-            if (clip == null) clip = make(name);
-            _audio.pitch = 0.94f + Random.value * 0.12f;
-            _audio.PlayOneShot(clip);
-        }
-
-        /// <summary>Tiếng "mi-meo" ngắn: 2 nốt cao dần.</summary>
-        private static AudioClip MakeChirp(string name) =>
-            Synth(name, 0.42f, t =>
-            {
-                float note = t < 0.17f ? t / 0.17f : (t - 0.2f) / 0.22f;
-                bool second = t >= 0.2f;
-                if (t >= 0.17f && t < 0.2f) return 0f;
-                float f0 = second ? 820f : 640f, f1 = second ? 1180f : 900f;
-                float f = Mathf.Lerp(f0, f1, Mathf.Clamp01(note)) * (1f + 0.02f * Mathf.Sin(t * 70f));
-                float env = Mathf.Sin(Mathf.Clamp01(note) * Mathf.PI);
-                return env * 0.5f * (Mathf.Sin(Phase(f, t)) + 0.25f * Mathf.Sin(2f * Phase(f, t)));
-            });
-
-        /// <summary>Tiếng chuông tiến hóa: 4 nốt đi lên.</summary>
-        private static AudioClip MakeChime(string name) =>
-            Synth(name, 1.2f, t =>
-            {
-                float[] notes = { 523.25f, 659.25f, 783.99f, 1046.5f };
-                float v = 0f;
-                for (int i = 0; i < notes.Length; i++)
-                {
-                    float t0 = i * 0.12f;
-                    if (t < t0) continue;
-                    float u = t - t0;
-                    v += Mathf.Sin(Phase(notes[i], u)) * Mathf.Exp(-u * 3.2f) * 0.22f;
-                }
-                return v;
-            });
-
-        /// <summary>Tiếng ngáp: trầm dần, dài hơn.</summary>
-        private static AudioClip MakeYawn(string name) =>
-            Synth(name, 0.85f, t =>
-            {
-                float u = t / 0.85f;
-                float f = Mathf.Lerp(520f, 240f, u);
-                float env = Mathf.Sin(u * Mathf.PI) * (1f - 0.3f * u);
-                return env * 0.4f * (Mathf.Sin(Phase(f, t)) + 0.35f * Mathf.Sin(3f * Phase(f, t)));
-            });
-
-        private static float Phase(float freq, float t) => SynthAudio.Phase(freq, t);
-
-        private static AudioClip Synth(string name, float seconds, System.Func<float, float> sample) => SynthAudio.Make(name, seconds, sample);
     }
 }

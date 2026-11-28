@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PawFit.Core;
+using PawFit.Core.Audio;
 using PawFit.Core.Unity;
 using PawFit.Garden.View;
 using PawFit.Pet;
@@ -173,6 +174,8 @@ namespace PawFit.Battle.View
                 _hud.Hint(match.Mode == BattleMode.Adventure ? match.PlayerName + " · " + match.Title + " · thắng còn nhiều máu = nhiều sao"
                                                              : "Đối thủ: " + match.PlayerName + " · " + match.Title, 3f);
             }
+            Sfx.Music(MusicId.Battle, 0.36f);   // nhạc trận + cồng mở trận (Phase 8.1)
+            Sfx.Play(SoundId.Fight, 0.55f);
             _log.Info("[PawFit] Vào trận: " + mode + (match != null ? " · gặp " + match.PlayerName : training ? "" : " · " + level));
         }
 
@@ -442,6 +445,8 @@ namespace PawFit.Battle.View
             {
                 case BattleEventKind.AttackStarted:   // thấy chuyển động ngay lúc vuốt xong
                     self.Attack(e.Move, _session.Sim.Config.WindupSeconds[(int)e.Move]);
+                    Sfx.PlayVaried(e.Move == MoveKind.Quick ? SoundId.WhooshQuick : e.Move == MoveKind.Heavy ? SoundId.WhooshHeavy
+                                 : e.Move == MoveKind.Special ? SoundId.WhooshSpecial : SoundId.UltCharge, mine ? 0.55f : 0.4f, 0.06f);
                     if (e.Move == MoveKind.Special)
                         FxBurst.Popup(transform, self.Center + Vector3.up * 0.75f, "Chiêu riêng!", new Color(0.75f, 0.9f, 1f), 0.2f);
                     else if (e.Move == MoveKind.Ultimate)
@@ -455,6 +460,10 @@ namespace PawFit.Battle.View
                     break;
                 case BattleEventKind.Hit:
                     self.Strike(e.Move != MoveKind.Quick);
+                    Sfx.PlayVaried(e.Crit || e.Move == MoveKind.Ultimate ? SoundId.HitCrit : e.Move == MoveKind.Quick ? SoundId.HitLight : SoundId.HitHeavy,
+                                   e.Move == MoveKind.Quick ? 0.65f : 0.85f, 0.08f);
+                    if (e.Combo >= 2)
+                        Sfx.Play(e.Combo == 2 ? SoundId.Combo2 : e.Combo == 3 ? SoundId.Combo3 : e.Combo == 4 ? SoundId.Combo4 : SoundId.Combo5, 0.4f);
                     other.Flinch(e.Move == MoveKind.Quick ? 0.5f : e.Move == MoveKind.Ultimate ? 1.5f : 1f);
                     HitStop(e.Crit || e.Move == MoveKind.Ultimate ? 0.1f : e.Move == MoveKind.Quick ? 0.035f : 0.07f);
                     if (e.Crit || e.Move == MoveKind.Ultimate) Shake(e.Move == MoveKind.Ultimate ? 0.14f : 0.07f);
@@ -471,11 +480,13 @@ namespace PawFit.Battle.View
                     break;
                 case BattleEventKind.Blocked:
                     self.Strike(false);
+                    Sfx.PlayVaried(SoundId.Block, 0.6f);
                     FxBurst.Ring(transform, other.Center, GuardBlue);
                     FxBurst.Popup(transform, other.Center + Vector3.up * 0.6f, "Đỡ!", GuardBlue, 0.18f);
                     break;
                 case BattleEventKind.Countered:
                     self.Strike(true);
+                    Sfx.Play(SoundId.Counter, 0.75f);
                     other.CancelAttack();   // đòn đâm vào thế đỡ: thôi lao, bị hất lùi
                     other.Flinch(1.3f);
                     other.Dizzy();
@@ -487,11 +498,13 @@ namespace PawFit.Battle.View
                     break;
                 case BattleEventKind.Interrupted:
                     self.CancelAttack();
+                    Sfx.PlayVaried(SoundId.Wrong, 0.35f);
                     self.Dizzy();
                     FxBurst.Popup(transform, self.Center + Vector3.up * 0.7f, "Bị cắt đòn!", new Color(1f, 0.6f, 0.5f), 0.18f);
                     break;
                 case BattleEventKind.WrongSwipe:
                     self.Dizzy();
+                    Sfx.Play(SoundId.Wrong, mine ? 0.5f : 0.3f);
                     FxBurst.Popup(transform, self.Center + Vector3.up * 0.7f, "Vuốt sai!", new Color(1f, 0.45f, 0.4f));
                     if (mine)
                         _hud.Hint("Vuốt sai" + (string.IsNullOrEmpty(_lastFail) ? "" : " (" + _lastFail + ")") +
@@ -499,9 +512,11 @@ namespace PawFit.Battle.View
                     break;
                 case BattleEventKind.Guard:
                     self.Guard();
+                    Sfx.PlayVaried(SoundId.Guard, 0.45f);
                     break;
                 case BattleEventKind.KO:
                     other.Knockout();
+                    Sfx.Play(SoundId.KO, 0.85f);
                     self.Cheer();
                     HitStop(0.15f);
                     SlowMo(1f);   // hạ gục: chậm lại 1 giây cho thấy rõ
@@ -509,10 +524,12 @@ namespace PawFit.Battle.View
                     break;
                 case BattleEventKind.RageFull:
                     FxBurst.Spark(transform, self.Center, RageOrange, 12, 1.4f);
+                    if (mine) Sfx.Play(SoundId.RageFull, 0.5f);
                     if (mine) _hud.Hint("Nộ đầy! Vuốt Z để ra Tuyệt chiêu", 2f);
                     break;
                 case BattleEventKind.RageLow:
                     if (!mine) break;
+                    Sfx.Play(SoundId.Wrong, 0.3f, 1.3f);
                     _hud.FlashRage(BattleSession.PlayerSide);
                     _hud.Hint("Nộ chưa đầy — đánh trúng, đỡ, phản đòn để tích Nộ", 1.6f);
                     break;
@@ -546,6 +563,8 @@ namespace PawFit.Battle.View
         private void ShowResult()
         {
             BattleResult r = _session.Result;
+            Sfx.Music(MusicId.None);   // tắt nhạc trận, phát nhạc thắng / thua
+            Sfx.Play(_session.Mode == BattleMode.Training || r.PlayerWon ? SoundId.Win : SoundId.Lose, 0.7f);
             string title = _session.Mode == BattleMode.Training ? "Xong buổi tập"
                          : r.PlayerWon ? "Thắng!" : r.Outcome == BattleOutcome.Draw ? "Hòa" : "Thua";
             var lines = new List<string>();

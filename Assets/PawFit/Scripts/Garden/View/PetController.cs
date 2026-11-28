@@ -1,5 +1,6 @@
 using System;
 using PawFit.Core;
+using PawFit.Core.Audio;
 using PawFit.Core.Unity;
 using PawFit.Pet;
 using PawFit.Pet.View;
@@ -37,6 +38,10 @@ namespace PawFit.Garden.View
         private PetActivity _lastActivity = (PetActivity)(-1);
         private AccessoryKind _accessory;
         private bool _dead;
+
+        // ---- tiếng (Phase 8.1): bước chân theo tốc độ, nhai lúc ăn, té nước + sủi bọt lúc tắm, thở lúc ngủ ----
+        private float _stepT, _activityT;
+        private int _step;
 
         public IPetAvatar Avatar => _avatar;
 
@@ -139,6 +144,7 @@ namespace PawFit.Garden.View
                 if (paused) _agent.ResetPath();
                 _sentTarget = NoTarget;
             }
+            if (paused) StopLoops();
             if (paused && _avatar != null)
             {
                 _avatar.SetMoveSpeed(0f);
@@ -150,6 +156,7 @@ namespace PawFit.Garden.View
         public void PlayDeath(Action done)
         {
             _dead = true;
+            StopLoops();
             if (_agent != null && _agent.isOnNavMesh)
             {
                 _agent.isStopped = true;
@@ -190,11 +197,21 @@ namespace PawFit.Garden.View
             if (_brain.Activity == PetActivity.Training) FaceTowards(_trainPoint);
             if (_brain.Activity != _lastActivity)
             {
-                if (_brain.Activity == PetActivity.Eating) _avatar.PlayEat();
-                else if (_brain.Activity == PetActivity.Bathing) _avatar.PlayBathe();
+                if (_brain.Activity == PetActivity.Eating)
+                {
+                    _avatar.PlayEat();
+                    Sfx.PlayVaried(SoundId.Munch, 0.55f);
+                }
+                else if (_brain.Activity == PetActivity.Bathing)
+                {
+                    _avatar.PlayBathe();
+                    Sfx.Play(SoundId.Splash, 0.6f);
+                }
                 else if (_brain.Activity == PetActivity.Training) _avatar.PlayTrain(_cfg.WorkoutSeconds);
                 _lastActivity = _brain.Activity;
+                _activityT = 0f;
             }
+            ActivitySounds(dt);
             if (_evo != null)   // lớn lên: dáng theo giai đoạn tiến hóa
             {
                 GrowthLook look = _evo.Look;
@@ -202,6 +219,7 @@ namespace PawFit.Garden.View
                 _fx.SetAura(look.Ultimate);
             }
             float v = _agent.velocity.magnitude;
+            Footsteps(dt, v);
             _avatar.SetMoveSpeed(v);
             _avatar.SetPose(_brain.Activity == PetActivity.Sleeping ? AvatarPose.Sleep
                             : v > 2.4f ? AvatarPose.Run : v > 0.15f ? AvatarPose.Walk : AvatarPose.Idle);
@@ -238,6 +256,47 @@ namespace PawFit.Garden.View
             }
         }
 
+        /// <summary>Bước chân trên cỏ: đi nhanh thì bước dồn hơn + to hơn; 3 tiếng bước xoay vòng cho khỏi nhàm.</summary>
+        private void Footsteps(float dt, float speed)
+        {
+            if (speed < 0.25f || _brain.Activity == PetActivity.Sleeping)
+            {
+                _stepT = 0.05f;
+                return;
+            }
+            _stepT -= dt;
+            if (_stepT > 0f) return;
+            _stepT = Mathf.Clamp(0.55f / speed, 0.15f, 0.42f);
+            SoundId s = _step++ % 3 == 0 ? SoundId.Step0 : _step % 3 == 1 ? SoundId.Step1 : SoundId.Step2;
+            Sfx.Play(s, Mathf.Lerp(0.14f, 0.3f, speed / 4f), UnityEngine.Random.Range(0.9f, 1.1f));
+        }
+
+        /// <summary>Tiếng trong lúc làm việc: nhai tiếp khi đang ăn, sủi nước khi tắm, thở khi ngủ, đấm hình nộm khi tập.</summary>
+        private void ActivitySounds(float dt)
+        {
+            PetActivity a = _brain.Activity;
+            _activityT += dt;
+            if (a == PetActivity.Eating && _activityT >= 0.8f)
+            {
+                _activityT = 0f;
+                Sfx.PlayVaried(SoundId.Munch, 0.45f);
+            }
+            if (a == PetActivity.Training && _activityT >= 0.45f)
+            {
+                _activityT = 0f;
+                Sfx.PlayVaried(SoundId.HitLight, 0.3f);
+            }
+            Sfx.Loop(LoopId.Bath, a == PetActivity.Bathing, 0.45f);
+            Sfx.Loop(LoopId.Sleep, a == PetActivity.Sleeping, 0.32f);
+        }
+
+        private static void StopLoops()
+        {
+            Sfx.Loop(LoopId.Bath, false);
+            Sfx.Loop(LoopId.Sleep, false);
+            Sfx.Loop(LoopId.Purr, false);
+        }
+
         private void FaceTowards(Vector3 point)
         {
             Vector3 d = point - transform.position;
@@ -251,7 +310,11 @@ namespace PawFit.Garden.View
         public void Tap()
         {
             _brain.OnTapped();
-            if (_brain.Activity == PetActivity.Reacting && !IsIll) _avatar.PlayHop();   // ốm: chỉ được lau, không nhảy
+            if (_brain.Activity == PetActivity.Reacting && !IsIll)   // ốm: chỉ được lau, không nhảy
+            {
+                _avatar.PlayHop();
+                Sfx.PlayVaried(SoundId.Happy, 0.55f, 0.1f);
+            }
         }
 
         public void MoveTo(Vector3 ground) => _brain.CommandMoveTo(ground.ToGround(), transform.position.ToGround());
@@ -263,7 +326,11 @@ namespace PawFit.Garden.View
         /// <summary>Thả đồ ăn trúng thú. Trả true nếu thú chịu ăn.</summary>
         public bool TryFeed()
         {
-            if (_care.Feed() != CareResult.Ok) return false;
+            if (_care.Feed() != CareResult.Ok)
+            {
+                Sfx.PlayVaried(SoundId.Wrong, 0.25f);   // lắc đầu "hông ăn đâu"
+                return false;
+            }
             _brain.OnFed();
             return true;
         }

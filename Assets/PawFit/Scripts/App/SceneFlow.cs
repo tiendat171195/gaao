@@ -370,6 +370,7 @@ namespace PawFit.App
             }
             PetController pet = Garden != null ? Garden.Pet : null;
             if (pet != null && pet.Avatar != null) pet.Avatar.PlayEat();   // bé ăn bánh / uống nước / uống thuốc ngay
+            PawFit.Core.Unity.Sfx.PlayVaried(item == ShopItem.Treat ? PawFit.Core.Audio.SoundId.Munch : PawFit.Core.Audio.SoundId.Gulp, 0.5f);
             GardenUi.Toast(ItemName(item) + ": -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin");
         }
 
@@ -667,6 +668,14 @@ namespace PawFit.App
             {
                 settings.ToggleSound();
                 GardenUi.Toast(settings.SoundOn ? "Đã bật âm thanh" : "Đã tắt âm thanh");
+                OpenSettings();
+            });
+            labels.Add("Nhạc nền: " + (settings.MusicOn ? "Bật (chạm để tắt)" : "Tắt (chạm để bật)"));
+            enabled.Add(true);
+            actions.Add(() =>
+            {
+                settings.ToggleMusic();
+                GardenUi.Toast(settings.MusicOn ? "Đã bật nhạc nền" : "Đã tắt nhạc nền");
                 OpenSettings();
             });
             if (_services.TryGet(out OnlineService online))   // máy chủ riêng: tài khoản + chuyển máy

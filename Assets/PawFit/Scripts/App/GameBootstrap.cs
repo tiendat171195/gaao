@@ -133,11 +133,17 @@ namespace PawFit.App
             Services.Register(_net);
             gameObject.AddComponent<UiSounds>().Init(bus);   // tiếng "ting" khi nhận / tiêu Coin
 
-            // Cài đặt ở hòm thư: lưu file riêng của máy này. Tắt tiếng = tắt mọi âm thanh của game 1 chỗ.
+            // Cài đặt ở hòm thư: lưu file riêng của máy này. Tiếng và nhạc nền bật / tắt riêng (Phase 8.1).
             var settings = new SettingsService(save, bus);
             Services.Register(settings);
-            AudioListener.volume = settings.SoundOn ? 1f : 0f;
-            bus.Subscribe<SettingsChanged>(e => AudioListener.volume = e.Settings.SoundOn ? 1f : 0f);
+            PawFit.Core.Unity.Sfx.SoundOn = settings.SoundOn;
+            PawFit.Core.Unity.Sfx.MusicOn = settings.MusicOn;
+            PawFit.Core.Unity.Sfx.Prewarm();   // tạo sẵn nhạc + tiếng ở luồng nền
+            bus.Subscribe<SettingsChanged>(e =>
+            {
+                PawFit.Core.Unity.Sfx.SoundOn = e.Settings.SoundOn;
+                PawFit.Core.Unity.Sfx.MusicOn = e.Settings.MusicOn;
+            });
 
             // Mẹo hướng dẫn theo tình huống (vườn không có nút nên chỉ cho người mới đúng lúc), mỗi mẹo 1 lần
             _tips = new TipService(settings, _pets, health, evo, exprCfg, bus);

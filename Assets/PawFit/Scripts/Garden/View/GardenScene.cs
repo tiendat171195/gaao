@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using PawFit.Core;
+using PawFit.Core.Audio;
 using PawFit.Core.Unity;
 using PawFit.Pet;
 using UnityEngine;
@@ -31,6 +32,8 @@ namespace PawFit.Garden.View
         private int _pendingDig = -1;
         private float _pendingDigLeft, _dayCheck;
         private bool _digging;
+        private bool _paused;
+        private Vector3 _pondPos;
         private ServiceLocator _s;
         private GardenLayout _layout;
         private PetService _pets;
@@ -59,9 +62,13 @@ namespace PawFit.Garden.View
         /// <summary>Chạm biển chỉ đường Thám hiểm (App mở bản đồ Thám hiểm, Phase 7.2).</summary>
         public Action AdventureTapped { get; set; }
 
-        /// <summary>Tạm dừng vườn khi đang ở màn đấu: không nhận chạm, camera đứng, thú đứng yên.</summary>
+        /// <summary>Tạm dừng vườn khi đang ở màn đấu: không nhận chạm, camera đứng, thú đứng yên, tắt nền gió / nước.</summary>
         public void SetPaused(bool paused)
         {
+            _paused = paused;
+            Sfx.Ambience(!paused);
+            if (!paused) Sfx.Music(MusicId.Garden);
+            else Sfx.Loop(LoopId.Pond, false);
             if (_router != null) _router.enabled = !paused;
             if (_camCtl != null) _camCtl.enabled = !paused;
             if (Pet != null) Pet.SetPaused(paused);
@@ -87,6 +94,10 @@ namespace PawFit.Garden.View
 
             SetupLighting();
             Camera cam = SetupCamera();
+            Sfx.Music(MusicId.Garden);   // nhạc nền vườn + gió, lá, chim (Phase 8.1)
+            Sfx.Ambience(true);
+            GardenZone pond = _layout.Get(ZoneType.Pond);
+            _pondPos = pond != null ? pond.Center.ToWorld() : new Vector3(999f, 0f, 999f);
             SetupPostFx(cam);
             GardenBuildResult built = GardenBuilder.Build(_layout, transform);
             _built = built;
@@ -198,6 +209,8 @@ namespace PawFit.Garden.View
                 return;
             }
             Pet.Avatar?.PlayEat();   // cúi đầu bới đất
+            Sfx.Play(SoundId.Dig, 0.6f);
+            Sfx.Play(SoundId.Treasure, 0.5f);
             for (int i = _treasures.Count - 1; i >= 0; i--)
             {
                 if (_treasures[i] == null || _treasures[i].Index != index) continue;
@@ -212,6 +225,7 @@ namespace PawFit.Garden.View
 
         private void Update()
         {
+            UpdatePondSound();
             if (_daily == null) return;
             if ((_dayCheck -= Time.deltaTime) <= 0f)   // để qua đêm: sang ngày mới thì đổi chỗ kho báu
             {
@@ -227,6 +241,16 @@ namespace PawFit.Garden.View
             }
             NVec2 spot = _daily.DigSpots[_pendingDig];
             if (NVec2.Distance(Pet.transform.position.ToGround(), spot) <= _daily.Config.DigReach * 0.8f) DoDig(_pendingDig);
+        }
+
+        /// <summary>Tiếng nước hồ to dần khi bé (camera bám theo bé) tới gần hồ.</summary>
+        private void UpdatePondSound()
+        {
+            if (_paused) return;
+            Vector3 ear = Pet != null ? Pet.transform.position : (_egg != null ? _egg.transform.position : _pondPos + Vector3.one * 50f);
+            float d = Vector3.Distance(new Vector3(ear.x, 0f, ear.z), _pondPos);
+            float v = Mathf.Clamp01(1f - (d - 2f) / 7f) * 0.35f;
+            Sfx.Loop(LoopId.Pond, v > 0.01f, v);
         }
 
         private void SpawnPet(Vector3 at)

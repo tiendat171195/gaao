@@ -1,4 +1,6 @@
 using System;
+using PawFit.Core.Audio;
+using PawFit.Core.Unity;
 using PawFit.Pet;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -38,6 +40,7 @@ namespace PawFit.Garden.View
         {
             Close();
             RectTransform dim = Panel(Root, "NamePrompt", new Color(0f, 0f, 0f, 0.45f));
+            Sfx.Play(SoundId.UiOpen, 0.3f);
             Stretch(dim);
             RectTransform card = Panel(dim, "Card", new Color(1f, 0.98f, 0.95f, 1f));
             Place(card, Vector2.zero, new Vector2(880f, 560f));
@@ -67,6 +70,7 @@ namespace PawFit.Garden.View
             float step = many ? 112f : 120f, head = 330f, h = head + n * step + 30f, top = h * 0.5f;
             var buttonSize = new Vector2(many ? 780f : 560f, many ? 96f : 100f);
             RectTransform dim = Panel(Root, "Choice", new Color(0f, 0f, 0f, 0.35f));
+            Sfx.Play(SoundId.UiOpen, 0.3f);
             Stretch(dim);
             RectTransform card = Panel(dim, "Box", new Color(0.97f, 0.97f, 0.95f, 1f));
             Place(card, Vector2.zero, new Vector2(900f, h));
@@ -105,6 +109,7 @@ namespace PawFit.Garden.View
         {
             Close();
             RectTransform dim = Panel(Root, "Live", new Color(0.06f, 0.06f, 0.09f, 0.94f));
+            Sfx.Play(SoundId.UiOpen, 0.3f);
             Stretch(dim);
             Label(dim, title, 64, FontStyle.Bold, Color.white, new Vector2(0f, 320f), new Vector2(940f, 140f));
             Text text = Label(dim, body != null ? body() : "", 44, FontStyle.Normal, new Color(0.88f, 0.88f, 0.9f),
@@ -182,6 +187,7 @@ namespace PawFit.Garden.View
         {
             Close();
             RectTransform dim = Panel(Root, "Card", new Color(0f, 0f, 0f, 0.35f));
+            Sfx.Play(SoundId.UiOpen, 0.3f);
             Stretch(dim);
             Button closer = dim.gameObject.AddComponent<Button>();
             closer.targetGraphic = dim.GetComponent<Image>();
@@ -298,6 +304,7 @@ namespace PawFit.Garden.View
             Place(rt, pos, size);
             var b = rt.gameObject.AddComponent<Button>();
             b.targetGraphic = rt.GetComponent<Image>();
+            b.onClick.AddListener(() => Sfx.Play(SoundId.UiTap, 0.3f));   // mọi nút có tiếng "tách"
             Label(rt, label, fontSize, FontStyle.Bold, Color.white, Vector2.zero, size - new Vector2(30f, 0f));
             return b;
         }

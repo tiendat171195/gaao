@@ -6,7 +6,11 @@ namespace PawFit.Core
     /// <summary>Cài đặt của máy này (không phải dữ liệu game: không đồng bộ lên cloud ở Phase 4).</summary>
     public sealed class GameSettingsData
     {
+        /// <summary>Tiếng (thú, vườn, trận, giao diện).</summary>
         public bool SoundOn = true;
+
+        /// <summary>Nhạc nền (Phase 8.1), bật / tắt riêng với tiếng.</summary>
+        public bool MusicOn = true;
 
         /// <summary>Mẹo hướng dẫn đã hiện / người chơi đã tự làm (mỗi mẹo chỉ hiện 1 lần).</summary>
         public List<string> SeenTips = new List<string>();
@@ -53,6 +57,18 @@ namespace PawFit.Core
         }
 
         public void ToggleSound() => SetSound(!_data.SoundOn);
+
+        public bool MusicOn => _data.MusicOn;
+
+        public void SetMusic(bool on)
+        {
+            if (_data.MusicOn == on) return;
+            _data.MusicOn = on;
+            _save.Save(SaveKey, _data);
+            _bus.Publish(new SettingsChanged(_data));
+        }
+
+        public void ToggleMusic() => SetMusic(!_data.MusicOn);
 
         public bool HasSeenTip(string id) => _data.SeenTips != null && _data.SeenTips.Contains(id);
 
