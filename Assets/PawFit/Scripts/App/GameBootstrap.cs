@@ -190,12 +190,12 @@ namespace PawFit.App
             _online?.Update(Time.unscaledDeltaTime);   // tài khoản, giờ máy chủ, sao lưu
             _net?.Update();   // tìm trận / nhịp trận PvP (mạng giả lập: người chơi ảo vào hàng chờ)
             _notifyOs?.Tick();   // chờ người chơi trả lời hộp thoại xin quyền thông báo
-            if (_notifications != null && SceneFlow.Garden != null && SceneFlow.Battle == null && !GardenUi.IsOpen)
+            if (_notifications != null && SceneFlow.Garden != null && !SceneFlow.InFight && !GardenUi.IsOpen)
             {
                 _notifications.Update(Time.unscaledDeltaTime);
                 if (_notifications.ShouldAsk) SceneFlow.AskNotifications();   // 1 lần, sau khi chơi một lúc
             }
-            if (_tips != null && SceneFlow.Garden != null && SceneFlow.Battle == null && !GardenUi.IsOpen)
+            if (_tips != null && SceneFlow.Garden != null && !SceneFlow.InFight && !GardenUi.IsOpen)
             {
                 TipId? tip = _tips.Update(Time.unscaledDeltaTime);
                 if (tip.HasValue) GardenUi.Tip(TipService.Text(tip.Value));

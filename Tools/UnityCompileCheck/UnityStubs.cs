@@ -433,6 +433,7 @@ namespace UnityEngine
     {
         public static Camera main => null;
         public float fieldOfView { get; set; }
+        public float aspect { get; set; }
         public float nearClipPlane { get; set; }
         public float farClipPlane { get; set; }
         public CameraClearFlags clearFlags { get; set; }

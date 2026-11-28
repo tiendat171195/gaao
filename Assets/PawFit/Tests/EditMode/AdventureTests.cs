@@ -71,7 +71,8 @@ namespace PawFit.Tests
             Assert.AreEqual("5-5", _adv.Stages[24].Code);
             Assert.Greater(_adv.CreatureStats(4).Power, _adv.CreatureStats(0).Power, "trùm mạnh hơn màn đầu");
             Assert.Greater(_adv.CreatureStats(5).Power, _adv.CreatureStats(0).Power, "vùng sau mạnh hơn vùng trước");
-            Assert.Greater(_adv.Stages[4].Skill, _adv.Stages[0].Skill, "trùm đánh giỏi hơn");
+            CollectionAssert.Contains(_adv.PlanFor(4).Kinds, MonsterKind.KingSlime, "màn cuối vùng 1 có trùm Vua Chất Nhờn");
+            Assert.AreEqual(MonsterBook.Get(MonsterKind.KingSlime).Name, _adv.Stages[4].Creature, "màn trùm mang tên trùm");
         }
 
         [Test]
@@ -150,42 +151,58 @@ namespace PawFit.Tests
         }
 
         [Test]
-        public void Opponent_MatchesStage_DnaIsStableAndThemed()
+        public void HuntPlan_MatchesStage_StableAndThemed()
         {
-            RankedOpponent o = _adv.OpponentFor(0);
-            PetStats p = _adv.CreatureStats(0);
-            Assert.AreEqual(p.Atk, o.Stats.Atk, 1e-4f);
-            Assert.AreEqual(_adv.Stages[0].Creature, o.Name);
-            Assert.IsNotNull(o.Bot, "sinh vật do bot điều khiển");
-            Assert.IsTrue(o.Learned[0] && o.Learned[1] && !o.Learned[3], "vùng 1 mới thuộc ngang + lên");
-            Assert.IsTrue(_adv.OpponentFor(24).Learned[3], "vùng cuối thuộc đủ 4 chiêu");
-            Assert.AreEqual(DnaCodec.Encode(_adv.CreatureDna(3)), DnaCodec.Encode(_adv.CreatureDna(3)), "cùng màn = cùng hình");
-            Assert.AreEqual(_adv.Regions[0].Hues[0], _adv.CreatureDna(0).FurHue, "màu lông theo vùng");
+            HuntPlan p = _adv.PlanFor(0);
+            Assert.AreEqual(_adv.CreatureStats(0).Atk, p.RefAtk, 1e-4f, "quái theo chỉ số chuẩn của màn");
+            Assert.AreEqual(3, p.Waves.Count, "màn thường: 3 đợt quái");
+            foreach (MonsterKind k in p.Kinds)
+                Assert.IsTrue(k == MonsterKind.Slime || k == MonsterKind.Bat, "Đồi Cỏ Gió chỉ có chất nhờn + dơi: " + k);
+            Assert.Less(p.Waves[0].Spawns.Count, p.Waves[2].Spawns.Count, "đông dần");
+            HuntPlan again = _adv.PlanFor(0);
+            for (int w = 0; w < p.Waves.Count; w++)
+                for (int i = 0; i < p.Waves[w].Spawns.Count; i++)
+                {
+                    Assert.AreEqual(p.Waves[w].Spawns[i].Kind, again.Waves[w].Spawns[i].Kind, "cùng màn = cùng đợt quái");
+                    Assert.AreEqual(p.Waves[w].Spawns[i].Side, again.Waves[w].Spawns[i].Side);
+                }
+            HuntPlan boss = _adv.PlanFor(9);   // trùm vùng 2
+            Assert.IsTrue(boss.Boss);
+            Assert.AreEqual(2, boss.Waves.Count, "màn trùm: 1 đợt quái + đợt trùm");
+            Assert.AreEqual(MonsterKind.MushroomKing, boss.Waves[1].Spawns[0].Kind);
+            Assert.Greater(_adv.PlanFor(24).RefHp, _adv.PlanFor(0).RefHp, "vùng cuối quái trâu hơn hẳn");
         }
 
         [Test]
-        public void EndToEnd_FightFirstStage_WinStarsCoins_Saved()
+        public void EndToEnd_HuntFirstStage_WinStarsCoins_Saved()
         {
             var won = new List<AdventureWon>();
+            var ended = new List<BattleEnded>();
             _bus.Subscribe<AdventureWon>(e => won.Add(e));
+            _bus.Subscribe<BattleEnded>(e => ended.Add(e));
             float energy = _pets.Current.Needs.Energy;
-            BattleSession s = _adv.StartBattle(0, 12345);
-            Assert.AreEqual(BattleMode.Adventure, s.Mode);
-            for (int i = 0; i < 3000 && !s.IsOver; i++)
+            HuntSession s = _adv.StartHunt(0, 12345);
+            s.Events = _bus;
+            var bot = new HuntBot(0.6f, 9);
+            float dt = s.Sim.Config.TickSeconds;
+            for (int i = 0; i < 20000 && !s.Finished; i++)
             {
-                s.PlayerSwipe(new SwipeResult { Kind = i % 3 == 2 ? SwipeKind.Up : SwipeKind.Horizontal, Quality = 1.1f });
-                s.Advance(0.1f);
+                bot.Act(s.Sim, dt);
+                s.Update(dt);
             }
-            Assert.IsTrue(s.IsOver);
-            Assert.IsTrue(s.Result.PlayerWon, "bé đánh liên tục thắng sinh vật màn 1-1");
-            Assert.AreEqual(s.Sim.Fighters[0].HpPercent, s.Result.HpLeft, 1e-6f);
-            AdventureResult r = _adv.Complete(0, s.Result);
+            Assert.IsTrue(s.Finished);
+            Assert.IsTrue(s.Won, "bé mới nở đánh khá thắng màn 1-1");
+            AdventureResult r = s.Result;
             Assert.GreaterOrEqual(r.Stars, 1);
             Assert.Greater(r.Coins, 0);
             Assert.AreEqual(r.Coins, _wallet.Coins);
             Assert.Less(_pets.Current.Needs.Energy, energy, "trận tốn năng lượng");
             Assert.AreEqual(1, won.Count, "báo sự kiện thắng (cho nhiệm vụ ngày)");
             Assert.IsTrue(won[0].FirstClear);
+            Assert.AreEqual(1, ended.Count, "báo hết trận (nhiệm vụ \"thắng N trận\")");
+            Assert.AreEqual((int)BattleMode.Adventure, ended[0].Mode);
+            Assert.IsTrue(ended[0].Won);
+            Assert.Greater(s.StrengthGained, 0f, "hạ quái = điểm Sức mạnh");
 
             // nạp lại từ file lưu: tiến độ còn nguyên
             var again = new PetService(_time, new SeededRandom(32), _save, new EventBus(), _cfg);

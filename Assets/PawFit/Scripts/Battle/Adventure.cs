@@ -5,25 +5,18 @@ using PawFit.Pet;
 
 namespace PawFit.Battle
 {
-    /// <summary>1 vùng trên bản đồ Thám hiểm (GDD G15). Sinh vật trong vùng có chỉ số theo giai đoạn tiến hóa <see cref="Stage"/>.</summary>
+    /// <summary>1 vùng trên bản đồ Thám hiểm (GDD G15). Quái trong vùng có chỉ số theo giai đoạn tiến hóa <see cref="Stage"/>.</summary>
     public sealed class AdventureRegion
     {
         public int Index;
         public string Name;
         public string Blurb;
         public EvolutionStage Stage;
-
-        /// <summary>Màu lông sinh vật trong vùng (FurHue 0..63 của DNA).</summary>
-        public int[] Hues;
-
-        /// <summary>Dạng Adult của sinh vật (vùng Adult / Ultimate), lần lượt theo màn.</summary>
-        public AdultForm[] Forms;
-
         public int FirstStage;
         public int StageCount;
     }
 
-    /// <summary>1 màn Thám hiểm = 1 trận với 1 sinh vật hoang. Màn cuối mỗi vùng là trùm.</summary>
+    /// <summary>1 màn Thám hiểm = 1 lần Săn quái (Phase 9.2: các đợt quái rừng, GDD G21). Màn cuối mỗi vùng là trùm.</summary>
     public sealed class AdventureStage
     {
         /// <summary>Số thứ tự trên cả bản đồ (0..).</summary>
@@ -35,20 +28,14 @@ namespace PawFit.Battle
         public int Number;
 
         public bool Boss;
+
+        /// <summary>Tên màn (màn trùm = tên trùm), vd "Bầy chất nhờn", "Vua Chất Nhờn".</summary>
         public string Creature;
+
         public EvolutionStage Stage;
-        public AdultForm Form;
 
-        /// <summary>Chỉ số = chỉ số chuẩn của giai đoạn × hệ số này (trừ Crit).</summary>
+        /// <summary>Chỉ số quái = chỉ số thú chuẩn của giai đoạn × hệ số này (trừ Crit).</summary>
         public float StatFactor;
-
-        /// <summary>Tay nghề bot 0..1 (BotConfig.Persona).</summary>
-        public float Skill;
-
-        public BotStyle Style;
-
-        /// <summary>Chiêu đã thuộc (bit 0..3 = ngang / lên / V / Z).</summary>
-        public int LearnedMask;
 
         /// <summary>Coin thưởng khi thắng lần đầu (1 sao).</summary>
         public int Coins;
@@ -61,16 +48,11 @@ namespace PawFit.Battle
     public sealed class AdventureConfig
     {
         /// <summary>
-        /// Hệ số chỉ số của 5 màn trong 1 vùng (màn 5 = trùm), so với thú chuẩn của giai đoạn đó.
-        /// Đo bằng bot (GDD G15): người chơi khá (tay nghề 0,5) ở đúng giai đoạn thắng dễ 3 màn đầu, màn 4 ~75–100%,
-        /// trùm 96% → 65% → 46% → 30% → 15% theo vùng; lớn thêm 1 giai đoạn thì vùng cũ dễ hẳn.
+        /// Hệ số chỉ số quái của 5 màn trong 1 vùng (màn 5 = trùm), so với thú chuẩn của giai đoạn đó.
+        /// Đo bằng bot Săn quái (GDD G21, test HuntBalance): ở đúng giai đoạn, người chơi khá thắng chắc 3 màn đầu, trùm khó hơn;
+        /// lớn thêm 1 giai đoạn thì vùng cũ dễ hẳn.
         /// </summary>
         public float[] StageFactors = { 0.7f, 0.8f, 0.9f, 0.98f, 1.05f };
-
-        /// <summary>Tay nghề sinh vật ở màn 1 của từng vùng; mỗi màn sau +SkillStep, trùm thêm BossSkillBonus.</summary>
-        public float[] RegionSkill = { 0.05f, 0.12f, 0.2f, 0.27f, 0.34f };
-        public float SkillStep = 0.04f;
-        public float BossSkillBonus = 0.05f;
 
         /// <summary>Thắng còn ≥ bấy nhiêu %HP thì được 2 / 3 sao (thắng = 1 sao).</summary>
         public float TwoStarHp = 0.4f;
@@ -113,22 +95,14 @@ namespace PawFit.Battle
     }
 
     /// <summary>
-    /// Thám hiểm (Phase 7.2, C# thuần): bản đồ 5 vùng × 5 màn, mỗi màn đấu 1 sinh vật hoang (bot có lối đánh riêng).
+    /// Thám hiểm (Phase 7.2, C# thuần): bản đồ 5 vùng × 5 màn. Từ Phase 9.2 mỗi màn là 1 lần Săn quái rừng (đánh theo đợt,
+    /// khác trận 1-1 PvP — HuntSession / HuntSimulation), màn cuối vùng có trùm.
     /// Độ khó bám theo giai đoạn tiến hóa (vùng 1 cho Baby ... vùng 5 cho Ultimate): bé lớn lên mới đi xa được.
     /// Thắng = 1 sao, còn ≥ 40% / 70% HP = 2 / 3 sao. Coin khi thắng lần đầu, mỗi sao mới, ít hơn khi thắng lại.
     /// Màn sau mở khi màn trước có sao; thắng trùm thì mở vùng sau. Mỗi trận tốn năng lượng + no như đấu Bot.
     /// </summary>
     public sealed class AdventureService
     {
-        private static readonly string[][] Names =
-        {
-            new[] { "Bông Gió", "Hạt Dẻ", "Mầm Non", "Gai Nhỏ", "Vua Đồi Cỏ" },
-            new[] { "Rêu Xanh", "Nấm Đỏ", "Bào Tử", "Gai Rừng", "Chúa Nấm" },
-            new[] { "Sương Mai", "Bọt Nước", "Đá Cuội", "Sóng Bạc", "Thần Hồ Sương" },
-            new[] { "Than Hồng", "Tro Bay", "Đá Nóng", "Lửa Nhỏ", "Hỏa Vương" },
-            new[] { "Pha Lê Tím", "Bóng Đêm", "Ánh Ngọc", "Gương Vỡ", "Bóng Ma Pha Lê" },
-        };
-
         private readonly PetService _pets;
         private readonly EvolutionService _evo;
         private readonly HealthService _health;
@@ -200,12 +174,12 @@ namespace PawFit.Battle
             }
         }
 
-        /// <summary>Chỉ số sinh vật của màn (đúng công thức chỉ số thú G8 của giai đoạn đó × hệ số màn).</summary>
+        /// <summary>Chỉ số quái chuẩn của màn (đúng công thức chỉ số thú G8 của giai đoạn đó × hệ số màn).</summary>
         public PetStats CreatureStats(int stage)
         {
             AdventureStage s = _stages[stage];
             StatsConfig c = _pets.Config.Stats;
-            PetStats p = StatsRules.Compute(s.Stage, s.Form, 1f, c);
+            PetStats p = StatsRules.Compute(s.Stage, AdultForm.None, 1f, c);
             p.Hp *= s.StatFactor;
             p.Atk *= s.StatFactor;
             p.Def *= s.StatFactor;
@@ -237,35 +211,19 @@ namespace PawFit.Battle
             return reason == null;
         }
 
-        /// <summary>Đối thủ của màn: chỉ số, chiêu đã thuộc, bot theo tay nghề + lối đánh của sinh vật.</summary>
-        public RankedOpponent OpponentFor(int stage)
+        /// <summary>Kịch bản Săn quái của màn: các đợt quái rừng + chỉ số quái chuẩn (cố định theo màn).</summary>
+        public HuntPlan PlanFor(int stage)
         {
             AdventureStage s = _stages[stage];
-            PetStats p = CreatureStats(stage);
-            var learned = new bool[4];
-            for (int i = 0; i < 4; i++) learned[i] = (s.LearnedMask & (1 << i)) != 0;
-            return new RankedOpponent
-            {
-                Name = s.Creature,
-                Stats = new FighterStats(p.Hp, p.Atk, p.Def, p.Spd, p.Crit),
-                Learned = learned,
-                Bot = BotConfig.Persona(s.Skill, s.Style),
-            };
+            return HuntPlan.Create(s.Region, s.Number, s.Boss, CreatureStats(stage));
         }
 
-        /// <summary>DNA (hình dáng + màu) của sinh vật: cố định theo màn, màu lông theo vùng.</summary>
-        public PetDna CreatureDna(int stage)
-        {
-            AdventureStage s = _stages[stage];
-            AdventureRegion r = _regions[s.Region];
-            PetDna dna = DnaGenerator.Random(new SeededRandom(0xAD0E_0000UL + (ulong)stage * 977UL, 7UL));
-            dna.FurHue = r.Hues[(s.Number - 1) % r.Hues.Length];
-            return dna;
-        }
+        /// <summary>Đi săn màn này. Gọi <see cref="CanStart"/> trước.</summary>
+        public HuntSession StartHunt(int stage, ulong seed, HuntConfig cfg = null) =>
+            new HuntSession(_pets, _evo, this, stage, seed, cfg);
 
-        /// <summary>Tạo trận cho màn này (mode Thám hiểm). Gọi <see cref="CanStart"/> trước.</summary>
-        public BattleSession StartBattle(int stage, ulong seed) =>
-            new BattleSession(_pets, _evo, OpponentFor(stage), seed, BattleMode.Adventure);
+        /// <summary>Màn kế tiếp đã mở (nút "Đánh tiếp" ở thẻ kết quả), -1 nếu không có.</summary>
+        public int NextAfter(int stage) => stage + 1 < _stages.Count && IsUnlocked(stage + 1) ? stage + 1 : -1;
 
         /// <summary>Sao của 1 trận theo kết quả + %HP thú còn lại (0 = thua / hòa / bỏ cuộc).</summary>
         public int StarsFor(bool won, float hpLeft01)
@@ -275,14 +233,7 @@ namespace PawFit.Battle
             return hpLeft01 >= _cfg.TwoStarHp - 1e-4f ? 2 : 1;
         }
 
-        /// <summary>Hết trận Thám hiểm: tính sao (theo %HP còn lại), cộng Coin, ghi tiến độ, lưu file.</summary>
-        public AdventureResult Complete(int stage, BattleResult result)
-        {
-            if (result == null) throw new ArgumentNullException(nameof(result));
-            return Complete(stage, result.PlayerWon, result.PlayerWon ? result.HpLeft : 0f);
-        }
-
-        /// <summary>Như trên, khi đã biết thắng / thua và %HP còn lại (để test).</summary>
+        /// <summary>Hết 1 lần săn: tính sao (theo %HP bé còn lại), cộng Coin, ghi tiến độ, lưu file (HuntSession gọi).</summary>
         public AdventureResult Complete(int stage, bool won, float hpLeft01)
         {
             if (stage < 0 || stage >= _stages.Count) throw new ArgumentOutOfRangeException(nameof(stage));
@@ -326,37 +277,25 @@ namespace PawFit.Battle
 
         private void BuildMap()
         {
-            AddRegion("Đồi Cỏ Gió", "Đồi cỏ sau vườn, toàn bé hoang hiền lành. Hợp với bé mới nở.",
-                      EvolutionStage.Baby, new[] { 20, 8, 13, 4, 24 }, null);
-            AddRegion("Rừng Nấm", "Rừng rậm đầy nấm phát sáng. Sinh vật ở đây lì đòn hơn.",
-                      EvolutionStage.Child, new[] { 58, 52, 2, 46, 60 }, null);
-            AddRegion("Hồ Sương", "Hồ nước phủ sương mờ. Sinh vật nhanh nhẹn, hay canh đỡ.",
-                      EvolutionStage.Teen, new[] { 36, 40, 32, 38, 34 }, null);
-            AddRegion("Núi Lửa", "Đá nóng bỏng chân. Sinh vật hung hăng, đánh rất đau.",
-                      EvolutionStage.Adult, new[] { 0, 4, 62, 2, 1 },
-                      new[] { AdultForm.Fire, AdultForm.Shadow, AdultForm.Steel, AdultForm.Fire, AdultForm.Fire });
-            AddRegion("Hang Pha Lê", "Hang sâu lấp lánh, nơi những sinh vật mạnh nhất sinh sống.",
-                      EvolutionStage.Ultimate, new[] { 48, 44, 34, 50, 47 },
-                      new[] { AdultForm.Light, AdultForm.Shadow, AdultForm.Water, AdultForm.Light, AdultForm.Shadow });
+            AddRegion("Đồi Cỏ Gió", "Đồi cỏ sau vườn: chất nhờn lúc nhúc, dơi bay vù vù. Hợp với bé mới nở.", EvolutionStage.Baby);
+            AddRegion("Rừng Nấm", "Rừng rậm đầy nấm phát sáng. Nấm độc phun bào tử từ xa, phải lao tới đánh.", EvolutionStage.Child);
+            AddRegion("Hồ Sương", "Hồ nước phủ sương mờ. Đá rêu đập đất rất đau: thấy lấy đà thì lướt né.", EvolutionStage.Teen);
+            AddRegion("Núi Lửa", "Đá nóng bỏng chân. Heo rừng lao húc: đỡ sát lúc để phản đòn.", EvolutionStage.Adult);
+            AddRegion("Hang Pha Lê", "Hang sâu lấp lánh, nơi quái mạnh nhất sinh sống.", EvolutionStage.Ultimate);
         }
 
-        private void AddRegion(string name, string blurb, EvolutionStage stage, int[] hues, AdultForm[] forms)
+        private void AddRegion(string name, string blurb, EvolutionStage stage)
         {
             int ri = _regions.Count;
             var region = new AdventureRegion
             {
-                Index = ri, Name = name, Blurb = blurb, Stage = stage, Hues = hues, Forms = forms,
-                FirstStage = _stages.Count, StageCount = _cfg.StageFactors.Length,
+                Index = ri, Name = name, Blurb = blurb, Stage = stage, FirstStage = _stages.Count, StageCount = _cfg.StageFactors.Length,
             };
             _regions.Add(region);
-            float baseSkill = _cfg.RegionSkill[Math.Min(ri, _cfg.RegionSkill.Length - 1)];
             for (int n = 1; n <= region.StageCount; n++)
             {
                 bool boss = n == region.StageCount;
                 int index = _stages.Count;
-                float skill = baseSkill + _cfg.SkillStep * (n - 1) + (boss ? _cfg.BossSkillBonus : 0f);
-                // vùng 1 mới thuộc ngang + lên, trùm vùng 1 + cả vùng 2 thêm V, từ trùm vùng 2 thuộc đủ 4 chiêu
-                int learned = ri == 0 ? (boss ? 7 : 3) : ri == 1 ? (boss ? 15 : 7) : 15;
                 int coins = _cfg.CoinsBase + _cfg.CoinsPerStage * index;
                 _stages.Add(new AdventureStage
                 {
@@ -364,13 +303,9 @@ namespace PawFit.Battle
                     Region = ri,
                     Number = n,
                     Boss = boss,
-                    Creature = Names[Math.Min(ri, Names.Length - 1)][Math.Min(n - 1, 4)],
+                    Creature = HuntPlan.TitleFor(ri, n, boss),
                     Stage = stage,
-                    Form = forms != null ? forms[(n - 1) % forms.Length] : AdultForm.None,
                     StatFactor = _cfg.StageFactors[n - 1],
-                    Skill = Math.Min(1f, skill),
-                    Style = boss ? (ri % 2 == 0 ? BotStyle.Technical : BotStyle.Aggressive) : (BotStyle)((ri + n) % 4),
-                    LearnedMask = learned,
                     Coins = boss ? (int)Math.Round(coins * _cfg.BossCoinFactor) : coins,
                 });
             }

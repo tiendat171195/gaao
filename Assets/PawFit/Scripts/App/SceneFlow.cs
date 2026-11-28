@@ -60,6 +60,12 @@ namespace PawFit.App
         public static GardenScene Garden { get; private set; }
         public static BattleScene Battle { get; private set; }
 
+        /// <summary>Màn Săn quái đang mở (Thám hiểm, Phase 9.3).</summary>
+        public static HuntScene Hunt { get; private set; }
+
+        /// <summary>Đang ở màn đấu hoặc màn Săn quái (vườn tạm dừng, các thẻ trong vườn không mở).</summary>
+        public static bool InFight => Battle != null || Hunt != null;
+
         public static void EnterGarden(ServiceLocator services)
         {
             if (Garden != null) return;
@@ -107,7 +113,7 @@ namespace PawFit.App
         /// <summary>Vào màn đấu (vườn tạm dừng), xong thì quay về vườn.</summary>
         public static void EnterBattle(BattleMode mode, BotLevel level)
         {
-            if (Battle != null || Garden == null) return;
+            if (InFight || Garden == null) return;
             CancelSearch();   // đang tìm trận PvP mà vào sân tập thì thôi tìm
             var pets = _services.Get<PetService>();
             if (!BattleSession.CanStart(pets, _services.Get<HealthService>(), out string reason))
@@ -124,6 +130,7 @@ namespace PawFit.App
         private static void BattleClosed()
         {
             Battle = null;
+            Hunt = null;
             if (Garden != null) Garden.SetPaused(false);
             FlushQuestToast();
         }
@@ -152,7 +159,7 @@ namespace PawFit.App
                 for (int i = 0; i < q.Count; i++)
                     if (q[i].Done && !_questDone[i]) _questToasts.Add(DailyService.QuestText(q[i]));
             SnapshotQuests(daily);
-            if (Battle == null) FlushQuestToast();
+            if (!InFight) FlushQuestToast();
         }
 
         private static void FlushQuestToast()
@@ -208,14 +215,13 @@ namespace PawFit.App
         // ------------------------------------------------------------------
 
         private static readonly string[] DifficultyNames = { "Dễ", "Vừa", "Khó", "Rất khó" };
-        private static readonly string[] StyleNames = { "cân bằng", "hăng máu, đánh dồn", "thủ chắc, hay phản đòn", "kỹ thuật, hay ra chiêu riêng" };
 
         private static string StarText(int n) => new string('★', Mathf.Clamp(n, 0, 3)) + new string('☆', 3 - Mathf.Clamp(n, 0, 3));
 
         /// <summary>Chạm biển Thám hiểm: tổng sao, nút "Đánh tiếp" màn kế, 5 vùng (vùng chưa mở xám).</summary>
         public static void OpenAdventure()
         {
-            if (Garden == null || Battle != null || !_services.TryGet(out AdventureService adv)) return;
+            if (Garden == null || InFight || !_services.TryGet(out AdventureService adv)) return;
             TipDone(TipId.Adventure);
             var pets = _services.Get<PetService>();
             var labels = new List<string>();
@@ -241,9 +247,9 @@ namespace PawFit.App
             enabled.Add(true);
             actions.Add(null);
             float energy = pets.HasPet ? pets.Current.Needs.Energy : 0f;
-            string body = "Tổng ★ " + adv.TotalStars + "/" + adv.MaxStars + " · năng lượng bé " + energy.ToString("0") + "/100" +
-                          " (mỗi trận tốn " + new BattleSessionConfig().FightEnergyCost.ToString("0") + ")\n" +
-                          "Thắng = 1 sao · còn ≥ 40% máu = 2 sao · ≥ 70% = 3 sao. Thắng trùm để mở vùng sau.";
+            string body = "Săn quái rừng theo từng đợt · tổng ★ " + adv.TotalStars + "/" + adv.MaxStars + " · năng lượng bé " + energy.ToString("0") + "/100" +
+                          " (mỗi lần săn tốn " + new BattleSessionConfig().FightEnergyCost.ToString("0") + ")\n" +
+                          "Thắng = 1 sao · còn ≥ 40% máu = 2 sao · ≥ 70% = 3 sao. Hạ trùm để mở vùng sau.";
             GardenUi.ShowChoice("Thám hiểm", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
         }
 
@@ -273,7 +279,7 @@ namespace PawFit.App
             }, enabled.ToArray());
         }
 
-        /// <summary>1 màn: sinh vật, độ khó, thưởng, lối đánh; Đánh! (xám kèm lý do nếu bé chưa đi được).</summary>
+        /// <summary>1 màn: quái sẽ gặp, độ khó, thưởng, cách đánh; Đi săn! (xám kèm lý do nếu bé chưa đi được).</summary>
         private static void OpenStage(int stage)
         {
             var adv = _services.Get<AdventureService>();
@@ -283,59 +289,65 @@ namespace PawFit.App
             string reward = stars == 0 ? "Thắng lần đầu: +" + s.Coins + " Coin" + (s.Boss ? " + mở vùng sau" : "")
                           : stars < 3 ? "Mỗi sao mới: +" + Mathf.RoundToInt(s.Coins * c.NewStarCoinFactor) + " Coin"
                           : "Đủ 3 sao · thắng lại: +" + Mathf.Max(1, Mathf.RoundToInt(s.Coins * c.RepeatCoinFactor)) + " Coin";
+            HuntPlan plan = adv.PlanFor(stage);
+            var names = new List<string>();
+            foreach (MonsterKind k in plan.Kinds) names.Add(MonsterBook.Get(k).Name);
             string body = (s.Boss ? "TRÙM vùng · " : "") + "Độ khó với bé: " + DifficultyNames[(int)adv.DifficultyOf(stage)] +
-                          " · " + StarText(stars) + "\n" + reward + "\nLối đánh: " + StyleNames[(int)s.Style];
+                          " · " + StarText(stars) + "\n" + reward + "\nGặp: " + string.Join(", ", names) + " · " + plan.Waves.Count + " đợt, " +
+                          plan.TotalMonsters + " con\nChạm = đánh · vuốt lên = đập đất · vuốt xuống = đỡ · vuốt ngang = lướt né";
             bool ok = adv.CanStart(stage, out string reason);
             if (!ok) body += "\nChưa đi được: " + reason + ".";
-            GardenUi.ShowChoice(s.Code + " · " + s.Creature, body, new[] { "Đánh!", "Quay lại" }, i =>
+            GardenUi.ShowChoice(s.Code + " · " + s.Creature, body, new[] { "Đi săn!", "Quay lại" }, i =>
             {
                 if (i == 0) EnterAdventure(stage);
                 else OpenRegion(s.Region);
             }, new[] { ok, true });
         }
 
-        /// <summary>Vào trận Thám hiểm (vườn tạm dừng). Hết trận: sao + Coin ở thẻ kết quả, có nút Đánh lại.</summary>
+        /// <summary>
+        /// Đi Săn quái 1 màn Thám hiểm (Phase 9.3, vườn tạm dừng). Hết trận: sao + Coin ở thẻ kết quả, nút Đánh lại,
+        /// thắng mà có màn sau đã mở + bé đủ sức thì thêm nút Đánh tiếp.
+        /// </summary>
         public static void EnterAdventure(int stage)
         {
-            if (Battle != null || Garden == null || !_services.TryGet(out AdventureService adv)) return;
+            if (InFight || Garden == null || !_services.TryGet(out AdventureService adv)) return;
             if (!adv.CanStart(stage, out string reason))
             {
                 GardenUi.ShowCard("Chưa đi được", "Chưa vào màn này được: " + reason + ".");
                 return;
             }
-            CancelSearch();   // đang tìm trận PvP mà đi thám hiểm thì thôi tìm
+            CancelSearch();   // đang tìm trận PvP mà đi săn thì thôi tìm
             AdventureStage s = adv.Stages[stage];
             AdventureRegion r = adv.Regions[s.Region];
-            var view = new RankedMatchView
+            var opt = new HuntOptions
             {
-                Mode = BattleMode.Adventure,
-                Theme = s.Region,
-                Opponent = adv.OpponentFor(stage),
-                Seed = (ulong)DateTime.UtcNow.Ticks,
-                PetName = s.Creature,
-                PlayerName = r.Name,
-                Title = "màn " + s.Code + (s.Boss ? " · TRÙM" : ""),
-                Dna = adv.CreatureDna(stage),
-                Look = BotPlayers.LookFor(s.Stage, s.Form, _services.Get<GameConfig>().Evolution),
-                Accessory = AccessoryKind.None,
-                OpponentScale = s.Boss ? 1.25f : 1f,
-                OnResult = result => AdventureLines(adv, adv.Complete(stage, result)),
-                AgainLabel = "Đánh lại",
+                Stage = stage,
+                Code = s.Code,
+                Title = s.Creature + (s.Boss ? " · TRÙM" : ""),
+                RegionName = r.Name,
+                Lines = h => AdventureLines(adv, h.Result),
                 Again = () => EnterAdventure(stage),
+                Next = h =>
+                {
+                    int next = h.Won ? adv.NextAfter(stage) : -1;
+                    if (next < 0 || !adv.CanStart(next, out _)) return default;   // chưa mở / bé mệt: không có nút (thẻ có ghi lý do)
+                    return new KeyValuePair<string, Action>("Đánh tiếp " + adv.Stages[next].Code, () => EnterAdventure(next));
+                },
             };
             GardenUi.Close();
             Garden.SetPaused(true);
-            Battle = BattleScene.EnterRanked(_services, view, BattleClosed);
+            Hunt = HuntScene.Enter(_services, opt, BattleClosed);
         }
 
         private static List<string> AdventureLines(AdventureService adv, AdventureResult r)
         {
-            AdventureStage s = adv.Stages[r.Stage];
             var lines = new List<string>();
+            if (r == null) return lines;
+            AdventureStage s = adv.Stages[r.Stage];
             if (!r.Won)
             {
-                lines.Add("Chưa thắng được " + s.Creature);
-                lines.Add("Thử đỡ sát đòn để phản đòn, nối combo, hoặc đợi bé lớn thêm");
+                lines.Add("Chưa qua được " + s.Creature);
+                lines.Add("Thấy dấu ! thì vuốt xuống đỡ sát lúc (phản đòn), lướt xuyên qua heo đang lao, bị vây thì vuốt lên đập đất");
                 return lines;
             }
             lines.Add(StarText(r.Stars) + (r.NewStars > 0 ? "  (+" + r.NewStars + " sao mới)" : ""));
@@ -343,6 +355,8 @@ namespace PawFit.App
             if (r.UnlockedRegion >= 0) lines.Add("Mở vùng mới: " + adv.Regions[r.UnlockedRegion].Name + "!");
             else if (r.FirstClear && r.Stage + 1 < adv.Stages.Count && adv.Stages[r.Stage + 1].Region == s.Region)
                 lines.Add("Mở màn " + adv.Stages[r.Stage + 1].Code);
+            int next = adv.NextAfter(r.Stage);
+            if (next >= 0 && !adv.CanStart(next, out string why)) lines.Add("Màn sau chưa đi được: " + why);
             return lines;
         }
 
@@ -353,7 +367,7 @@ namespace PawFit.App
         /// <summary>Chạm quầy hàng: thẻ có số Coin, 3 món dùng ngay (xám nếu chưa mua được), Phụ kiện, Trang trí, 2 kiểu quảng cáo, Thôi.</summary>
         public static void OpenShop()
         {
-            if (Garden == null || Battle != null) return;
+            if (Garden == null || InFight) return;
             TipDone(TipId.Shop);
             var shop = _services.Get<ShopService>();
             var eco = _services.Get<EconomyService>();
@@ -417,7 +431,7 @@ namespace PawFit.App
         /// <summary>Chạm cổng đấu trường: thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút Tìm trận.</summary>
         public static void OpenArena()
         {
-            if (Garden == null || Battle != null) return;
+            if (Garden == null || InFight) return;
             TipDone(TipId.Arena);
             var rank = _services.Get<RankService>();
             RankData d = rank.Current;
@@ -492,7 +506,7 @@ namespace PawFit.App
                     asked = true;
                     net.Connect(null, ok =>
                     {
-                        if (done || Garden == null || Battle != null || !GardenUi.IsOpen) return;   // đã hủy / đã sang màn khác
+                        if (done || Garden == null || InFight || !GardenUi.IsOpen) return;   // đã hủy / đã sang màn khác
                         done = true;
                         if (ok) StartSearch();
                         else ShowConnectFailed(net);
@@ -566,10 +580,10 @@ namespace PawFit.App
             var net = _services.Get<INetworkManager>();
             net.MatchFound -= OnMatchFound;
             string reason = null;
-            if (Garden == null || Battle != null || !RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out reason))
+            if (Garden == null || InFight || !RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out reason))
             {
                 net.LeaveMatch();   // thú vừa ốm / ngủ / mất trong lúc tìm, hoặc đang ở trận khác
-                if (Battle == null)
+                if (!InFight)
                 {
                     GardenUi.Close();
                     GardenUi.Toast("Hủy trận: thú " + (reason ?? "không đấu được lúc này"));
@@ -595,10 +609,10 @@ namespace PawFit.App
         {
             var net = _services.Get<INetworkManager>();
             string reason = null;
-            if (Garden == null || Battle != null || !RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out reason))
+            if (Garden == null || InFight || !RankService.CanPlayRanked(_services.Get<PetService>(), _services.Get<HealthService>(), out reason))
             {
                 net.LeaveMatch();   // trong 2,4 giây chờ: thú vừa ốm / ngủ / mất, hoặc đã vào trận khác
-                if (Battle == null)
+                if (!InFight)
                 {
                     GardenUi.Close();
                     GardenUi.Toast("Hủy trận: thú " + (reason ?? "không đấu được lúc này"));
@@ -668,7 +682,7 @@ namespace PawFit.App
         /// <summary>Chạm hòm thư: âm thanh, tài khoản (biệt danh, mã chuyển máy), xem lại hướng dẫn, copy mã DNA, phiên bản game.</summary>
         public static void OpenSettings()
         {
-            if (Garden == null || Battle != null) return;
+            if (Garden == null || InFight) return;
             var settings = _services.Get<SettingsService>();
             var pets = _services.Get<PetService>();
             string dna = pets.DnaCode;
@@ -774,7 +788,7 @@ namespace PawFit.App
         /// <summary>Hỏi bật thông báo (1 lần, sau khi chơi một lúc): thẻ giải thích trước, đồng ý mới xin quyền của máy.</summary>
         public static void AskNotifications()
         {
-            if (Garden == null || Battle != null || GardenUi.IsOpen || !_services.TryGet(out NotificationService notify)) return;
+            if (Garden == null || InFight || GardenUi.IsOpen || !_services.TryGet(out NotificationService notify)) return;
             var pets = _services.Get<PetService>();
             string pet = pets.HasPet ? pets.Current.Name : "bé";
             GardenUi.ShowChoice("Bật thông báo?",
@@ -817,7 +831,7 @@ namespace PawFit.App
             GardenUi.ShowLive("Mã chuyển máy", () => "Đang lấy mã...", (string[])null, null);
             online.RequestTransferCode((reply, error) =>
             {
-                if (Garden == null || Battle != null) return;
+                if (Garden == null || InFight) return;
                 if (reply == null)
                 {
                     GardenUi.Close();
@@ -996,7 +1010,7 @@ namespace PawFit.App
             {
                 GardenUi.Close();   // tắt màn quảng cáo giả
                 GardenUi.Toast(AdText(outcome, eco));
-                if (Garden != null && Battle == null) OpenShop();
+                if (Garden != null && !InFight) OpenShop();
             });
             if (started && eco.Ads is MockAdService mock && mock.IsShowing)
                 GardenUi.ShowLive("Quảng cáo (giả lập)",
