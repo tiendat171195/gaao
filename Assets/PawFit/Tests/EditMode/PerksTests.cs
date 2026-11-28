@@ -119,6 +119,9 @@ namespace PawFit.Tests
             Assert.IsFalse(daily.WindmillReady);
             Assert.IsFalse(daily.TakeWindmillTreat(out string again));
             StringAssert.Contains("mai", again);
+            daily.StartNewDayForDebug();
+            Assert.IsTrue(daily.WindmillReady, "bảng DEV ▸ Sang ngày mới: có túi bánh mới để thử lại");
+            Assert.IsTrue(daily.TakeWindmillTreat(out _));
             f.Time.Advance(TimeSpan.FromDays(1));
             Assert.IsTrue(daily.WindmillReady, "sang ngày mới có túi bánh mới");
             daily.Dispose();

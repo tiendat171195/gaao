@@ -374,7 +374,7 @@ namespace PawFit.Garden
 
         // ------------------------------------------------------------------ công cụ test (bảng DEV)
 
-        /// <summary>Coi như hôm qua mới mở game (để thử sang ngày mới: chuỗi +1, nhiệm vụ + điểm đào mới).</summary>
+        /// <summary>Coi như hôm qua mới mở game (để thử sang ngày mới: chuỗi +1, nhiệm vụ + điểm đào mới, túi bánh cối xay gió mới).</summary>
         public void StartNewDayForDebug()
         {
             DailyData d = Data;
@@ -382,6 +382,7 @@ namespace PawFit.Garden
             string yesterday = DayKey(_time.UtcNow.AddDays(-1));
             d.Day = yesterday;
             d.LastLoginDay = yesterday;
+            if (d.WindmillDay != null) d.WindmillDay = yesterday;   // túi bánh hôm nay đã ăn: coi như ăn hôm qua
             _spotsDay = null;
             EnsureToday();
         }
