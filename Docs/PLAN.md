@@ -45,7 +45,7 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 5.3 | Build Android / iOS | 🔄 Có menu build Android (APK + AAB cho Google Play, kiểm khóa ký, số build tự tăng) + iOS; chờ bạn build thử (`Docs/BUILD.md`) |
 | 6 | Model thật (Gen 2) + vườn đẹp + shader lông + LOD mobile | ⏳ (sau gameplay). Yêu cầu kỹ thuật: `Docs/MODEL_SPEC.md`; làm bằng tool AI: `Docs/AI_ART_GUIDE.md` |
 | 7.1 | Cảm giác đánh (bạn góp ý sau lần build đầu): sửa lỗi thú đứng yên, bộ đệm vuốt, nhịp nhanh hơn, combo, thanh Nộ cho Tuyệt chiêu, nhận dạng vuốt dễ hơn, hình ra đòn thấy ngay (GDD G9d) | ✅ Chờ bạn đánh thử trên điện thoại |
-| 7.2 | Thám hiểm (PvE): bản đồ nhiều vùng, màn đấu sinh vật hoang, 1–3 sao, thưởng lần đầu, tốn năng lượng thú; lối vào trong vườn | ⏳ |
+| 7.2 | Thám hiểm (PvE): 5 vùng × 5 màn đấu sinh vật hoang (trùm cuối vùng), 1–3 sao, Coin, độ khó bám theo tiến hóa, tốn năng lượng; biển chỉ đường trong vườn (GDD G15) | ✅ Chờ bạn thử trên điện thoại |
 | 7.3 | Giữ chân người chơi: 3 nhiệm vụ mỗi ngày + chuỗi ngày đăng nhập + điểm đào kho báu trong vườn | ⏳ |
 
 ## Kiến trúc thư mục

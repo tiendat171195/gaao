@@ -36,9 +36,9 @@ namespace PawFit.Pet
     {
         /// <summary>
         /// 2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). 3 = Phase 5.1 (thêm ví Coin). 4 = Phase 5.2 (thêm phụ kiện + trang trí).
-        /// 5 = Phase 4.3 (thêm rank Elo + mùa giải). File bản cũ vẫn đọc được.
+        /// 5 = Phase 4.3 (thêm rank Elo + mùa giải). 6 = Phase 7.2 (thêm Thám hiểm). File bản cũ vẫn đọc được.
         /// </summary>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
         public int Version = CurrentVersion;
 
         /// <summary>Thú đang sống. null khi thú đã mất và trứng chưa nở.</summary>
@@ -60,6 +60,9 @@ namespace PawFit.Pet
 
         /// <summary>Rank Elo + mùa giải của người chơi (thú mất vẫn giữ). File cũ chưa có thì tạo khi cần (Elo khởi đầu).</summary>
         public RankData Rank;
+
+        /// <summary>Tiến độ Thám hiểm (sao từng màn). File cũ chưa có thì tạo rỗng khi cần.</summary>
+        public AdventureData Adventure;
     }
 
     // ---- Sự kiện (View lắng nghe qua EventBus) ----
@@ -173,6 +176,18 @@ namespace PawFit.Pet
                 if (c.Accessories == null) c.Accessories = new List<AccessoryKind>();   // file sửa tay / lỗi: không để null
                 if (c.Decor == null) c.Decor = new List<DecorKind>();
                 return c;
+            }
+        }
+
+        /// <summary>Tiến độ Thám hiểm (AdventureService đọc / ghi qua đây). null nếu chưa nạp file lưu.</summary>
+        public AdventureData Adventure
+        {
+            get
+            {
+                if (_game == null) return null;
+                AdventureData a = _game.Adventure ?? (_game.Adventure = new AdventureData());
+                if (a.Stars == null) a.Stars = new List<int>();   // file sửa tay / lỗi: không để null
+                return a;
             }
         }
 

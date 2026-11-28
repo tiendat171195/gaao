@@ -9,7 +9,8 @@ namespace PawFit.Garden.View
     /// Đổi chạm / kéo thành lệnh (không có nút nào):
     ///   chạm đất = thú chạy tới · kéo đất = kéo camera · chạm thú = vuốt ve (đang ngủ thì dậy)
     ///   kéo thú = dắt đi (thả vào hồ = tắm, vào ổ = ngủ) · kéo từ khay đồ ăn thả lên thú = cho ăn
-    ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy · chạm hòm thư (cạnh cổng đấu trường) = cài đặt.
+    ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy · chạm hòm thư (cạnh cổng đấu trường) = cài đặt
+    ///   chạm biển Thám hiểm (góc sau bên trái) = bản đồ Thám hiểm.
     /// Phân loại cử chỉ nằm ở PointerGestureClassifier (C# thuần); lớp này chỉ raycast + chuyển lệnh.
     /// </summary>
     public sealed class GardenInputRouter : MonoBehaviour
@@ -36,6 +37,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm trúng cổng đấu trường (PvP / rank).</summary>
         public Action ArenaTapped { get; set; }
 
+        /// <summary>Chạm trúng biển chỉ đường Thám hiểm.</summary>
+        public Action AdventureTapped { get; set; }
+
         /// <summary>Mẹo hướng dẫn: báo người chơi đã chạm đất / dắt thú (mẹo đó không hiện nữa). Có thể null.</summary>
         public TipService Tips { get; set; }
 
@@ -47,6 +51,7 @@ namespace PawFit.Garden.View
         private ShopStallView _downShop;
         private MailboxView _downMailbox;
         private ArenaGateView _downArena;
+        private AdventureSignView _downAdventure;
         private PointerGestureClassifier _gestures;
         private GardenCamera _camCtl;
         private PetController _pet;
@@ -109,6 +114,7 @@ namespace PawFit.Garden.View
             _downShop = null;
             _downMailbox = null;
             _downArena = null;
+            _downAdventure = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -125,6 +131,8 @@ namespace PawFit.Garden.View
                 if (_downMailbox != null) return PointerTarget.Mailbox;
                 _downArena = hit.collider.GetComponentInParent<ArenaGateView>();
                 if (_downArena != null) return PointerTarget.Arena;
+                _downAdventure = hit.collider.GetComponentInParent<AdventureSignView>();
+                if (_downAdventure != null) return PointerTarget.Adventure;
             }
             return PointerTarget.Ground;
         }
@@ -176,6 +184,14 @@ namespace PawFit.Garden.View
                     {
                         TapBounce.Play(_downArena);
                         ArenaTapped?.Invoke();
+                    }
+                    else HandleGround(e, screen, onGround, g);
+                    break;
+                case PointerTarget.Adventure:
+                    if (e.Kind == GestureKind.Tap)
+                    {
+                        TapBounce.Play(_downAdventure);
+                        AdventureTapped?.Invoke();
                     }
                     else HandleGround(e, screen, onGround, g);
                     break;

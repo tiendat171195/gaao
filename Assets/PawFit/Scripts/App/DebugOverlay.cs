@@ -198,6 +198,15 @@ namespace PawFit.App
             if (GUILayout.Button("Huấn luyện", _button)) SceneFlow.EnterBattle(PawFit.Battle.BattleMode.Training, PawFit.Battle.BotLevel.Easy);
             if (GUILayout.Button("Đấu Bot Thường", _button)) SceneFlow.EnterBattle(PawFit.Battle.BattleMode.BotFight, PawFit.Battle.BotLevel.Normal);
             GUILayout.EndHorizontal();
+            if (S.TryGet(out PawFit.Battle.AdventureService adv))   // Thám hiểm (Phase 7.2)
+            {
+                GUILayout.Label($"Thám hiểm: ★ {adv.TotalStars}/{adv.MaxStars} · màn kế {(adv.NextStage >= 0 ? adv.Stages[adv.NextStage].Code : "-")}", _small);
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Bản đồ", _button)) SceneFlow.OpenAdventure();
+                if (GUILayout.Button("Mở hết (1 sao)", _button)) adv.SetAllForDebug(1);
+                if (GUILayout.Button("Xóa tiến độ", _button)) adv.SetAllForDebug(0);
+                GUILayout.EndHorizontal();
+            }
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("+10 Sức", _button)) evo.Training.Add(TrainingAxis.Strength, 10f);
             if (GUILayout.Button("+10 Tốc", _button)) evo.Training.Add(TrainingAxis.Speed, 10f);

@@ -6,7 +6,7 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Các mẹo hướng dẫn (vườn không có nút nên người mới cần được chỉ đúng lúc).</summary>
-    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9 }
+    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9, Adventure = 10 }
 
     public sealed class TipConfig
     {
@@ -22,6 +22,7 @@ namespace PawFit.Garden
         /// <summary>Chơi bấy nhiêu giây thì giới thiệu quầy hàng / sân tập / đấu trường.</summary>
         public float ShopAfterSeconds = 150f;
         public float TrainingAfterSeconds = 300f;
+        public float AdventureAfterSeconds = 390f;
         public float ArenaAfterSeconds = 480f;
 
         /// <summary>Vắng từ bấy nhiêu giờ trở lên thì vào game có dòng "trong lúc bạn vắng".</summary>
@@ -128,6 +129,7 @@ namespace PawFit.Garden
             if (!Seen(TipId.Shop) && _played >= _cfg.ShopAfterSeconds) return TipId.Shop;
             if (!Seen(TipId.Training) && _health.CanTrain && !pet.IsSleeping &&
                 (_played >= _cfg.TrainingAfterSeconds || _evo.Stage >= EvolutionStage.Child)) return TipId.Training;
+            if (!Seen(TipId.Adventure) && Seen(TipId.Training) && _health.CanTrain && _played >= _cfg.AdventureAfterSeconds) return TipId.Adventure;
             if (!Seen(TipId.Arena) && Seen(TipId.Training) && _health.CanTrain && _played >= _cfg.ArenaAfterSeconds) return TipId.Arena;
             return null;
         }
@@ -153,6 +155,7 @@ namespace PawFit.Garden
                 case TipId.Shop: return "Quầy hàng ở phía trước bên phải: thuốc, bánh, phụ kiện, trang trí, xem quảng cáo lấy Coin.";
                 case TipId.Training: return "Chạm hình nộm ở sân tập (phía sau) để học chiêu bằng cách vuốt, hoặc đấu thử.";
                 case TipId.Arena: return "Cổng đấu trường sau sân tập: đấu PvP 90 giây, thắng được Elo và Coin.";
+                case TipId.Adventure: return "Biển gỗ góc sau bên trái vườn dẫn đi Thám hiểm: đấu sinh vật hoang, gom sao, nhận Coin. Bé lớn lên sẽ đi được xa hơn.";
                 default: return "";
             }
         }

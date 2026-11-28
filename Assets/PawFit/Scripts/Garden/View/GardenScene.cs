@@ -50,6 +50,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm cổng đấu trường (App mở thẻ rank / PvP).</summary>
         public Action ArenaTapped { get; set; }
 
+        /// <summary>Chạm biển chỉ đường Thám hiểm (App mở bản đồ Thám hiểm, Phase 7.2).</summary>
+        public Action AdventureTapped { get; set; }
+
         /// <summary>Tạm dừng vườn khi đang ở màn đấu: không nhận chạm, camera đứng, thú đứng yên.</summary>
         public void SetPaused(bool paused)
         {
@@ -107,6 +110,7 @@ namespace PawFit.Garden.View
             _router.ShopTapped = () => ShopTapped?.Invoke();
             _router.MailboxTapped = () => MailboxTapped?.Invoke();
             _router.ArenaTapped = () => ArenaTapped?.Invoke();
+            _router.AdventureTapped = () => AdventureTapped?.Invoke();
             _router.Tips = s.TryGet(out TipService tips) ? tips : null;
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));

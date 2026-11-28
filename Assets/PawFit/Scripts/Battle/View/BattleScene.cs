@@ -10,11 +10,25 @@ using UnityEngine;
 namespace PawFit.Battle.View
 {
     /// <summary>
-    /// Dữ liệu 1 trận PvP để màn đấu dựng (App điền từ kết quả ghép trận): đối thủ trong trận + thú của họ trông thế nào,
-    /// và hàm App gọi lúc hết trận để tính Elo / Coin rồi trả về các dòng chữ cho thẻ kết quả.
+    /// Dữ liệu 1 trận với đối thủ cho trước để màn đấu dựng (App điền): PvP (từ kết quả ghép trận) hoặc Thám hiểm (sinh vật hoang).
+    /// Gồm đối thủ trong trận + thú của họ trông thế nào, và hàm App gọi lúc hết trận để tính Elo / sao / Coin
+    /// rồi trả về các dòng chữ cho thẻ kết quả.
     /// </summary>
     public sealed class RankedMatchView
     {
+        /// <summary>Ranked (PvP) hoặc Adventure (Thám hiểm, Phase 7.2).</summary>
+        public BattleMode Mode = BattleMode.Ranked;
+
+        /// <summary>Sân đấu: -1 = đấu trường thường; 0..4 = vùng Thám hiểm (đồi cỏ, rừng nấm, hồ sương, núi lửa, hang pha lê).</summary>
+        public int Theme = -1;
+
+        /// <summary>Cỡ thú đối thủ (trùm Thám hiểm to hơn).</summary>
+        public float OpponentScale = 1f;
+
+        /// <summary>Thẻ kết quả có thêm nút này (vd "Đánh lại"): rời màn đấu rồi gọi Again.</summary>
+        public string AgainLabel;
+        public Action Again;
+
         public RankedOpponent Opponent;
         public ulong Seed;
 
@@ -84,7 +98,7 @@ namespace PawFit.Battle.View
         {
             if (match == null) throw new ArgumentNullException(nameof(match));
             var scene = new GameObject("PawFit_Battle").AddComponent<BattleScene>();
-            scene.Build(s, BattleMode.Ranked, BotLevel.Normal, onExit, match);
+            scene.Build(s, match.Mode, BotLevel.Normal, onExit, match);
             return scene;
         }
 
@@ -96,16 +110,17 @@ namespace PawFit.Battle.View
             _log = s.Get<ILog>();
             _onExit = onExit;
             _match = match;
-            if (match != null)   // PvP: Elo do App (mạng giả lập) / máy chủ tính sau trận
+            if (match != null)   // PvP: Elo do App (mạng giả lập) / máy chủ tính sau trận; Thám hiểm: sao + Coin do AdventureService
                 _session = match.Feed != null ? new BattleSession(_pets, _evo, match.Opponent, match.Feed)
-                                              : new BattleSession(_pets, _evo, match.Opponent, match.Seed);
+                                              : new BattleSession(_pets, _evo, match.Opponent, match.Seed,
+                                                                  match.Mode == BattleMode.Adventure ? BattleMode.Adventure : BattleMode.Ranked);
             else
             {
                 ICoinWallet wallet = s.TryGet(out ICoinWallet w) ? w : null;   // thắng Bot có Coin (Phase 5.1)
                 _session = new BattleSession(mode, level, _pets, _evo, (ulong)DateTime.UtcNow.Ticks, wallet: wallet);
             }
             transform.position = ArenaPos;
-            BuildArena();
+            BuildArena(match != null ? match.Theme : -1);
 
             // thú của người chơi (bên trái, nhìn sang phải + hơi về camera)
             Transform p = Prim.Group(transform, "Player", new Vector3(-1.3f, 0f, 0f));
@@ -154,7 +169,8 @@ namespace PawFit.Battle.View
             if (match != null)
             {
                 _hud.Big(_pets.Current.Name + "   VS   " + match.PetName, 2.2f);
-                _hud.Hint("Đối thủ: " + match.PlayerName + " · " + match.Title, 3f);
+                _hud.Hint(match.Mode == BattleMode.Adventure ? match.PlayerName + " · " + match.Title + " · thắng còn nhiều máu = nhiều sao"
+                                                             : "Đối thủ: " + match.PlayerName + " · " + match.Title, 3f);
             }
             _log.Info("[PawFit] Vào trận: " + mode + (match != null ? " · gặp " + match.PlayerName : training ? "" : " · " + level));
         }
@@ -164,6 +180,7 @@ namespace PawFit.Battle.View
         {
             Transform d = Prim.Group(transform, "Opponent", new Vector3(1.3f, 0f, 0f));
             Transform dBody = Prim.Group(d, "Body");
+            dBody.localScale = Vector3.one * Mathf.Clamp(match.OpponentScale, 0.5f, 2f);   // trùm Thám hiểm to hơn
             var host = new GameObject("Pet");
             host.transform.SetParent(dBody, false);
             host.transform.localRotation = Quaternion.Euler(0f, -65f, 0f);   // đối xứng với thú mình (65°)
@@ -174,16 +191,94 @@ namespace PawFit.Battle.View
             _dummy.Init(dBody, -1f, avatar);
         }
 
-        private void BuildArena()
+        // màu sân theo vùng: sân ngoài, sân trong, nền đất, trời / vách
+        private static readonly string[][] ThemeColors =
         {
-            Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(0f, -0.05f, 0f), new Vector3(6.5f, 0.05f, 4f), Prim.Hex("#E3C88F"), smoothness: 0.05f);
-            Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(0f, -0.02f, 0f), new Vector3(5.6f, 0.03f, 3.3f), Prim.Hex("#D9B877"), smoothness: 0.05f);
-            Prim.Make(PrimitiveType.Cube, transform, new Vector3(0f, -0.3f, 6f), new Vector3(40f, 0.5f, 20f), Prim.Hex("#8CC36A"), smoothness: 0.05f);
-            Prim.Make(PrimitiveType.Cube, transform, new Vector3(0f, 3f, 7f), new Vector3(40f, 8f, 0.2f), Prim.Hex("#BFE0F2"), smoothness: 0f);
-            for (int i = -4; i <= 4; i++)   // hàng rào gỗ phía sau
+            new[] { "#B9DB8A", "#A7CF77", "#8CC36A", "#CDEBF7" },   // 0 Đồi Cỏ Gió
+            new[] { "#7D9A5E", "#6E8C52", "#4F6B3E", "#8E7BB5" },   // 1 Rừng Nấm
+            new[] { "#CFE0E2", "#BCD3D7", "#9FC3C9", "#DDE8EE" },   // 2 Hồ Sương
+            new[] { "#6B5751", "#5C4A45", "#4A3B37", "#E9967A" },   // 3 Núi Lửa
+            new[] { "#5A4E7D", "#4C416B", "#3E3557", "#2B2547" },   // 4 Hang Pha Lê
+        };
+
+        /// <summary>Sân đấu: theme -1 = đấu trường (cát + hàng rào gỗ); 0..4 = vùng Thám hiểm, mỗi vùng màu + đồ vật riêng.</summary>
+        private void BuildArena(int theme)
+        {
+            bool region = theme >= 0 && theme < ThemeColors.Length;
+            string[] c = region ? ThemeColors[theme] : new[] { "#E3C88F", "#D9B877", "#8CC36A", "#BFE0F2" };
+            Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(0f, -0.05f, 0f), new Vector3(6.5f, 0.05f, 4f), Prim.Hex(c[0]), smoothness: 0.05f);
+            Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(0f, -0.02f, 0f), new Vector3(5.6f, 0.03f, 3.3f), Prim.Hex(c[1]), smoothness: 0.05f);
+            Prim.Make(PrimitiveType.Cube, transform, new Vector3(0f, -0.3f, 6f), new Vector3(40f, 0.5f, 20f), Prim.Hex(c[2]), smoothness: 0.05f);
+            Prim.Make(PrimitiveType.Cube, transform, new Vector3(0f, 3f, 7f), new Vector3(40f, 8f, 0.2f), Prim.Hex(c[3]), smoothness: 0f);
+            if (!region)
             {
-                Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(i * 1.2f, 0.45f, 2.6f), new Vector3(0.12f, 0.45f, 0.12f), Prim.Hex("#B9865A"));
-                if (i < 4) Prim.Make(PrimitiveType.Cube, transform, new Vector3(i * 1.2f + 0.6f, 0.65f, 2.6f), new Vector3(1.2f, 0.08f, 0.06f), Prim.Hex("#7A5236"));
+                for (int i = -4; i <= 4; i++)   // hàng rào gỗ phía sau
+                {
+                    Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(i * 1.2f, 0.45f, 2.6f), new Vector3(0.12f, 0.45f, 0.12f), Prim.Hex("#B9865A"));
+                    if (i < 4) Prim.Make(PrimitiveType.Cube, transform, new Vector3(i * 1.2f + 0.6f, 0.65f, 2.6f), new Vector3(1.2f, 0.08f, 0.06f), Prim.Hex("#7A5236"));
+                }
+                return;
+            }
+            var rng = new System.Random(17 + theme);
+            float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+            switch (theme)
+            {
+                case 0:   // đồi cỏ: 3 quả đồi xa + bụi cây + hoa
+                    for (int i = 0; i < 3; i++)
+                        Prim.Make(PrimitiveType.Sphere, transform, new Vector3(-7f + i * 7f, -0.5f, 6f), new Vector3(9f, 4.5f, 4f),
+                                  Prim.Hex(i == 1 ? "#7FBF5A" : "#93CC6B"), smoothness: 0.05f);
+                    for (int i = 0; i < 7; i++)
+                    {
+                        float x = R(-6f, 6f);
+                        Prim.Make(PrimitiveType.Sphere, transform, new Vector3(x, 0.2f, R(2.6f, 4f)), Vector3.one * R(0.5f, 0.9f), Prim.Hex("#5FA84F"), smoothness: 0.1f);
+                        Prim.Make(PrimitiveType.Sphere, transform, new Vector3(R(-5f, 5f), 0.05f, R(1.8f, 3f)), Vector3.one * 0.14f,
+                                  Prim.Hex(i % 2 == 0 ? "#F7C6D9" : "#FFF1A8"));
+                    }
+                    break;
+                case 1:   // rừng nấm: thân cây tối + nấm đỏ chấm trắng
+                    for (int i = 0; i < 6; i++)
+                        Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(-7.5f + i * 3f, 2f, R(4.5f, 6f)), new Vector3(0.6f, 2.5f, 0.6f),
+                                  Prim.Hex("#5B4636"));
+                    for (int i = 0; i < 6; i++)
+                    {
+                        float x = (i < 3 ? -1f : 1f) * R(3.4f, 6f), z = R(2.4f, 4f), h = R(0.5f, 1.1f);
+                        Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(x, h * 0.5f, z), new Vector3(0.18f, h * 0.5f, 0.18f), Prim.Hex("#F3E6C4"));
+                        Prim.Make(PrimitiveType.Sphere, transform, new Vector3(x, h, z), new Vector3(0.9f, 0.45f, 0.9f) * (0.6f + h * 0.5f),
+                                  Prim.Hex(i % 2 == 0 ? "#D9443B" : "#B04BC0"), smoothness: 0.4f);
+                        Prim.Make(PrimitiveType.Sphere, transform, new Vector3(x + 0.15f, h + 0.18f, z - 0.25f), Vector3.one * 0.12f, Color.white);
+                    }
+                    break;
+                case 2:   // hồ sương: mặt hồ phía sau, cỏ lau, sương mờ
+                    Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(0f, -0.04f, 5f), new Vector3(18f, 0.02f, 5f), Prim.Hex("#7FB7D6"), smoothness: 0.9f);
+                    for (int i = 0; i < 12; i++)
+                        Prim.Make(PrimitiveType.Cylinder, transform, new Vector3(R(-7f, 7f), 0.45f, R(2.4f, 3f)), new Vector3(0.04f, R(0.35f, 0.6f), 0.04f),
+                                  Prim.Hex("#8FA86E"));
+                    for (int i = 0; i < 5; i++)
+                        Prim.Make(PrimitiveType.Sphere, transform, new Vector3(-8f + i * 4f, R(0.6f, 1.2f), R(5.5f, 6.5f)), new Vector3(4f, 1.2f, 1.5f),
+                                  Prim.Hex("#EEF3F6"), smoothness: 0f);
+                    break;
+                case 3:   // núi lửa: núi xa đỉnh lửa, vũng dung nham, đá
+                    Prim.Make(PrimitiveType.Sphere, transform, new Vector3(2f, 1f, 6.5f), new Vector3(10f, 7f, 3f), Prim.Hex("#4A3B37"), smoothness: 0.05f);
+                    Prim.Make(PrimitiveType.Sphere, transform, new Vector3(2f, 4.3f, 6.2f), new Vector3(2.2f, 0.8f, 1f), Prim.Hex("#FF7A2F"), smoothness: 0.9f);
+                    for (int i = 0; i < 4; i++)
+                        Prim.Make(PrimitiveType.Cylinder, transform, new Vector3((i % 2 == 0 ? -1f : 1f) * R(3.8f, 6f), -0.01f, R(2f, 3.6f)),
+                                  new Vector3(R(0.9f, 1.6f), 0.01f, R(0.6f, 1f)), Prim.Hex("#FF8C2E"), smoothness: 0.9f);
+                    for (int i = 0; i < 6; i++)
+                        Prim.Make(PrimitiveType.Sphere, transform, new Vector3(R(-6.5f, 6.5f), 0.15f, R(2.6f, 4.2f)), new Vector3(R(0.5f, 1f), R(0.4f, 0.7f), R(0.5f, 0.9f)),
+                                  Prim.Hex("#3A2E2B"), smoothness: 0.1f);
+                    break;
+                default:   // hang pha lê: tinh thể xanh / tím lấp lánh, nhũ đá
+                    for (int i = 0; i < 9; i++)
+                    {
+                        float x = (i % 2 == 0 ? -1f : 1f) * R(3.2f, 7f), h = R(0.8f, 2f);
+                        Prim.Make(PrimitiveType.Cube, transform, new Vector3(x, h * 0.45f, R(2.4f, 4.5f)), new Vector3(0.35f, h, 0.35f),
+                                  Prim.Hex(i % 3 == 0 ? "#7FE3F0" : i % 3 == 1 ? "#B58CF2" : "#E3A6F5"), smoothness: 0.95f,
+                                  rotation: Quaternion.Euler(R(-12f, 12f), R(0f, 90f), R(-15f, 15f)));
+                    }
+                    for (int i = 0; i < 6; i++)
+                        Prim.Make(PrimitiveType.Capsule, transform, new Vector3(-7.5f + i * 3f, 6f, R(5f, 6.5f)), new Vector3(0.5f, R(1f, 1.8f), 0.5f),
+                                  Prim.Hex("#463C66"));
+                    break;
             }
         }
 
@@ -464,7 +559,14 @@ namespace PawFit.Battle.View
             if (r.Coins > 0) lines.Add("+" + r.Coins + " Coin");
             if (_match?.OnResult != null) lines.AddRange(_match.OnResult(r));   // PvP: Elo / bậc / Coin do App tính
             if (lines.Count == 0) lines.Add("Hôm nay tập đủ rồi, mai tập tiếp nhé");
-            _hud.ShowResult(title, string.Join("\n", lines), Exit);
+            Action again = _match?.Again;
+            if (again != null && !string.IsNullOrEmpty(_match.AgainLabel))   // Thám hiểm: "Đánh lại" = rời màn đấu rồi vào lại
+                _hud.ShowResult(title, string.Join("\n", lines), Exit, _match.AgainLabel, () =>
+                {
+                    Exit();
+                    again();
+                });
+            else _hud.ShowResult(title, string.Join("\n", lines), Exit);
         }
 
         private void OnDestroy() => Time.timeScale = 1f;   // rời màn đấu bằng đường nào cũng trả tốc độ game về bình thường

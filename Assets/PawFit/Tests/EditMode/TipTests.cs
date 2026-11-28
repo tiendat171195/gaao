@@ -78,7 +78,7 @@ namespace PawFit.Tests
         }
 
         [Test]
-        public void Discovery_ShopTrainingArena_ByPlayTime()
+        public void Discovery_ShopTrainingAdventureArena_ByPlayTime()
         {
             foreach (TipId id in new[] { TipId.Move, TipId.Pet, TipId.Lead, TipId.Feed, TipId.Bathe, TipId.Sleep }) _tips.Done(id);
             var shown = new List<TipId>();
@@ -87,7 +87,7 @@ namespace PawFit.Tests
                 TipId? t = _tips.Update(0.5f);
                 if (t.HasValue) shown.Add(t.Value);
             }
-            CollectionAssert.AreEqual(new[] { TipId.Shop, TipId.Training, TipId.Arena }, shown);
+            CollectionAssert.AreEqual(new[] { TipId.Shop, TipId.Training, TipId.Adventure, TipId.Arena }, shown);
         }
 
         [Test]

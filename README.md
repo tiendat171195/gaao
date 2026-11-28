@@ -154,6 +154,17 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Thắng Bot được thêm điểm + Coin (Dễ +5, Thường +10, Khó +15).
   - Mỗi buổi tốn năng lượng + no bụng.
 
+## Thám hiểm (Phase 7.2)
+
+- **Vào:** chạm **biển gỗ "THÁM HIỂM"** ở góc sau bên trái vườn (cạnh lối đá dẫn ra khe hở hàng rào).
+- **Bản đồ:** 5 vùng, mỗi vùng 5 màn, màn cuối là **trùm**:
+  1. Đồi Cỏ Gió (hợp bé Baby) · 2. Rừng Nấm (Child) · 3. Hồ Sương (Teen) · 4. Núi Lửa (Adult) · 5. Hang Pha Lê (Ultimate).
+  - Bé lớn lên mới đi xa được: sinh vật mạnh ngang bé ở giai đoạn của vùng. Thẻ màn ghi độ khó so với bé (Dễ / Vừa / Khó / Rất khó).
+  - Màn sau mở khi thắng màn trước; thắng trùm thì mở vùng sau.
+- **Sao:** thắng = ★, còn ≥ 40% máu = ★★, còn ≥ 70% máu = ★★★. Coin khi thắng lần đầu + mỗi sao mới, thắng lại được ít hơn.
+- Mỗi trận tốn năng lượng như đấu Bot. Bé mệt (năng lượng < 15), ốm hoặc đang ngủ thì không đi được.
+- Hết trận có nút **Đánh lại** để thử ngay.
+
 ## Coin, quầy hàng, quảng cáo (Phase 5.1)
 
 - **Ví Coin:** khởi đầu 200 Coin. Ví là của người chơi nên thú mất vẫn còn. Không có nạp tiền.
@@ -249,6 +260,7 @@ Cả 2 đều mua ở quầy hàng, mua 1 lần là có mãi. Đồ là của ng
   - Khi thú đã mất: xem trứng còn bao lâu nở, thừa hưởng trait gì, nút **Trứng nở được ngay**.
   - Tiến hóa: xem giai đoạn, dạng đang nghiêng, CareScore, điểm tập, chỉ số, lực chiến. Nút **+1 ngày tuổi**, **Lên giai đoạn**, **Thuộc 1 chiêu**, **+10** từng hướng tập.
   - Nút **Huấn luyện** / **Đấu Bot Thường**: vào sân tập ngay, không cần đi tới hình nộm.
+  - Thám hiểm: xem tổng sao + màn kế; nút **Bản đồ**, **Mở hết (1 sao)**, **Xóa tiến độ**.
   - Kinh tế: xem Coin, lượt quảng cáo còn lại, tổng đã nhận / đã tiêu. Nút **+100 Coin** / **-100 Coin** / **Trả lượt QC** / **Mở quầy hàng** / **QC: hết hàng** (giả lập không có quảng cáo).
   - Rank: xem bậc / Elo / mùa. Nút **Thắng PvP giả** / **Thua PvP giả** (đổi Elo như thắng / thua 1 người ngang cơ; thắng +30 Coin). Nút **Đấu trường** mở thẻ đấu trường ngay.
   - Phụ kiện / trang trí: xem đang đeo gì, có mấy món. Nút **Có hết đồ (test)** (có hết, không trừ Coin) và **Đổi phụ kiện** (lần lượt từng món).

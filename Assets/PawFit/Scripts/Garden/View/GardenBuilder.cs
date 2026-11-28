@@ -30,6 +30,11 @@ namespace PawFit.Garden.View
     {
     }
 
+    /// <summary>Biển chỉ đường Thám hiểm ở góc sau bên trái vườn (Phase 7.2): chạm vào = mở bản đồ Thám hiểm.</summary>
+    public sealed class AdventureSignView : MonoBehaviour
+    {
+    }
+
     /// <summary>Đồ vật nảy nhẹ khi được chạm (quầy hàng, hình nộm): co xuống rồi bật lên, về đúng cỡ sau 0,35 giây.</summary>
     public sealed class TapBounce : MonoBehaviour
     {
@@ -99,6 +104,7 @@ namespace PawFit.Garden.View
             BuildTraining(layout.Get(ZoneType.TrainingGround), r.Obstacles, decor);
             BuildMemorial(layout.Get(ZoneType.Memorial), r.Obstacles, decor);
             BuildShop(layout.Get(ZoneType.Shop), r.Obstacles);
+            BuildAdventure(layout, r.Obstacles, decor);
             BuildTrees(r.Obstacles, decor);
             BuildFlowers(layout, decor);
             return r;
@@ -128,6 +134,9 @@ namespace PawFit.Garden.View
             }
         }
 
+        /// <summary>Khe hở ở hàng rào trái (giữa 2 cột) cho lối mòn Thám hiểm đi ra ngoài vườn.</summary>
+        private const float GateZ0 = 9f, GateZ1 = 11f;
+
         private static void BuildFence(GardenLayout l, Transform obstacles)
         {
             Transform f = Prim.Group(obstacles, "Fence");
@@ -146,8 +155,66 @@ namespace PawFit.Garden.View
             {
                 Prim.Make(PrimitiveType.Cube, f, new Vector3((x0 + x1) / 2, y, z0), new Vector3(x1 - x0, 0.07f, 0.06f), Wood, keepCollider: true);
                 Prim.Make(PrimitiveType.Cube, f, new Vector3((x0 + x1) / 2, y, z1), new Vector3(x1 - x0, 0.07f, 0.06f), Wood, keepCollider: true);
-                Prim.Make(PrimitiveType.Cube, f, new Vector3(x0, y, (z0 + z1) / 2), new Vector3(0.06f, 0.07f, z1 - z0), Wood, keepCollider: true);
+                // hàng rào trái chừa khe GateZ0..GateZ1 cho lối mòn Thám hiểm
+                Prim.Make(PrimitiveType.Cube, f, new Vector3(x0, y, (z0 + GateZ0) / 2), new Vector3(0.06f, 0.07f, GateZ0 - z0), Wood, keepCollider: true);
+                Prim.Make(PrimitiveType.Cube, f, new Vector3(x0, y, (GateZ1 + z1) / 2), new Vector3(0.06f, 0.07f, z1 - GateZ1), Wood, keepCollider: true);
                 Prim.Make(PrimitiveType.Cube, f, new Vector3(x1, y, (z0 + z1) / 2), new Vector3(0.06f, 0.07f, z1 - z0), Wood, keepCollider: true);
+            }
+            foreach (float z in new[] { GateZ0, GateZ1 })   // 2 cột cổng cao hơn, có đèn
+            {
+                Prim.Make(PrimitiveType.Cylinder, f, new Vector3(x0, 0.75f, z), new Vector3(0.2f, 0.75f, 0.2f), WoodDark, keepCollider: true);
+                Prim.Make(PrimitiveType.Sphere, f, new Vector3(x0, 1.6f, z), Vector3.one * 0.22f, Prim.Hex("#FFD27A"), smoothness: 0.8f);
+            }
+        }
+
+        /// <summary>
+        /// Lối Thám hiểm: biển chỉ đường gỗ (chạm = bản đồ), ba lô + cuộn bản đồ dưới chân biển, đường đá dẫn ra khe hở
+        /// hàng rào trái, rồi đường đất đi xa ra ngoài vườn (gợi cảm giác "còn cả thế giới bên ngoài").
+        /// </summary>
+        private static void BuildAdventure(GardenLayout l, Transform obstacles, Transform decor)
+        {
+            GardenZone z = l.Get(ZoneType.Adventure);
+            if (z == null) return;
+            Transform s = Prim.Group(obstacles, "AdventureSign", W(z.Center));
+            s.localRotation = Quaternion.Euler(0f, 18f, 0f);   // hơi quay về phía giữa vườn / camera
+            s.gameObject.AddComponent<AdventureSignView>();
+            var col = s.gameObject.AddComponent<BoxCollider>();   // chạm trúng + vật cản NavMesh
+            col.center = new Vector3(0f, 0.9f, 0f);
+            col.size = new Vector3(1.5f, 1.8f, 0.7f);
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(0f, 0.85f, 0f), new Vector3(0.12f, 0.85f, 0.12f), WoodDark);
+            Prim.Make(PrimitiveType.Sphere, s, new Vector3(0f, 1.78f, 0f), Vector3.one * 0.2f, Prim.Hex("#FFD27A"), smoothness: 0.8f);   // đèn đầu cột
+            // tấm trên: mũi tên chỉ ra ngoài vườn (sang trái)
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(-0.12f, 1.45f, -0.07f), new Vector3(1.3f, 0.36f, 0.06f), Wood);
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(-0.78f, 1.45f, -0.07f), new Vector3(0.26f, 0.26f, 0.06f), Wood,
+                      rotation: Quaternion.Euler(0f, 0f, 45f));
+            MemorialView.Text3D(s, new Vector3(-0.1f, 1.45f, -0.11f), "THÁM HIỂM", 0.17f, Prim.Hex("#4A2E1A"), FontStyle.Bold);
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(0.1f, 1.04f, -0.07f), new Vector3(0.95f, 0.26f, 0.06f), Prim.Hex("#A8774D"));
+            MemorialView.Text3D(s, new Vector3(0.1f, 1.04f, -0.11f), "5 vùng · 25 màn", 0.11f, Prim.Hex("#4A2E1A"), FontStyle.Normal);
+            // ba lô + cuộn bản đồ dưới chân biển
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(0.42f, 0.2f, -0.1f), new Vector3(0.32f, 0.38f, 0.2f), Prim.Hex("#C0573E"));
+            Prim.Make(PrimitiveType.Cube, s, new Vector3(0.42f, 0.27f, -0.21f), new Vector3(0.22f, 0.14f, 0.04f), Prim.Hex("#9E4430"));
+            Prim.Make(PrimitiveType.Cylinder, s, new Vector3(-0.4f, 0.07f, -0.15f), new Vector3(0.12f, 0.22f, 0.12f), Prim.Hex("#F3E6C4"),
+                      rotation: Quaternion.Euler(0f, 30f, 90f));
+            // đường đá từ biển ra khe hở hàng rào
+            var gate = new NVec2(l.Min.X, (GateZ0 + GateZ1) * 0.5f);
+            for (int i = 1; i <= 6; i++)
+            {
+                NVec2 p = NVec2.Lerp(z.Center, gate, i / 6.5f) + new NVec2(0f, i % 2 == 0 ? 0.16f : -0.16f);
+                Prim.Make(PrimitiveType.Cylinder, decor, W(p, 0.01f), new Vector3(0.42f, 0.01f, 0.36f), Prim.Hex("#D8D2C4"), smoothness: 0.1f);
+            }
+            // ngoài vườn: đường đất uốn lượn đi xa + bụi cây, tảng đá 2 bên
+            Color dirt = Prim.Hex("#C9A46B");
+            for (int i = 0; i < 9; i++)
+            {
+                float x = l.Min.X - 0.8f - i * 1.6f;
+                float zz = gate.Y + Mathf.Sin(i * 0.7f) * 1.1f;
+                Prim.Make(PrimitiveType.Cube, decor, new Vector3(x, -0.165f, zz), new Vector3(1.8f, 0.02f, 1.1f), dirt, smoothness: 0.05f,
+                          rotation: Quaternion.Euler(0f, Mathf.Cos(i * 0.7f) * 25f, 0f));
+                if (i % 2 == 0)
+                    Prim.Make(PrimitiveType.Sphere, decor, new Vector3(x - 0.4f, 0.05f, zz + 1.4f), new Vector3(0.9f, 0.6f, 0.9f),
+                              Prim.Hex(i % 4 == 0 ? "#5FA84F" : "#6FBF5C"), smoothness: 0.1f);
+                else
+                    Prim.Make(PrimitiveType.Sphere, decor, new Vector3(x + 0.3f, -0.05f, zz - 1.3f), new Vector3(0.6f, 0.35f, 0.5f), Stone, smoothness: 0.15f);
             }
         }
 

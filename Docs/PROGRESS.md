@@ -332,6 +332,19 @@
   - Công cụ đo nhịp trận: `Tools/BattleBalance` (bot đấu bot 400 trận / cặp).
   - Test: 218 test logic (thêm 15: bộ đệm, combo, Nộ, giáp Tuyệt chiêu, 6 kiểu vuốt "thật tay") + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 519 thành viên khớp Unity.
 
+- **Phase 7.2 · Thám hiểm** (GDD G15):
+  - Logic `Battle/Adventure.cs` (`AdventureService`, C# thuần):
+    - 5 vùng × 5 màn, trùm cuối vùng; sinh vật theo giai đoạn tiến hóa của vùng (Baby → Ultimate);
+    - bot có tay nghề + lối đánh riêng; 1–3 sao theo %máu còn lại; Coin lần đầu / sao mới / thắng lại;
+    - mở khóa tuần tự; cần đủ năng lượng; sự kiện `AdventureWon` (cho nhiệm vụ ngày).
+  - `BattleMode.Adventure`, `BattleResult.HpLeft`. Lưu ở `GameSave.Adventure` (bản lưu 6, file cũ vẫn đọc được).
+  - Vườn: khu `Adventure` (góc sau bên trái), biển gỗ "THÁM HIỂM" + ba lô + cuộn bản đồ, lối đá ra khe hở hàng rào có 2 cột đèn, đường đất đi xa ngoài vườn. Mẹo hướng dẫn mới.
+  - Bản đồ trong vườn (thẻ): tổng sao, "Đánh tiếp", vùng → màn (sao, độ khó so với bé), thưởng, lối đánh.
+  - Trận: 5 sân đấu theo vùng (đồi cỏ, rừng nấm, hồ sương, núi lửa, hang pha lê), sinh vật dựng từ DNA theo vùng, trùm to ×1,25. Thẻ kết quả: sao + Coin + mở màn / vùng, nút **Đánh lại**.
+  - Bảng DEV: xem tổng sao, mở bản đồ, mở hết (1 sao), xóa tiến độ.
+  - Cân bằng: đo bằng bot đánh lần lượt 25 màn ở từng giai đoạn tiến hóa; đã nới 2 lần cho trùm vùng 4–5 bớt dốc.
+  - Test: 227 test logic (thêm 9) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 519 thành viên khớp Unity.
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -354,7 +367,8 @@
 ## Tiếp theo
 
 - **Đánh thử Phase 7.1 trên điện thoại** — pull code, build Dev, vào sân tập ▸ Đấu hình nộm + Đấu trường. Gửi tôi cảm nhận: ra đòn đã đủ nhanh chưa, vuốt có còn hay bị "sai" không, trận dài / ngắn thế nào. Số chỉnh ở `BattleConfig` / `SwipeConfig`.
-- **Phase 7.2 / 7.3** — Thám hiểm (PvE) + nhiệm vụ ngày + đào kho báu (tôi làm tiếp).
+- **Thử Thám hiểm** — chạm biển gỗ góc sau bên trái vườn. Bảng DEV ▸ Lên giai đoạn để thử vùng sau nhanh. Gửi tôi: màn nào quá dễ / quá khó, chữ ★ có hiện đúng không.
+- **Phase 7.3** — nhiệm vụ ngày + chuỗi đăng nhập + đào kho báu (tôi làm tiếp).
 - **Thử máy chủ** — chạy `dotnet run` trên Mac, điện thoại (bản Dev) gõ địa chỉ ở bảng DEV ▸ Máy chủ (`Docs/BUILD.md` mục 14). Gửi tôi:
   - Console / log nếu không nối được;
   - cảm giác độ trễ khi đánh PvP.

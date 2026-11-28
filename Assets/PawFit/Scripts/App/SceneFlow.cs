@@ -15,7 +15,8 @@ namespace PawFit.App
     /// <summary>
     /// Chuyển màn: Vườn (dọc) ⇄ Sân tập / Màn đấu (ngang). Phase 5.1: quầy hàng + quảng cáo giả lập trong vườn.
     /// Phase 5.2: thẻ Phụ kiện / Trang trí trong quầy hàng.
-    /// Phase 4.2 thêm PvP ở cổng đấu trường. Chỉ nối UI với service — luật nằm ở BattleSession / ShopService / EconomyService.
+    /// Phase 4.2 thêm PvP ở cổng đấu trường. Phase 7.2: Thám hiểm ở biển chỉ đường góc vườn.
+    /// Chỉ nối UI với service — luật nằm ở BattleSession / ShopService / EconomyService / AdventureService.
     /// </summary>
     public static class SceneFlow
     {
@@ -36,6 +37,7 @@ namespace PawFit.App
             Garden.ShopTapped = OpenShop;
             Garden.MailboxTapped = OpenSettings;
             Garden.ArenaTapped = OpenArena;
+            Garden.AdventureTapped = OpenAdventure;
             if (services.TryGet(out TipService tips))   // vào game sau 1 thời gian vắng: "trong lúc bạn vắng..."
             {
                 string welcome = tips.WelcomeBack(services.Get<PetService>().LastAwayHours);
@@ -82,6 +84,153 @@ namespace PawFit.App
                 Battle = null;
                 if (Garden != null) Garden.SetPaused(false);
             });
+        }
+
+        // ------------------------------------------------------------------
+        // Thám hiểm (Phase 7.2): biển chỉ đường góc sau bên trái vườn
+        // ------------------------------------------------------------------
+
+        private static readonly string[] DifficultyNames = { "Dễ", "Vừa", "Khó", "Rất khó" };
+        private static readonly string[] StyleNames = { "cân bằng", "hăng máu, đánh dồn", "thủ chắc, hay phản đòn", "kỹ thuật, hay ra chiêu riêng" };
+
+        private static string StarText(int n) => new string('★', Mathf.Clamp(n, 0, 3)) + new string('☆', 3 - Mathf.Clamp(n, 0, 3));
+
+        /// <summary>Chạm biển Thám hiểm: tổng sao, nút "Đánh tiếp" màn kế, 5 vùng (vùng chưa mở xám).</summary>
+        public static void OpenAdventure()
+        {
+            if (Garden == null || Battle != null || !_services.TryGet(out AdventureService adv)) return;
+            TipDone(TipId.Adventure);
+            var pets = _services.Get<PetService>();
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            var actions = new List<Action>();
+            int next = adv.NextStage;
+            if (next >= 0)
+            {
+                AdventureStage ns = adv.Stages[next];
+                labels.Add("Đánh tiếp: " + ns.Code + " " + ns.Creature + " · " + DifficultyNames[(int)adv.DifficultyOf(next)]);
+                enabled.Add(true);
+                actions.Add(() => OpenStage(next));
+            }
+            foreach (AdventureRegion r in adv.Regions)
+            {
+                bool open = adv.IsRegionUnlocked(r.Index);
+                int ri = r.Index;
+                labels.Add((ri + 1) + ". " + r.Name + " · ★ " + adv.RegionStars(ri) + "/" + r.StageCount * 3 + (open ? "" : " (khóa)"));
+                enabled.Add(open);
+                actions.Add(() => OpenRegion(ri));
+            }
+            labels.Add("Thôi");
+            enabled.Add(true);
+            actions.Add(null);
+            float energy = pets.HasPet ? pets.Current.Needs.Energy : 0f;
+            string body = "Tổng ★ " + adv.TotalStars + "/" + adv.MaxStars + " · năng lượng bé " + energy.ToString("0") + "/100" +
+                          " (mỗi trận tốn " + new BattleSessionConfig().FightEnergyCost.ToString("0") + ")\n" +
+                          "Thắng = 1 sao · còn ≥ 40% máu = 2 sao · ≥ 70% = 3 sao. Thắng trùm để mở vùng sau.";
+            GardenUi.ShowChoice("Thám hiểm", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
+        }
+
+        /// <summary>1 vùng: 5 màn với sao + độ khó so với bé (màn chưa mở xám), Quay lại.</summary>
+        private static void OpenRegion(int region)
+        {
+            var adv = _services.Get<AdventureService>();
+            AdventureRegion r = adv.Regions[region];
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            for (int k = 0; k < r.StageCount; k++)
+            {
+                int i = r.FirstStage + k;
+                AdventureStage s = adv.Stages[i];
+                bool open = adv.IsUnlocked(i);
+                labels.Add(s.Code + " " + (s.Boss ? "TRÙM " : "") + s.Creature + " · " + StarText(adv.StarsOf(i)) +
+                           (open ? " · " + DifficultyNames[(int)adv.DifficultyOf(i)] : " (khóa)"));
+                enabled.Add(open);
+            }
+            labels.Add("Quay lại");
+            enabled.Add(true);
+            string body = r.Blurb + "\nSinh vật mạnh ngang bé giai đoạn " + r.Stage + ".";
+            GardenUi.ShowChoice(r.Name, body, labels.ToArray(), i =>
+            {
+                if (i < r.StageCount) OpenStage(r.FirstStage + i);
+                else OpenAdventure();
+            }, enabled.ToArray());
+        }
+
+        /// <summary>1 màn: sinh vật, độ khó, thưởng, lối đánh; Đánh! (xám kèm lý do nếu bé chưa đi được).</summary>
+        private static void OpenStage(int stage)
+        {
+            var adv = _services.Get<AdventureService>();
+            AdventureStage s = adv.Stages[stage];
+            AdventureConfig c = adv.Config;
+            int stars = adv.StarsOf(stage);
+            string reward = stars == 0 ? "Thắng lần đầu: +" + s.Coins + " Coin" + (s.Boss ? " + mở vùng sau" : "")
+                          : stars < 3 ? "Mỗi sao mới: +" + Mathf.RoundToInt(s.Coins * c.NewStarCoinFactor) + " Coin"
+                          : "Đủ 3 sao · thắng lại: +" + Mathf.Max(1, Mathf.RoundToInt(s.Coins * c.RepeatCoinFactor)) + " Coin";
+            string body = (s.Boss ? "TRÙM vùng · " : "") + "Độ khó với bé: " + DifficultyNames[(int)adv.DifficultyOf(stage)] +
+                          " · " + StarText(stars) + "\n" + reward + "\nLối đánh: " + StyleNames[(int)s.Style];
+            bool ok = adv.CanStart(stage, out string reason);
+            if (!ok) body += "\nChưa đi được: " + reason + ".";
+            GardenUi.ShowChoice(s.Code + " · " + s.Creature, body, new[] { "Đánh!", "Quay lại" }, i =>
+            {
+                if (i == 0) EnterAdventure(stage);
+                else OpenRegion(s.Region);
+            }, new[] { ok, true });
+        }
+
+        /// <summary>Vào trận Thám hiểm (vườn tạm dừng). Hết trận: sao + Coin ở thẻ kết quả, có nút Đánh lại.</summary>
+        public static void EnterAdventure(int stage)
+        {
+            if (Battle != null || Garden == null || !_services.TryGet(out AdventureService adv)) return;
+            if (!adv.CanStart(stage, out string reason))
+            {
+                GardenUi.ShowCard("Chưa đi được", "Chưa vào màn này được: " + reason + ".");
+                return;
+            }
+            CancelSearch();   // đang tìm trận PvP mà đi thám hiểm thì thôi tìm
+            AdventureStage s = adv.Stages[stage];
+            AdventureRegion r = adv.Regions[s.Region];
+            var view = new RankedMatchView
+            {
+                Mode = BattleMode.Adventure,
+                Theme = s.Region,
+                Opponent = adv.OpponentFor(stage),
+                Seed = (ulong)DateTime.UtcNow.Ticks,
+                PetName = s.Creature,
+                PlayerName = r.Name,
+                Title = "màn " + s.Code + (s.Boss ? " · TRÙM" : ""),
+                Dna = adv.CreatureDna(stage),
+                Look = BotPlayers.LookFor(s.Stage, s.Form, _services.Get<GameConfig>().Evolution),
+                Accessory = AccessoryKind.None,
+                OpponentScale = s.Boss ? 1.25f : 1f,
+                OnResult = result => AdventureLines(adv, adv.Complete(stage, result)),
+                AgainLabel = "Đánh lại",
+                Again = () => EnterAdventure(stage),
+            };
+            GardenUi.Close();
+            Garden.SetPaused(true);
+            Battle = BattleScene.EnterRanked(_services, view, () =>
+            {
+                Battle = null;
+                if (Garden != null) Garden.SetPaused(false);
+            });
+        }
+
+        private static List<string> AdventureLines(AdventureService adv, AdventureResult r)
+        {
+            AdventureStage s = adv.Stages[r.Stage];
+            var lines = new List<string>();
+            if (!r.Won)
+            {
+                lines.Add("Chưa thắng được " + s.Creature);
+                lines.Add("Thử đỡ sát đòn để phản đòn, nối combo, hoặc đợi bé lớn thêm");
+                return lines;
+            }
+            lines.Add(StarText(r.Stars) + (r.NewStars > 0 ? "  (+" + r.NewStars + " sao mới)" : ""));
+            if (r.Coins > 0) lines.Add("+" + r.Coins + " Coin");
+            if (r.UnlockedRegion >= 0) lines.Add("Mở vùng mới: " + adv.Regions[r.UnlockedRegion].Name + "!");
+            else if (r.FirstClear && r.Stage + 1 < adv.Stages.Count && adv.Stages[r.Stage + 1].Region == s.Region)
+                lines.Add("Mở màn " + adv.Stages[r.Stage + 1].Code);
+            return lines;
         }
 
         // ------------------------------------------------------------------

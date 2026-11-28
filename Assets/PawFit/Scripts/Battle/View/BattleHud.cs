@@ -219,7 +219,8 @@ namespace PawFit.Battle.View
             _trail.Add((rt, 0.35f));
         }
 
-        public void ShowResult(string title, string body, Action onClose)
+        /// <summary>Thẻ kết quả: nút "Về vườn"; có `secondLabel` thì thêm nút thứ 2 bên cạnh (vd "Đánh lại").</summary>
+        public void ShowResult(string title, string body, Action onClose, string secondLabel = null, Action onSecond = null)
         {
             if (_result != null) return;
             RectTransform dim = Panel(transform, "Result", new Color(0f, 0f, 0f, 0.5f));
@@ -231,7 +232,13 @@ namespace PawFit.Battle.View
             Text t = Label(card, title, 72, new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(860f, 110f), TextAnchor.MiddleCenter, new Color(0.25f, 0.2f, 0.2f));
             t.fontStyle = FontStyle.Bold;
             Label(card, body, 36, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(820f, 220f), TextAnchor.MiddleCenter, new Color(0.3f, 0.28f, 0.3f));
-            Button(card, "Về vườn", new Vector2(0.5f, 0.5f), new Vector2(0f, -190f), new Vector2(380f, 110f), onClose);
+            if (string.IsNullOrEmpty(secondLabel))
+                Button(card, "Về vườn", new Vector2(0.5f, 0.5f), new Vector2(0f, -190f), new Vector2(380f, 110f), onClose);
+            else
+            {
+                Button(card, "Về vườn", new Vector2(0.5f, 0.5f), new Vector2(-200f, -190f), new Vector2(360f, 110f), onClose);
+                Button(card, secondLabel, new Vector2(0.5f, 0.5f), new Vector2(200f, -190f), new Vector2(360f, 110f), onSecond);
+            }
             _result = dim.gameObject;
         }
 

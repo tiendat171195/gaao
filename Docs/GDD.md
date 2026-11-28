@@ -273,6 +273,28 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Android: kênh "Nhắc chăm thú", icon dấu chân trắng, khởi động lại điện thoại vẫn giữ lịch.
   - Cài đặt lưu file riêng của máy (`settings`), không nằm trong file game, không đồng bộ cloud.
   - Sau này thư thông báo (thưởng mùa giải...) cũng gửi về hòm thư này.
+- **G15 · Thám hiểm (Phase 7.2, `AdventureService` + `AdventureConfig`; bạn góp ý "ít chỗ để khám phá giữ người dùng", tôi tự thiết kế):**
+  - Lối vào: biển gỗ "THÁM HIỂM" ở góc sau bên trái vườn, lối đá dẫn ra khe hở hàng rào, đường đất đi xa ra ngoài vườn. Chạm biển = bản đồ.
+  - Bản đồ 5 vùng × 5 màn, màn 5 là trùm (to hơn, đánh giỏi hơn). Mỗi màn = 1 trận với 1 sinh vật hoang (bot có lối đánh riêng), sân đấu theo vùng:
+
+    | Vùng | Sinh vật ngang bé giai đoạn | Sân đấu |
+    |---|---|---|
+    | 1 · Đồi Cỏ Gió | Baby | đồi xanh, bụi cây, hoa |
+    | 2 · Rừng Nấm | Child | thân cây tối, nấm đỏ / tím |
+    | 3 · Hồ Sương | Teen | mặt hồ, cỏ lau, sương |
+    | 4 · Núi Lửa | Adult | núi lửa, vũng dung nham |
+    | 5 · Hang Pha Lê | Ultimate | tinh thể xanh / tím, nhũ đá |
+
+  - Sinh vật: chỉ số = công thức G8 của giai đoạn vùng × 0,7 / 0,8 / 0,9 / 0,98 / 1,05 (màn 1 → trùm). Tay nghề bot tăng dần theo vùng + màn. Vùng 1 mới thuộc chiêu ngang + lên; từ trùm vùng 2 thuộc đủ 4 chiêu. Màu lông theo vùng, hình cố định theo màn.
+  - Ý đồ: độ khó bám theo tiến hóa → **bé lớn lên mới đi xa được**, có lý do quay lại mỗi ngày. Đo bằng bot (người chơi khá = tay nghề 0,5, đúng giai đoạn của vùng): 3 màn đầu gần như chắc thắng, màn 4 ~75–100%, trùm 96% / 65% / 46% / 30% / 15% theo vùng. Lớn thêm 1 giai đoạn thì vùng cũ dễ hẳn (để gom đủ 3 sao).
+  - Sao: thắng = 1 sao; thắng còn ≥ 40% máu = 2 sao; ≥ 70% = 3 sao. Giữ số sao tốt nhất. Tổng 75 sao.
+  - Mở khóa: màn sau mở khi màn trước có sao; thắng trùm thì mở vùng sau.
+  - Coin: thắng lần đầu 10 + 4 × số thứ tự màn (trùm ×2: 52 → 212 Coin); mỗi sao mới sau đó +50%; thắng lại không thêm sao +20%. Cả bản đồ 3 sao ≈ 3.500 Coin (giá đồ ở quầy 80–300).
+  - Mỗi trận tốn năng lượng + no như đấu Bot (10 / 6). Năng lượng dưới 15 thì không đi được ("bé mệt rồi"). Thú ốm / đang ngủ không đi được.
+  - Bản đồ (thẻ trong vườn): tổng sao, nút "Đánh tiếp" màn kế, sao từng vùng; trong vùng: sao + độ khó so với bé (Dễ / Vừa / Khó / Rất khó, so lực chiến); màn: thưởng + lối đánh của sinh vật.
+  - Hết trận: thẻ kết quả có sao + Coin + "Mở màn / vùng mới", nút **Đánh lại** bên cạnh Về vườn.
+  - Lưu ở file game (`GameSave.Adventure`, bản lưu 6). Thú mất vẫn giữ tiến độ: bé mới đi tiếp từ chỗ cũ.
+  - Mẹo hướng dẫn: chơi 6,5 phút (sau mẹo sân tập) thì chỉ đường tới biển Thám hiểm.
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

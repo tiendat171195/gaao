@@ -15,6 +15,7 @@ namespace PawFit.Battle.View
         private const float RecoverSeconds = 0.22f;
 
         private Transform _body;
+        private Vector3 _bodyScale = Vector3.one;
         private Transform _shield;
         private Transform _aura;
         private Transform[] _arms;
@@ -54,6 +55,7 @@ namespace PawFit.Battle.View
         public void Init(Transform body, float facing, IPetAvatar avatar, Transform[] arms = null)
         {
             _body = body;
+            _bodyScale = body.localScale;   // cỡ gốc (trùm Thám hiểm to hơn): nhún / vươn nhân trên cỡ này
             _facing = facing;
             _avatar = avatar;
             _arms = arms;
@@ -262,7 +264,7 @@ namespace PawFit.Battle.View
             }
             _squash *= Mathf.Exp(-dt * 12f);
             if (_atkT >= 0f && _atkT > 0.3f) _squash = Mathf.Min(_squash, -0.06f);   // đang lao: vươn dài ra
-            _body.localScale = new Vector3(1f + _squash * 0.5f, 1f - _squash, 1f + _squash * 0.5f);
+            _body.localScale = Vector3.Scale(_bodyScale, new Vector3(1f + _squash * 0.5f, 1f - _squash, 1f + _squash * 0.5f));
             transform.localPosition = _home + offset;
             _body.localRotation = Quaternion.Euler(wobble, yaw, lean * _facing * -1f);
             if (_arms != null)   // hình nộm vung tay khi đánh
