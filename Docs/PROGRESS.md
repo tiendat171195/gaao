@@ -384,6 +384,31 @@
   - Sửa công cụ soát API: trước đây báo nhầm giá trị enum cuối cùng (không có dấu phẩy) là "không thấy".
   - Test: 262 test logic (thêm 10) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 580 thành viên khớp Unity.
 
+- **Sửa lỗi Unity vào Safe Mode** (bạn gặp khi mở project): test `DailyTests` dùng `Is.AnyOf`, bản NUnit 3.5 của Unity Test Framework 1.5 không có. Đổi sang `CollectionAssert.Contains`. Từ giờ `Tools/NetStandardCheck` biên dịch luôn test với đúng NUnit 3.5.0 nên lỗi kiểu này bị bắt trước. Unity chỉ báo 2 lỗi đó, nghĩa là toàn bộ code game Phase 7–8 đã biên dịch được trong Unity thật.
+
+- **Phase 9.1 · Bước chân nhẹ + camera vườn** (bạn góp ý: "âm thanh di chuyển hơi ồn", "cho điều chỉnh camera, zoom, xoay đổi góc"; GDD G17, G22):
+  - Bước chân: tiếng "bộp" mềm (dải trầm, không có tiếng "tách"), nhỏ hơn hẳn (0,05–0,11), thưa hơn, mỗi bước hơi khác nhau; đi lững thững / ngồi ghế thì không nghe.
+  - `Garden/CameraOrbit.cs` (C# thuần): xoay / nghiêng / khoảng cách có giới hạn; nhận 2 ngón (chụm / mở, xoay, kéo dọc) có ngưỡng chống rung tay; lăn chuột + chuột phải trên máy tính.
+  - `GardenCamera` dùng góc này (đổi mượt); router nhận 2 ngón mà không làm hỏng chạm / kéo 1 ngón; góc lưu ở cài đặt của máy; hòm thư có nút về góc mặc định; mẹo hướng dẫn mới. Nền cỏ ngoài vườn nới 240 m.
+  - Test: 268 test logic (thêm 6) + 8 test máy chủ, đều qua. Soát API 582 thành viên khớp Unity.
+
+- **Phase 9.2–9.3 · Thám hiểm thành Săn quái rừng** (bạn góp ý: "thám hiểm nên đánh kiểu khác, khác PvP, không đánh với pet, có thể là quái rừng"; "đánh xong mở nút đánh tiếp"; GDD G21):
+  - Logic C# thuần ở `Battle/`:
+    - `Hunt.cs`: 5 loại quái + 5 trùm (`MonsterBook`), số liệu `HuntConfig`, kịch bản màn `HuntPlan` (3 đợt / màn, màn trùm có đợt trùm).
+    - `HuntSimulation.cs`: bước cố định + seed — chạm đánh, combo, Nộ, đập đất, đỡ / phản đòn, lướt né, tuyệt chiêu; quái lấy đà báo trước, đạn, lao húc, đập đất; trùm gọi quái + nổi giận.
+    - `HuntSession.cs`: điểm tập, tốn sức, sao + Coin, `BattleEnded` cho nhiệm vụ ngày. `HuntBot` để test + đo cân bằng. `HuntGestures.cs`: chạm + vuốt 4 hướng nhận ngay khi đủ dài.
+  - `AdventureService`: thêm `PlanFor` / `StartHunt` / `NextAfter`; bỏ phần đấu 1-1 với sinh vật hoang. Sao, mở khóa, Coin, file lưu giữ nguyên: tiến độ cũ vẫn còn.
+  - Cân bằng đo bằng bot (`Tools/HuntBalance`). Đã sửa 2 lỗi bot tìm ra trước khi giao:
+    - quái đứng ngoài tầm với của bé làm trận kẹt tới hết giờ;
+    - heo húc xong đứng chồng lên bé.
+  - Màn Săn quái trong Unity (`Battle/View/`):
+    - `HuntScene`: sân theo vùng dùng chung `ArenaBuilder` (dải đường dài), camera ngang đi theo bé, chậm lại khi phản đòn;
+    - `MonsterView`: quái dựng bằng khối + hoạt cảnh code, dấu ! / vòng đỏ / vạch đỏ báo đòn;
+    - `HunterView`: khiên khi đỡ, hào quang khi đầy Nộ;
+    - `HuntHud`: thẻ kết quả có **Đánh tiếp / Đánh lại / Về vườn**.
+  - `SceneFlow`: thẻ màn ghi quái sẽ gặp + cách đánh; `InFight` tính cả màn Săn quái.
+  - Test: 284 test logic (thêm 16) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 583 thành viên khớp Unity.
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -404,6 +429,13 @@
 - Giả định GDD G1–G11: tạm dùng, bạn sửa khi cần.
 
 ## Tiếp theo
+
+- **Thử Phase 9 trên điện thoại** — pull code, build Dev:
+  - Bước chân: đi / chạy quanh vườn, nghe đã đủ nhẹ chưa.
+  - Camera: chụm / mở 2 ngón, xoay 2 ngón, 2 ngón kéo lên / xuống. Hòm thư ▸ Góc camera về mặc định.
+  - Săn quái: biển Thám hiểm ▸ 1-1. Chạm để đánh, vuốt lên / xuống / ngang. Gửi tôi:
+    - vuốt có nhận đúng không, đánh có "đã" không, quái nào khó / dễ quá;
+    - ảnh màn hình nếu quái trông lạ (tôi chưa chạy được màn này trong Unity thật).
 
 - **Thử Phase 8 trên điện thoại** — pull code, build Dev:
   - Nghe: nhạc nền vườn / trận, gió + chim, bước chân, tắm, ăn, ngủ. Hòm thư bật / tắt nhạc riêng. Gửi tôi: tiếng nào to / nhỏ / chói quá.
@@ -439,6 +471,7 @@
   - Chạy `python3 Tools/ApiAudit/api_audit.py Tools/UnityCompileCheck/UnityStubs.cs <thư mục>/package Unity.Notifications`.
 - Đổi luật trận / tin nhắn mạng thì tăng `NetProto.Version` (`Online/Protocol.cs`): bản game cũ sẽ được báo "hãy cập nhật". Đang là 2 (Phase 7.1).
 - Đo nhịp trận sau khi chỉnh số: `cd Tools/BattleBalance && dotnet run -c Release` (trận ngang sức nên ~25–30 giây).
+- Đo cân bằng Săn quái sau khi chỉnh `HuntConfig` / `MonsterBook`: `cd Tools/HuntBalance && dotnet run -c Release -- 30 0` (tham số 2: `-1` / `1` = bé nhỏ / lớn hơn giai đoạn vùng). Kết quả hiện tại ở GDD G21.
 - Máy chủ biên dịch chung `Core / Pet / Battle / Online`: thêm file logic mới vào 4 thư mục này là máy chủ có luôn; dùng `using` tới Garden / Economy trong Online sẽ làm hỏng build máy chủ.
 - Compile thử code Unity: `dotnet build Tools/UnityCompileCheck` (stub ở `UnityStubs.cs`; dùng API Unity mới thì thêm stub).
 - Môi trường cloud riêng `gaao` có setup script cài sẵn Blender + .NET + restore NuGet (chưa kiểm chứng ở session mới).

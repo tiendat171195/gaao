@@ -30,6 +30,7 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 |---|---|
 | Chạm xuống đất | Thú chạy tới đó |
 | Kéo trên mặt đất | Kéo camera. Thả tay khoảng 2,5 giây thì camera quay lại theo thú |
+| 2 ngón chụm / mở · xoay 2 ngón · 2 ngón kéo lên xuống | Phóng to thu nhỏ · xoay vườn · đổi góc nhìn (máy tính: lăn chuột, giữ chuột phải kéo). Hòm thư có nút về góc mặc định |
 | Chạm vào thú | Thú quay lại nhìn, nhảy mừng, mắt híp, tim bay. Chạm 3 lần liền = cù (cười khúc khích). Đang ngủ thì thức dậy |
 | Xoa qua lại trên người thú | Vuốt ve: thú đứng yên lim dim, dụi đầu theo tay, vẫy đuôi, tim bay, gừ gừ (+ vui). Đang ngủ vẫn vuốt được |
 | Kéo thú ra xa | Thú chạy theo ngón tay (dắt). Thả vào **hồ** thì tắm, thả vào **ổ** thì ngủ (nếu đã buồn ngủ), thả lên **ghế gỗ** thì ngồi nghỉ |
@@ -159,16 +160,28 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Thắng Bot được thêm điểm + Coin (Dễ +5, Thường +10, Khó +15).
   - Mỗi buổi tốn năng lượng + no bụng.
 
-## Thám hiểm (Phase 7.2)
+## Thám hiểm = Săn quái rừng (Phase 7.2, kiểu đánh mới từ Phase 9.2)
 
 - **Vào:** chạm **biển gỗ "THÁM HIỂM"** ở góc sau bên trái vườn (cạnh lối đá dẫn ra khe hở hàng rào).
 - **Bản đồ:** 5 vùng, mỗi vùng 5 màn, màn cuối là **trùm**:
   1. Đồi Cỏ Gió (hợp bé Baby) · 2. Rừng Nấm (Child) · 3. Hồ Sương (Teen) · 4. Núi Lửa (Adult) · 5. Hang Pha Lê (Ultimate).
-  - Bé lớn lên mới đi xa được: sinh vật mạnh ngang bé ở giai đoạn của vùng. Thẻ màn ghi độ khó so với bé (Dễ / Vừa / Khó / Rất khó).
-  - Màn sau mở khi thắng màn trước; thắng trùm thì mở vùng sau.
-- **Sao:** thắng = ★, còn ≥ 40% máu = ★★, còn ≥ 70% máu = ★★★. Coin khi thắng lần đầu + mỗi sao mới, thắng lại được ít hơn.
-- Mỗi trận tốn năng lượng như đấu Bot. Bé mệt (năng lượng < 15), ốm hoặc đang ngủ thì không đi được.
-- Hết trận có nút **Đánh lại** để thử ngay.
+  - Bé lớn lên mới đi xa được: quái mạnh ngang bé ở giai đoạn của vùng. Thẻ màn ghi độ khó so với bé (Dễ / Vừa / Khó / Rất khó), quái sẽ gặp, số đợt.
+  - Màn sau mở khi thắng màn trước; hạ trùm thì mở vùng sau.
+- **Cách đánh** (khác trận 1-1 PvP): màn ngang, bé đứng giữa đường, quái rừng kéo tới từ 2 bên theo 3 đợt.
+
+  | Thao tác | Bé làm gì |
+  |---|---|
+  | Chạm | Lao tới đánh con được chạm (chạm chỗ trống = con gần nhất), đánh liên tục thành combo |
+  | Vuốt lên | Đập đất: trúng cả đám quanh bé, đẩy lùi + choáng |
+  | Vuốt xuống | Đỡ. Đỡ sát lúc quái đánh trúng = **phản đòn** (không mất máu, quái choáng) |
+  | Vuốt ngang | Lướt né: lúc lướt không bị trúng đòn, lướt xuyên quái thì gây sát thương |
+  | Nút TUYỆT CHIÊU (đầy Nộ) | Trúng mọi quái + choáng |
+
+  - Quái: Chất Nhờn (nhảy cắn), Dơi Rừng (bay nhanh), Nấm Độc (phun bào tử từ xa), Heo Rừng (lao húc), Đá Rêu (đập đất). Quái sắp đánh thì hiện dấu **!** đỏ; đập đất có vòng đỏ trên đất; heo có vạch đỏ chỉ hướng lao.
+  - Trùm: Vua Chất Nhờn, Chúa Nấm, Người Đá Sương, Heo Lửa Đầu Đàn, Người Đá Pha Lê. Trùm biết gọi thêm quái, còn nửa máu thì nổi giận.
+- **Sao:** thắng = ★, còn ≥ 40% máu = ★★, còn ≥ 70% máu = ★★★. Coin khi thắng lần đầu + mỗi sao mới, thắng lại được ít hơn. Hạ quái = điểm Sức mạnh, phản đòn / né = điểm Tốc độ.
+- Mỗi lần săn tốn năng lượng như đấu Bot. Bé mệt (năng lượng < 15), ốm hoặc đang ngủ thì không đi được.
+- Hết trận: **Đánh tiếp** (màn sau), **Đánh lại**, **Về vườn**. Số liệu: GDD G21.
 
 ## Việc mỗi ngày (Phase 7.3)
 
@@ -283,7 +296,7 @@ Tác dụng tính cả lúc tắt app. Quầy hàng ghi tác dụng ngay cạnh 
 
   - Mua xong camera lia tới, món đó bật lên từ mặt đất, rồi camera quay về thú.
   - Thú đi vòng qua đồ trang trí, không đi xuyên.
-- **Âm thanh (Phase 8.1, GDD G17):** nhạc nền vườn + trận, gió + lá + chim, nước hồ, bước chân, tắm, ăn, ngủ, gừ gừ khi vuốt, tiếng trận, "ting-ting" khi nhận Coin, "cạch-ting" khi tiêu. Tất cả tạo bằng code, không có file âm thanh. Hòm thư bật / tắt âm thanh và nhạc nền riêng. Quầy hàng và hình nộm nảy nhẹ khi chạm.
+- **Âm thanh (Phase 8.1, GDD G17):** nhạc nền vườn + trận, gió + lá + chim, nước hồ, bước chân nhẹ (Phase 9.1), tắm, ăn, ngủ, gừ gừ khi vuốt, tiếng trận, "ting-ting" khi nhận Coin, "cạch-ting" khi tiêu. Tất cả tạo bằng code, không có file âm thanh. Hòm thư bật / tắt âm thanh và nhạc nền riêng. Quầy hàng và hình nộm nảy nhẹ khi chạm.
 - Giá nằm ở `EconomyConfig.AccessoryPrices` / `DecorPrices`.
 
 ## Công cụ test (chỉ Editor / bản Development)
@@ -330,8 +343,8 @@ dotnet build Tools/UnityCompileCheck
 | `Assets/PawFit/Scripts/Core/Audio` | `SoundSynth` (C# thuần): tạo nhạc nền + mọi tiếng bằng code |
 | `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ, phát âm thanh `Sfx` |
 | `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu + tác dụng của đồ đã mua `CarePerks`, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx`, phụ kiện `AccessoryView` |
-| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo, vuốt ve hay dắt `StrokeTracker`, trò chơi `PlayService`, việc mỗi ngày `DailyService` (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder` + thú dùng đồ trang trí `DecorLife`, đồ chơi `ToyViews`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
-| `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt |
+| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo, vuốt ve hay dắt `StrokeTracker`, trò chơi `PlayService`, việc mỗi ngày `DailyService`, góc camera `CameraOrbit` (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder` + thú dùng đồ trang trí `DecorLife`, đồ chơi `ToyViews`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
+| `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot, Thám hiểm `AdventureService`, Săn quái `HuntSimulation` + `HuntSession` + `HuntGestures` · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt, sân theo vùng `ArenaBuilder`, màn Săn quái `HuntScene` + quái rừng `MonsterView` |
 | `Assets/PawFit/Scripts/Economy` | Kinh tế (C# thuần): ví Coin + quảng cáo `EconomyService`, quầy hàng `ShopService`, phụ kiện + trang trí `CosmeticsService`, cổng quảng cáo `IAdService` + bản giả lập `MockAdService` |
 | `Assets/PawFit/Scripts/Online` | Phase 4 phần không cần tài khoản (C# thuần): rank Elo + bậc + mùa giải `RankService`, luật ghép trận + hàng chờ `Matchmaker`, người chơi ảo `BotPlayers`, cổng mạng `INetworkManager` + bản giả lập `LocalNetworkManager` |
 | `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow (chuyển màn, quầy hàng, quảng cáo, phụ kiện, trang trí), tiếng Coin `UiSounds`, Debug overlay |

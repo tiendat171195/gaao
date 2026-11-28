@@ -1,6 +1,6 @@
 # PawFit — GDD ngắn
 
-Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G20). Mọi số nằm trong config, chỉnh được.
+Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G22). Mọi số nằm trong config, chỉnh được.
 
 ## 1. Lõi
 
@@ -10,6 +10,8 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Bố trí: chòi ăn bên trái, hồ tắm bên phải, sân tập phía sau, ổ ngủ ở giữa, tưởng niệm ở góc.
   - Điều khiển: chạm đất thì thú chạy tới; kéo thú để dắt; xoa qua lại trên người thú = vuốt ve (G18); chạm thú thì thú phản ứng; kéo đồ ăn thả cho thú để cho ăn; kéo thú ra hồ để tắm.
   - Đồ chơi để chơi với bé (G19); đồ trang trí + phụ kiện có tác dụng, bé dùng được (G20).
+  - Camera vườn: 2 ngón chụm / xoay / kéo dọc = zoom / xoay / đổi góc (G22).
+- **Thám hiểm = Săn quái rừng** (G15, G21): chạm để đánh, vuốt để đập đất / đỡ / lướt; khác hẳn trận 1-1 PvP.
 - **Thú:** 1 base mesh + DNA, sinh lúc chạy bằng blendshape + material (+ shader lông ở Gen 2). Style ngầu + cute, không cartoon phẳng.
 - **Tiến hóa:** Baby (ngày 0) → Child (3) → Teen (7) → Adult (14) → Ultimate (30, nếu đủ điều kiện).
   - Đầu vào: CareScore 7 ngày + TrainingVector (Sức mạnh / Tốc độ / Chăm sóc / Bóng tối) + seed và tính cách ẩn (10–20%).
@@ -23,7 +25,7 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
 - **Ranking:** ghép đối thủ theo Elo ±100 và Lực chiến ±10%. Bậc Bronze → Silver → Gold → Diamond → Master. Mùa giải 30 ngày.
 - **Kinh tế:** Coin; không nạp tiền. Quảng cáo tự nguyện, tối đa 5 lần/ngày (`IAdService` + `MockAdService`).
 
-## 2. Số liệu & giả định (G1–G20)
+## 2. Số liệu & giả định (G1–G22)
 
 - **G1 · Nhu cầu ẩn:** No bụng, Sạch, Năng lượng, Vui (0–100). Đang cài đặt ở `NeedsConfig`: no −4/h, sạch −3/h, năng lượng −4/h khi thức và +15/h khi ngủ, vui −3.5/h, lúc nở = 80.
 - **G1b · Biểu cảm (Phase 1.3, `ExpressionConfig`):**
@@ -276,9 +278,9 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Sau này thư thông báo (thưởng mùa giải...) cũng gửi về hòm thư này.
 - **G15 · Thám hiểm (Phase 7.2, `AdventureService` + `AdventureConfig`; bạn góp ý "ít chỗ để khám phá giữ người dùng", tôi tự thiết kế):**
   - Lối vào: biển gỗ "THÁM HIỂM" ở góc sau bên trái vườn, lối đá dẫn ra khe hở hàng rào, đường đất đi xa ra ngoài vườn. Chạm biển = bản đồ.
-  - Bản đồ 5 vùng × 5 màn, màn 5 là trùm (to hơn, đánh giỏi hơn). Mỗi màn = 1 trận với 1 sinh vật hoang (bot có lối đánh riêng), sân đấu theo vùng:
+  - Bản đồ 5 vùng × 5 màn, màn 5 là trùm. Từ Phase 9.2 mỗi màn = 1 lần **Săn quái rừng** (G21); trước đó là trận 1-1 với sinh vật hoang. Cảnh theo vùng:
 
-    | Vùng | Sinh vật ngang bé giai đoạn | Sân đấu |
+    | Vùng | Quái ngang bé giai đoạn | Cảnh |
     |---|---|---|
     | 1 · Đồi Cỏ Gió | Baby | đồi xanh, bụi cây, hoa |
     | 2 · Rừng Nấm | Child | thân cây tối, nấm đỏ / tím |
@@ -286,14 +288,14 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
     | 4 · Núi Lửa | Adult | núi lửa, vũng dung nham |
     | 5 · Hang Pha Lê | Ultimate | tinh thể xanh / tím, nhũ đá |
 
-  - Sinh vật: chỉ số = công thức G8 của giai đoạn vùng × 0,7 / 0,8 / 0,9 / 0,98 / 1,05 (màn 1 → trùm). Tay nghề bot tăng dần theo vùng + màn. Vùng 1 mới thuộc chiêu ngang + lên; từ trùm vùng 2 thuộc đủ 4 chiêu. Màu lông theo vùng, hình cố định theo màn.
-  - Ý đồ: độ khó bám theo tiến hóa → **bé lớn lên mới đi xa được**, có lý do quay lại mỗi ngày. Đo bằng bot (người chơi khá = tay nghề 0,5, đúng giai đoạn của vùng): 3 màn đầu gần như chắc thắng, màn 4 ~75–100%, trùm 96% / 65% / 46% / 30% / 15% theo vùng. Lớn thêm 1 giai đoạn thì vùng cũ dễ hẳn (để gom đủ 3 sao).
+  - Quái: chỉ số chuẩn = công thức G8 của giai đoạn vùng × 0,7 / 0,8 / 0,9 / 0,98 / 1,05 (màn 1 → trùm), mỗi loại quái nhân thêm hệ số riêng (G21). Mỗi vùng có bảng màu quái riêng.
+  - Ý đồ: độ khó bám theo tiến hóa → **bé lớn lên mới đi xa được**, có lý do quay lại mỗi ngày. Số đo bằng bot: xem G21. Lớn thêm 1 giai đoạn thì vùng cũ dễ hẳn (để gom đủ 3 sao).
   - Sao: thắng = 1 sao; thắng còn ≥ 40% máu = 2 sao; ≥ 70% = 3 sao. Giữ số sao tốt nhất. Tổng 75 sao.
   - Mở khóa: màn sau mở khi màn trước có sao; thắng trùm thì mở vùng sau.
   - Coin: thắng lần đầu 10 + 4 × số thứ tự màn (trùm ×2: 52 → 212 Coin); mỗi sao mới sau đó +50%; thắng lại không thêm sao +20%. Cả bản đồ 3 sao ≈ 3.500 Coin (giá đồ ở quầy 80–300).
   - Mỗi trận tốn năng lượng + no như đấu Bot (10 / 6). Năng lượng dưới 15 thì không đi được ("bé mệt rồi"). Thú ốm / đang ngủ không đi được.
-  - Bản đồ (thẻ trong vườn): tổng sao, nút "Đánh tiếp" màn kế, sao từng vùng; trong vùng: sao + độ khó so với bé (Dễ / Vừa / Khó / Rất khó, so lực chiến); màn: thưởng + lối đánh của sinh vật.
-  - Hết trận: thẻ kết quả có sao + Coin + "Mở màn / vùng mới", nút **Đánh lại** bên cạnh Về vườn.
+  - Bản đồ (thẻ trong vườn): tổng sao, nút "Đánh tiếp" màn kế, sao từng vùng; trong vùng: sao + độ khó so với bé (Dễ / Vừa / Khó / Rất khó, so lực chiến); màn: thưởng + các loại quái sẽ gặp + số đợt + cách đánh.
+  - Hết trận: thẻ kết quả có sao + Coin + "Mở màn / vùng mới", nút **Đánh lại** và **Đánh tiếp** (màn sau) bên cạnh Về vườn.
   - Lưu ở file game (`GameSave.Adventure`, bản lưu 6). Thú mất vẫn giữ tiến độ: bé mới đi tiếp từ chỗ cũ.
   - Mẹo hướng dẫn: chơi 6,5 phút (sau mẹo sân tập) thì chỉ đường tới biển Thám hiểm.
 - **G16 · Việc mỗi ngày (Phase 7.3, `DailyService` + `DailyConfig`; tôi tự thiết kế để có lý do quay lại mỗi ngày):**
@@ -316,7 +318,7 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Nhạc nền: vườn (90 nhịp / phút, nhẹ nhàng) và trận đấu (128 nhịp / phút). Lặp liền mạch, đổi màn thì nhạc hòa dần sang bài kia.
   - Vườn: gió + lá xào xạc lặp liên tục, chim hót ngẫu nhiên 4–12 giây / lần. Tiếng nước hồ to dần khi bé tới gần hồ.
   - Bé:
-    - bước chân trên cỏ (đi nhanh thì dồn + to hơn);
+    - bước chân trên cỏ: tiếng "bộp" mềm, nhỏ, thưa, đi lững thững thì không nghe (Phase 9.1 làm nhẹ lại theo góp ý "hơi ồn");
     - tắm: nước sủi liên tục; ăn: nhai liên tục + nuốt; ngủ: tiếng thở;
     - ngáp, kêu đói, khóc, kêu vui, cười khúc khích khi bị cù, gừ gừ khi được vuốt.
   - Trận: tiếng vung đòn theo loại chiêu, trúng nhẹ / mạnh / chí mạng, đỡ, phản đòn, combo 2–5, Nộ đầy, hạ gục, thắng / thua, gong bắt đầu.
@@ -370,6 +372,55 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Nhiều món cộng dồn, mỗi nhu cầu cắt tối đa 40%. Ví dụ ghế + mũ len: năng lượng hao 4 → 3/giờ.
   - Quầy hàng ghi tác dụng từng món. Vừa mua có dòng chỉ cách dùng. Bảng DEV có dòng "Đồ đã mua: hao chậm ...".
   - Túi bánh lưu ngày đã ăn ở `GameSave.Daily.WindmillDay` (trường mới có mặc định, file cũ vẫn đọc được).
+- **G21 · Săn quái — Thám hiểm kiểu mới (Phase 9.2–9.3, `HuntSimulation` + `HuntSession` + `HuntConfig` + `MonsterBook`; bạn góp ý "thám hiểm nên đánh kiểu khác PvP, không đánh với pet, có thể là quái rừng"):**
+  - Khác hẳn trận 1-1: màn ngang, bé đứng giữa 1 dải đường của vùng, **quái rừng** (không phải thú) kéo tới từ 2 bên theo từng đợt.
+  - Điều khiển (nhận ngay khi ngón tay vuốt đủ dài, không đợi nhấc tay):
+
+    | Thao tác | Bé làm gì |
+    |---|---|
+    | Chạm | Lao tới đánh con được chạm (chạm chỗ trống = con gần nhất). Trúng liên tục (cách nhau ≤ 1,6 giây) thành combo +6% mỗi bậc, tối đa 8 bậc. 2 đòn cách nhau 0,32 giây (SPD cao hơn quái thì nhanh hơn chút) |
+    | Vuốt lên | Đập đất: trúng mọi quái trong 2,4 m (×1,4), đẩy lùi + choáng 0,7 giây. Hồi 5 giây |
+    | Vuốt xuống | Đỡ 0,45 giây: chỉ mất 25% máu. Đỡ trong 0,22 giây trước khi trúng = **phản đòn**: không mất máu, quái choáng 1 giây + bị đánh lại, +20 Nộ |
+    | Vuốt ngang | Lướt 3,2 m trong 0,22 giây: không bị trúng đòn lúc lướt, lướt xuyên quái thì gây sát thương. Hồi 1,1 giây |
+    | Nút TUYỆT CHIÊU (khi đầy Nộ) | Trúng mọi quái ×3 + choáng 1,5 giây. Nộ lên khi đánh trúng (+5), hạ quái (+6), bị đánh (+10), phản đòn (+20) |
+
+  - Quái thường:
+
+    | Quái | Cách đánh |
+    |---|---|
+    | Chất Nhờn | Nhảy tới cắn |
+    | Dơi Rừng | Bay nhanh, ít máu, bổ nhào cắn |
+    | Nấm Độc | Đứng xa phun bào tử (bé áp sát thì cắn): phải lao tới đánh |
+    | Heo Rừng | Cào đất rồi lao húc rất đau. Lướt xuyên qua lúc heo tới sát hoặc đỡ đúng lúc. Húc hụt thì choáng 1,1 giây |
+    | Đá Rêu | Lì đòn, giơ 2 tay đập đất trúng cả vùng quanh nó |
+
+  - Mọi đòn đều báo trước: quái lấy đà thì hiện dấu ! đỏ; đập đất có vòng đỏ trên đất (vùng trúng); heo có vạch đỏ chỉ hướng lao. Đánh quái nhỏ lúc nó mới lấy đà (nửa đầu) thì cắt được đòn; sát lúc ra đòn thì phải đỡ / lướt.
+  - Trùm (màn 5 mỗi vùng), còn nửa máu thì **nổi giận**: lấy đà nhanh hơn 20%, nghỉ ít hơn 25%, đi nhanh hơn 20%:
+
+    | Vùng | Trùm | Đặc biệt |
+    |---|---|---|
+    | 1 | Vua Chất Nhờn | Đập đất rộng, 10 giây gọi 2 chất nhờn |
+    | 2 | Chúa Nấm | Bắn loạt 3 bào tử, áp sát thì đập đất, gọi thêm nấm |
+    | 3 | Người Đá Sương | Đập đất rất rộng, đứng xa thì phóng sóng đất |
+    | 4 | Heo Lửa Đầu Đàn | Lao húc liên tục, áp sát thì đập đất, gọi heo |
+    | 5 | Người Đá Pha Lê | Đập đất + bắn mảnh pha lê, gọi dơi |
+
+  - Mỗi màn: màn 1–4 có 3 đợt (3–7 con, đông dần, từ đợt 2 có quái cả 2 bên); màn 5 có 1 đợt 4 quái + đợt trùm (kèm 2 quái). Cùng màn thì cùng đợt quái. Quái gọi thêm cũng phải hạ hết mới qua.
+  - Chỉ số: quái = chỉ số chuẩn của màn (G15) × hệ số từng loại. Máu bé khi săn = HP × 1,4. Sát thương = sức đòn × ATK² / (ATK + DEF): bé lớn hơn 1 giai đoạn thì dễ hẳn.
+  - Thưởng: sao + Coin như G15. Điểm tập: mỗi quái hạ được +0,4 Sức mạnh (tối đa 6 mỗi lần), mỗi lần phản đòn / lướt né +0,5 Tốc độ (tối đa 4). Mỗi lần săn tốn 10 năng lượng + 6 no.
+  - Đo bằng bot (`Tools/HuntBalance`, 30 lần mỗi màn, tay nghề 0,3 / 0,5 / 0,8), bé đúng giai đoạn của vùng:
+    - màn 1–3: thắng 100%, còn 70–98% máu;
+    - màn 4: thắng 93–100%, còn 30–86% máu;
+    - trùm: thắng 60–90% (vụng) / 86–100% (khá), còn 25–60% máu.
+    - Bé nhỏ hơn 1 giai đoạn: thắng trùm 0–15%. Bé lớn hơn 1 giai đoạn: gần như chắc thắng, còn ≥ 65% máu (để gom 3 sao).
+  - Thẻ kết quả: sao + Coin + mở màn / vùng + điểm tập + số quái đã hạ. Các nút: **Về vườn** / **Đánh lại** / **Đánh tiếp** (khi thắng + màn sau đã mở + bé đủ sức; bé mệt thì thẻ ghi lý do).
+- **G22 · Camera vườn (Phase 9.1, `CameraOrbit` + `CameraOrbitConfig`; bạn góp ý "cho điều chỉnh camera, zoom, xoay đổi góc"):**
+  - 2 ngón chụm / mở = zoom (gần 6,5 m → xa 20 m). Xoay 2 ngón = xoay vườn 360°. 2 ngón cùng kéo lên / xuống = đổi góc nghiêng (30° → 75°).
+  - Có ngưỡng chống rung tay: khoảng cách 2 ngón đổi 6%, xoay 10°, kéo 3,5% chiều cao màn hình mới tính. Kéo dọc thì chỉ đổi góc, không zoom / xoay nhầm.
+  - Máy tính: lăn chuột = zoom; giữ chuột phải kéo = xoay + nghiêng.
+  - Đang dắt bé / cầm đồ ăn / cầm đồ chơi thì ngón thứ 2 không tính. Kéo 1 ngón trên đất vẫn là kéo camera như cũ.
+  - Góc đã chỉnh được lưu ở cài đặt của máy. Hòm thư có dòng "Góc camera: đã chỉnh (chạm để về mặc định)".
+  - Mẹo hướng dẫn hiện sau 70 giây chơi (sau 3 mẹo mở đầu). Nền cỏ ngoài vườn rộng 240 m để nhìn thấp không lộ mép.
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

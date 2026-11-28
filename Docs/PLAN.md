@@ -51,6 +51,8 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 8.2 | Vuốt ve rõ ràng (xoa qua lại = vuốt, kéo đi = dắt) + chạm vào bé ra dáng chăm sóc (tim, mắt híp, cù 3 lần) (GDD G18) | ✅ Như trên |
 | 8.3 | Trò chơi trong vườn: bóng (vuốt để ném, bé nhặt mang về), cần lông vũ (bé đuổi vồ), máy bong bóng (bé nhảy đớp), bé tự chơi bóng; nhiệm vụ ngày "chơi với bé" (GDD G19) | ✅ Như trên |
 | 8.4 | Đồ mua có tác dụng: trang trí + phụ kiện làm nhu cầu hao chậm / ngủ ngon hơn; bé ngồi ghế, ăn túi bánh cối xay gió, ngắm đèn lồng, đuổi bướm ở vòm hoa (GDD G20) | ✅ Như trên |
+| 9.1 | Bước chân nhẹ + tự nhiên hơn; camera vườn chụm / xoay / kéo 2 ngón = zoom / xoay / đổi góc, lưu góc ở cài đặt (GDD G17, G22) | ✅ Chờ bạn thử trên điện thoại |
+| 9.2–9.3 | Thám hiểm thành **Săn quái rừng** (khác PvP): đánh theo đợt, chạm đánh + vuốt đập đất / đỡ / lướt, 5 loại quái + 5 trùm, thẻ kết quả có Đánh tiếp (GDD G21) | ✅ Như trên |
 
 ## Kiến trúc thư mục
 
@@ -66,13 +68,16 @@ gaao/                            ← gốc repo = gốc project Unity
 │   │   ├── Core/Unity/ [Unity]               MaterialFactory, Prim, VecExt, Sfx (phát âm thanh) — dùng chung cho View
 │   │   ├── Garden/ [PawFit.Garden, C# thuần] GardenLayout, PetBrain, PetExpressionService, CareActionService, PointerGestures,
 │   │   │                                     StrokeTracker (vuốt ve hay dắt), PlayService (trò chơi), DailyService (việc mỗi ngày),
+│   │   │                                     CameraOrbit (zoom / xoay / đổi góc camera),
 │   │   │                                     TipService (mẹo), NotificationPlanner + NotificationService (thông báo nhắc chăm thú)
 │   │   │   └── View/ [Unity]                 GardenScene, GardenBuilder, GardenCamera, GardenInputRouter, PetController,
 │   │   │                                     MemorialView, EggView, PetDeathFx, GardenUi (bảng đặt tên / thẻ / toast),
 │   │   │                                     ShopStallView (quầy hàng), DecorBuilder (đồ trang trí), DecorLife (bé dùng đồ trang trí),
 │   │   │                                     ToyViews (bóng, cần lông vũ, máy bong bóng + ToyPlayground)
-│   │   ├── Battle/ [PawFit.Battle, C# thuần] SwipeRecognizer, BattleSimulation, BattleBot, BattleSession
-│   │   │   └── View/ [Unity]                 BattleScene (màn ngang), BattleHud, FighterRig, DummyBuilder
+│   │   ├── Battle/ [PawFit.Battle, C# thuần] SwipeRecognizer, BattleSimulation, BattleBot, BattleSession, AdventureService,
+│   │   │                                     Săn quái: Hunt (quái + kịch bản), HuntSimulation, HuntSession + HuntBot, HuntGestures
+│   │   │   └── View/ [Unity]                 BattleScene (màn ngang), BattleHud, FighterRig, DummyBuilder, ArenaBuilder (sân theo vùng),
+│   │   │                                     HuntScene, HuntHud, HunterView, MonsterView (màn Săn quái)
 │   │   ├── Economy/ [PawFit.Economy, C# thuần] EconomyService (ví Coin + quảng cáo 5 lần/ngày), ShopService,
 │   │   │                                     CosmeticsService (phụ kiện + trang trí), IAdService + MockAdService
 │   │   ├── Online/ [PawFit.Online, C# thuần] RankService (Elo + bậc + mùa), Matchmaker, GhostSearch (người chơi ảo),
@@ -87,6 +92,7 @@ gaao/                            ← gốc repo = gốc project Unity
 ├── Server/                                    máy chủ riêng: PawFit.Server (ASP.NET Core + SQLite), PawFit.Server.Tests,
 │                                              Dockerfile + docker-compose + Caddyfile, README (chạy trên Mac / VPS)
 ├── Tools/LogicTests/                          dotnet test (ngoài Unity)
+├── Tools/BattleBalance/ · Tools/HuntBalance/   bot đo nhịp trận 1-1 / đo cân bằng Săn quái
 ├── Tools/NetStandardCheck/                    biên dịch code logic theo .NET Standard 2.1 (bộ thư viện Unity dùng)
 ├── Tools/UnityCompileCheck/                   compile thử code Unity bằng stub (ngoài Unity)
 ├── Tools/Blender/                             bộ dựng thú Gen 1

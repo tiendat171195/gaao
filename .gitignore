@@ -75,3 +75,6 @@ __pycache__/
 !/Tools/BattleBalance/BattleBalance.csproj
 /Tools/BattleBalance/bin/
 /Tools/BattleBalance/obj/
+!/Tools/HuntBalance/HuntBalance.csproj
+/Tools/HuntBalance/bin/
+/Tools/HuntBalance/obj/
