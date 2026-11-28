@@ -3,6 +3,8 @@
     Biên dịch code logic C# thuần theo .NET Standard 2.1 = bộ thư viện Unity 6 dùng (API Compatibility Level mặc định).
     Bắt lỗi lỡ dùng API chỉ có ở .NET 8 (test chạy net8 nên không thấy):
         dotnet build Tools/NetStandardCheck
+    Biên dịch luôn các test EditMode với NUnit 3.5.0 = bản NUnit mà Unity Test Framework 1.5 dùng.
+    LogicTests chạy NUnit 3.14 nên dùng nhầm API mới (vd Is.AnyOf) vẫn qua, nhưng Unity báo lỗi + vào Safe Mode.
   -->
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -19,8 +21,11 @@
     <Compile Include="../../Assets/PawFit/Scripts/Battle/**/*.cs" Exclude="../../Assets/PawFit/Scripts/Battle/View/**" />
     <Compile Include="../../Assets/PawFit/Scripts/Economy/**/*.cs" />
     <Compile Include="../../Assets/PawFit/Scripts/Online/**/*.cs" />
+    <Compile Include="../../Assets/PawFit/Tests/EditMode/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- NUnit 3.5 chỉ có bản .NET Framework: chỉ dùng để biên dịch (không chạy test ở đây) nên bỏ cảnh báo NU1701 -->
+    <PackageReference Include="NUnit" Version="3.5.0" NoWarn="NU1701" />
   </ItemGroup>
 </Project>

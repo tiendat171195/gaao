@@ -432,6 +432,7 @@
 - Chạy test logic: `dotnet test Tools/LogicTests` (khoảng 30 giây, gồm cả restore NuGet lần đầu).
 - Test máy chủ: `dotnet test Server/PawFit.Server.Tests` (khoảng 10 giây, chạy máy chủ thật ở cổng ngẫu nhiên). Chạy thử máy chủ: `cd Server/PawFit.Server && dotnet run` (cổng 5080).
 - Kiểm tra code logic theo bộ thư viện của Unity: `dotnet build Tools/NetStandardCheck` (.NET Standard 2.1). Code logic dùng API mới của .NET 8 thì bước này báo lỗi.
+  - Bước này biên dịch luôn test EditMode với **NUnit 3.5.0** (bản Unity Test Framework 1.5 dùng). LogicTests chạy NUnit 3.14 nên không thấy lỗi kiểu `Is.AnyOf` (Unity báo lỗi + vào Safe Mode, đã gặp 1 lần).
 - Compile check nhánh chạy trên điện thoại (thông báo): `dotnet build Tools/UnityCompileCheck "-p:DefineConstants=UNITY_ANDROID%3BPAWFIT_NOTIFICATIONS" -o <thư mục tạm>`. Sau đó build lại thường bằng `--no-incremental`.
 - Soát API package thông báo:
   - Tải tarball `com.unity.mobile.notifications-2.5.0.tgz` từ download.packages.unity.com (môi trường `gaao` đã mở packages.unity.com + cdn.packages.unity.com), giải nén vào thư mục tạm.
