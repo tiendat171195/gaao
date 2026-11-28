@@ -117,7 +117,8 @@ namespace PawFit.Garden.View
             NVec2 size = l.Max - l.Min, c = (l.Min + l.Max) * 0.5f;
             Prim.Make(PrimitiveType.Cube, walk, new Vector3(c.X, -0.1f, c.Y), new Vector3(size.X, 0.2f, size.Y), Grass,
                       keepCollider: true, smoothness: 0.05f, name: "Ground");
-            Prim.Make(PrimitiveType.Cube, decor, new Vector3(c.X, -0.22f, c.Y), new Vector3(90f, 0.1f, 100f), GrassFar,
+            // nền cỏ ngoài vườn: đủ rộng để mép luôn chìm trong sương (sương dày hẳn ở 70 m) kể cả khi xoay / nhìn thấp (Phase 9.1)
+            Prim.Make(PrimitiveType.Cube, decor, new Vector3(c.X, -0.22f, c.Y), new Vector3(240f, 0.1f, 240f), GrassFar,
                       smoothness: 0.02f, name: "FarGround");
             // đường đá nhỏ từ chỗ thú đứng tới các khu
             foreach (ZoneType z in new[] { ZoneType.FoodHut, ZoneType.Pond, ZoneType.TrainingGround, ZoneType.Shop })

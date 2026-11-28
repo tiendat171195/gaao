@@ -37,6 +37,7 @@ namespace PawFit.Garden.View
         private ToyPlayground _toys;
         private PlayService _play;
         private DecorLife _decor;
+        private SettingsService _settings;
         private ServiceLocator _s;
         private GardenLayout _layout;
         private PetService _pets;
@@ -124,7 +125,12 @@ namespace PawFit.Garden.View
 
             _camCtl = cam.GetComponent<GardenCamera>();
             if (_camCtl == null) _camCtl = cam.gameObject.AddComponent<GardenCamera>();
-            _camCtl.Init(cam, Pet != null ? Pet.transform : (_egg != null ? _egg.transform : null), _layout);
+            var orbit = new CameraOrbit();   // góc camera bạn đã chỉnh lần trước (Phase 9.1)
+            _settings = s.TryGet(out SettingsService settings) ? settings : null;
+            if (_settings != null && _settings.HasCameraView)
+                orbit.Set(_settings.Current.CameraYaw.Value, _settings.Current.CameraPitch.Value, _settings.Current.CameraDistance.Value);
+            _camCtl.Init(cam, Pet != null ? Pet.transform : (_egg != null ? _egg.transform : null), _layout, orbit);
+            _camCtl.ViewChanged = SaveCameraView;
             _router = gameObject.AddComponent<GardenInputRouter>();
             _router.Init(cam, new LegacyPointerInput(), _camCtl, Pet, cfg, _log);
             _router.EggTapped = OnEggTapped;
@@ -264,6 +270,24 @@ namespace PawFit.Garden.View
             }
             NVec2 spot = _daily.DigSpots[_pendingDig];
             if (NVec2.Distance(Pet.transform.position.ToGround(), spot) <= _daily.Config.DigReach * 0.8f) DoDig(_pendingDig);
+        }
+
+        // ------------------------------------------------------------------ góc camera (Phase 9.1)
+
+        /// <summary>Camera đang ở góc mặc định không (hòm thư hiện nút "về góc mặc định" khi đã chỉnh).</summary>
+        public bool CameraIsDefault => _camCtl == null || _camCtl.Orbit.IsDefault;
+
+        /// <summary>Về góc camera mặc định (hòm thư).</summary>
+        public void ResetCameraView()
+        {
+            if (_camCtl != null) _camCtl.ResetView();
+        }
+
+        private void SaveCameraView(CameraOrbit o)
+        {
+            if (_settings == null) return;
+            if (o.IsDefault) _settings.ClearCameraView();
+            else _settings.SetCameraView(o.Yaw, o.Pitch, o.Distance);
         }
 
         /// <summary>Bé (mới) biết tự tới chơi bóng khi rảnh.</summary>

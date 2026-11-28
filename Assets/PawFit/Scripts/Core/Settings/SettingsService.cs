@@ -17,6 +17,11 @@ namespace PawFit.Core
 
         /// <summary>Thông báo nhắc chăm thú khi tắt app: null = chưa hỏi người chơi, true = bật, false = tắt.</summary>
         public bool? NotificationsOn;
+
+        /// <summary>Góc camera vườn bạn đã chỉnh (Phase 9.1): xoay / nghiêng (độ), khoảng cách (m). null = góc mặc định.</summary>
+        public float? CameraYaw;
+        public float? CameraPitch;
+        public float? CameraDistance;
     }
 
     /// <summary>Cài đặt vừa đổi (App bật / tắt âm thanh theo).</summary>
@@ -69,6 +74,26 @@ namespace PawFit.Core
         }
 
         public void ToggleMusic() => SetMusic(!_data.MusicOn);
+
+        /// <summary>Có góc camera đã lưu không (cả 3 số).</summary>
+        public bool HasCameraView => _data.CameraYaw.HasValue && _data.CameraPitch.HasValue && _data.CameraDistance.HasValue;
+
+        /// <summary>Lưu góc camera vườn (gọi khi thả tay sau khi chỉnh, không gọi mỗi frame).</summary>
+        public void SetCameraView(float yaw, float pitch, float distance)
+        {
+            _data.CameraYaw = yaw;
+            _data.CameraPitch = pitch;
+            _data.CameraDistance = distance;
+            _save.Save(SaveKey, _data);
+        }
+
+        /// <summary>Về góc mặc định: xóa góc đã lưu.</summary>
+        public void ClearCameraView()
+        {
+            if (!HasCameraView && !_data.CameraYaw.HasValue) return;
+            _data.CameraYaw = _data.CameraPitch = _data.CameraDistance = null;
+            _save.Save(SaveKey, _data);
+        }
 
         public bool HasSeenTip(string id) => _data.SeenTips != null && _data.SeenTips.Contains(id);
 

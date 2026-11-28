@@ -13,7 +13,9 @@ namespace PawFit.Garden.View
     ///   chạm hình nộm = vào sân tập · chạm quầy hàng = mở quầy · chạm hòm thư (cạnh cổng đấu trường) = cài đặt
     ///   chạm biển Thám hiểm (góc sau bên trái) = bản đồ Thám hiểm · chạm ụ đất kho báu = bé chạy tới đào
     ///   đồ chơi (Phase 8.3): vuốt bóng = ném (chạm = đá nhẹ) · kéo cần lông vũ = bé đuổi · chạm máy bong bóng = thổi, chạm bong bóng = vỡ
-    ///   đồ trang trí (Phase 8.4): chạm ghế = bé ra ngồi · chạm đèn lồng = lấp lánh · chạm cối xay gió = bé ra ăn bánh · chạm vòm hoa = gọi bướm.
+    ///   đồ trang trí (Phase 8.4): chạm ghế = bé ra ngồi · chạm đèn lồng = lấp lánh · chạm cối xay gió = bé ra ăn bánh · chạm vòm hoa = gọi bướm
+    ///   camera (Phase 9.1): 2 ngón chụm / mở = zoom · 2 ngón xoay = xoay vườn · 2 ngón kéo lên / xuống = đổi góc nghiêng ·
+    ///   máy tính: lăn chuột = zoom, giữ chuột phải kéo = xoay + nghiêng.
     /// Phân loại cử chỉ nằm ở PointerGestureClassifier (C# thuần); lớp này chỉ raycast + chuyển lệnh.
     /// </summary>
     public sealed class GardenInputRouter : MonoBehaviour
@@ -70,6 +72,8 @@ namespace PawFit.Garden.View
         private PointerGestureClassifier _gestures;
         private readonly StrokeTracker _stroke = new StrokeTracker();
         private bool _leading, _strokingPet;
+        private bool _twoFinger, _orbitHeld;
+        private float _wheelIdle;
         private GardenCamera _camCtl;
         private PetController _pet;
         private GardenConfig _cfg;
@@ -108,6 +112,8 @@ namespace PawFit.Garden.View
                 if (s.Phase == PointerPhase.Began) _gestures.Cancel();
                 return;
             }
+            CameraMouse(s);
+            if (TwoFinger(s)) return;
             switch (s.Phase)
             {
                 case PointerPhase.Began:
@@ -121,6 +127,70 @@ namespace PawFit.Garden.View
                     Handle(_gestures.Up(s.Position.ToNumerics(), s.Time));
                     break;
             }
+        }
+
+        /// <summary>Máy tính: lăn chuột = zoom, giữ chuột phải kéo = xoay + đổi góc. Thôi chỉnh thì lưu góc.</summary>
+        private void CameraMouse(PointerSample s)
+        {
+            bool blocked = PointerBlocker != null && PointerBlocker(s.Position);   // đang lăn / kéo trên bảng DEV
+            if (Mathf.Abs(s.Scroll) > 0.01f && !blocked)
+            {
+                _camCtl.Wheel(s.Scroll);
+                _wheelIdle = 0.4f;
+            }
+            else if (_wheelIdle > 0f)
+            {
+                _wheelIdle -= Time.unscaledDeltaTime;
+                if (_wheelIdle <= 0f) CameraDone();
+            }
+            if (s.OrbitHeld && !blocked)
+            {
+                _camCtl.OrbitDrag(s.OrbitDelta);
+                _orbitHeld = true;
+            }
+            else if (_orbitHeld && !s.OrbitHeld)
+            {
+                _orbitHeld = false;
+                CameraDone();
+            }
+        }
+
+        /// <summary>
+        /// 2 ngón trên màn hình = chỉnh camera. Trả true khi đang ở chế độ 2 ngón: bỏ qua chạm 1 ngón cho tới khi nhấc hết tay
+        /// (nhấc 1 ngón trước thì ngón còn lại không bị coi là kéo / chạm). Đang dắt bé / cầm đồ ăn / đồ chơi thì ngón 2 không tính.
+        /// </summary>
+        private bool TwoFinger(PointerSample s)
+        {
+            if (!_twoFinger)
+            {
+                if (s.Count < 2) return false;
+                PointerTarget t = _gestures.Target;
+                if (_gestures.IsDragging && (t == PointerTarget.Pet || t == PointerTarget.FoodSource || t == PointerTarget.Toy)) return false;
+                if (PointerBlocker != null && (PointerBlocker(s.Position) || PointerBlocker(s.Second))) return false;
+                if (_gestures.IsDragging) _camCtl.EndPan();
+                _gestures.Cancel();
+                _twoFinger = true;
+                _camCtl.BeginTwoFinger(s.Position, s.Second);
+                return true;
+            }
+            if (s.Count >= 2)
+            {
+                _camCtl.MoveTwoFinger(s.Position, s.Second);
+                return true;
+            }
+            if (_camCtl.Orbit.TwoFingerActive)
+            {
+                _camCtl.EndTwoFinger();
+                Tips?.Done(TipId.Camera);
+            }
+            if (s.Count == 0) _twoFinger = false;
+            return true;
+        }
+
+        private void CameraDone()
+        {
+            _camCtl.CommitView();
+            Tips?.Done(TipId.Camera);
         }
 
         private PointerTarget Pick(Vector2 screen)

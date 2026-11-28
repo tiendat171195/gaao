@@ -6,7 +6,7 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Các mẹo hướng dẫn (vườn không có nút nên người mới cần được chỉ đúng lúc).</summary>
-    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9, Adventure = 10, Dig = 11, Daily = 12 }
+    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9, Adventure = 10, Dig = 11, Daily = 12, Camera = 13 }
 
     public sealed class TipConfig
     {
@@ -18,6 +18,9 @@ namespace PawFit.Garden
 
         /// <summary>Chuỗi mở đầu (chạm đất → vuốt ve → dắt): chưa làm theo thì chờ bấy nhiêu giây mới hiện mẹo kế.</summary>
         public float IntroWaitSeconds = 40f;
+
+        /// <summary>Chơi bấy nhiêu giây thì chỉ cách chỉnh camera (zoom / xoay / đổi góc bằng 2 ngón, Phase 9.1).</summary>
+        public float CameraAfterSeconds = 70f;
 
         /// <summary>Chơi bấy nhiêu giây thì giới thiệu quầy hàng / sân tập / đấu trường.</summary>
         public float DigAfterSeconds = 100f;
@@ -128,6 +131,7 @@ namespace PawFit.Garden
             if (!Seen(TipId.Bathe) && n.Hygiene < _expr.DirtyBelowHygiene && !_health.IsIll && !pet.IsSleeping) return TipId.Bathe;
             if (!Seen(TipId.Sleep) && n.Energy < _expr.SleepyBelowEnergy && !pet.IsSleeping) return TipId.Sleep;
             // khám phá
+            if (!Seen(TipId.Camera) && Seen(TipId.Lead) && _played >= _cfg.CameraAfterSeconds) return TipId.Camera;
             if (!Seen(TipId.Dig) && !pet.IsSleeping && _played >= _cfg.DigAfterSeconds) return TipId.Dig;
             if (!Seen(TipId.Shop) && _played >= _cfg.ShopAfterSeconds) return TipId.Shop;
             if (!Seen(TipId.Daily) && _played >= _cfg.DailyAfterSeconds) return TipId.Daily;
@@ -149,6 +153,7 @@ namespace PawFit.Garden
             switch (id)
             {
                 case TipId.Move: return "Chạm xuống đất để bé chạy tới chỗ đó. Kéo trên mặt đất để xem chỗ khác trong vườn.";
+                case TipId.Camera: return "Chụm / mở 2 ngón để phóng to thu nhỏ, xoay 2 ngón để xoay vườn, kéo 2 ngón lên xuống để đổi góc nhìn.";
                 case TipId.Pet: return "Xoa qua lại trên người bé để vuốt ve: bé lim dim, gừ gừ, vui lắm. Chạm nhẹ thì bé nhảy lên mừng.";
                 case TipId.Lead: return "Giữ bé rồi kéo ra chỗ khác để dắt đi. Thả vào hồ = tắm, thả vào ổ = đi ngủ.";
                 case TipId.Feed: return "Bé đói rồi! Kéo quả táo ở khay chòi ăn (bên trái) thả lên bé.";

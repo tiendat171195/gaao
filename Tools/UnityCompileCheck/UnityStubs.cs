@@ -101,6 +101,7 @@ namespace UnityEngine
         public float x, y;
         public Vector2(float x, float y) { this.x = x; this.y = y; }
         public float magnitude => 0f;
+        public float sqrMagnitude => 0f;
         public static Vector2 zero => default;
         public static Vector2 one => new Vector2(1, 1);
         public static Vector2 operator -(Vector2 a, Vector2 b) => a;
@@ -394,6 +395,7 @@ namespace UnityEngine
         public static Vector3 mousePosition => default;
         public static Touch GetTouch(int index) => default;
         public static bool GetMouseButton(int button) => false;
+        public static Vector2 mouseScrollDelta => default;
         public static bool GetMouseButtonDown(int button) => false;
         public static bool GetMouseButtonUp(int button) => false;
         public static bool GetKeyDown(KeyCode key) => false;

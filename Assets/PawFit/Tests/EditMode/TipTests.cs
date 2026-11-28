@@ -87,7 +87,8 @@ namespace PawFit.Tests
                 TipId? t = _tips.Update(0.5f);
                 if (t.HasValue) shown.Add(t.Value);
             }
-            CollectionAssert.AreEqual(new[] { TipId.Dig, TipId.Shop, TipId.Daily, TipId.Training, TipId.Adventure, TipId.Arena }, shown);
+            // Phase 9.1: mẹo chỉnh camera (2 ngón) đứng đầu phần khám phá
+            CollectionAssert.AreEqual(new[] { TipId.Camera, TipId.Dig, TipId.Shop, TipId.Daily, TipId.Training, TipId.Adventure, TipId.Arena }, shown);
         }
 
         [Test]

@@ -713,6 +713,15 @@ namespace PawFit.App
                 GardenUi.Toast(settings.MusicOn ? "Đã bật nhạc nền" : "Đã tắt nhạc nền");
                 OpenSettings();
             });
+            bool camDefault = Garden.CameraIsDefault;   // góc camera (Phase 9.1): chụm / xoay / kéo 2 ngón để chỉnh
+            labels.Add(camDefault ? "Góc camera: mặc định (chụm / xoay / kéo 2 ngón để chỉnh)" : "Góc camera: đã chỉnh (chạm để về mặc định)");
+            enabled.Add(!camDefault);
+            actions.Add(() =>
+            {
+                Garden.ResetCameraView();
+                GardenUi.Toast("Camera về góc mặc định");
+                OpenSettings();
+            });
             if (_services.TryGet(out OnlineService online))   // máy chủ riêng: tài khoản + chuyển máy
             {
                 body += "\nTài khoản: " + (online.Name ?? "chưa có") + " · " +

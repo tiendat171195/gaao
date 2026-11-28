@@ -312,16 +312,19 @@ namespace PawFit.Garden.View
         /// <summary>Bước chân trên cỏ: đi nhanh thì bước dồn hơn + to hơn; 3 tiếng bước xoay vòng cho khỏi nhàm.</summary>
         private void Footsteps(float dt, float speed)
         {
-            if (speed < 0.25f || _brain.Activity == PetActivity.Sleeping)
+            if (speed < 0.4f || _brain.Activity == PetActivity.Sleeping || _perched)   // lững thững / đứng / ngồi ghế: không nghe bước
             {
-                _stepT = 0.05f;
+                _stepT = 0.08f;
                 return;
             }
             _stepT -= dt;
             if (_stepT > 0f) return;
-            _stepT = Mathf.Clamp(0.55f / speed, 0.15f, 0.42f);
-            SoundId s = _step++ % 3 == 0 ? SoundId.Step0 : _step % 3 == 1 ? SoundId.Step1 : SoundId.Step2;
-            Sfx.Play(s, Mathf.Lerp(0.14f, 0.3f, speed / 4f), UnityEngine.Random.Range(0.9f, 1.1f));
+            // Phase 9.1: nhẹ hơn (0,05–0,11 thay vì 0,14–0,3), thưa hơn, mỗi bước to nhỏ + cao thấp hơi khác, không lặp 2 tiếng giống nhau liền
+            _stepT = Mathf.Clamp(0.62f / speed, 0.2f, 0.5f) * UnityEngine.Random.Range(0.92f, 1.08f);
+            _step = (_step + UnityEngine.Random.Range(1, 3)) % 3;
+            SoundId s = _step == 0 ? SoundId.Step0 : _step == 1 ? SoundId.Step1 : SoundId.Step2;
+            float run = Mathf.Clamp01((speed - 0.5f) / 3.5f);
+            Sfx.Play(s, Mathf.Lerp(0.05f, 0.11f, run) * UnityEngine.Random.Range(0.8f, 1.05f), UnityEngine.Random.Range(0.92f, 1.08f));
         }
 
         /// <summary>Tiếng trong lúc làm việc: nhai tiếp khi đang ăn, sủi nước khi tắm, thở khi ngủ, đấm hình nộm khi tập.</summary>

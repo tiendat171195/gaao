@@ -87,23 +87,31 @@ namespace PawFit.Core.Audio
             }
         }
 
-        /// <summary>Bước chân trên cỏ: tiếng sột soạt ngắn + tiếng "bịch" trầm rất nhỏ.</summary>
+        /// <summary>
+        /// Bước chân trên cỏ (Phase 9.1: nhẹ + tự nhiên hơn): tiếng "bộp" mềm của đệm chân (dải trầm 180–1.000 Hz, vào chậm 12 ms nên
+        /// không có tiếng "tách"), thêm chút cỏ lá sột soạt rất nhỏ. Bản cũ dải 700–3.200 Hz vào 3 ms nghe chói + ồn.
+        /// </summary>
         private static float[] Step(uint seed, float pitch)
         {
-            float[] b = Buf(0.12f);
+            float[] b = Buf(0.16f);
             var n = new Noise(seed);
-            var hp = new OnePole(700f * pitch);
-            var lp = new OnePole(3200f * pitch);
-            var thump = new Sine(70f * pitch);
+            var hp = new OnePole(180f * pitch);
+            var lp = new OnePole(1000f * pitch);
+            var lp2 = new OnePole(900f * pitch);
+            var leafHp = new OnePole(2400f);
+            var leafLp = new OnePole(4500f);
+            var thump = new Sine(55f * pitch);
             for (int i = 0; i < b.Length; i++)
             {
                 float t = T(i);
                 float x = n.Next();
-                float band = lp.Run(x - hp.Run(x));
-                float env = Attack(t, 0.003f) * Exp(t, 45f) + 0.35f * Attack(t - 0.03f, 0.004f) * Exp(t - 0.03f, 70f);
-                b[i] = band * env + thump.Next() * Exp(t, 60f) * 0.45f;
+                float pad = lp2.Run(lp.Run(x - hp.Run(x)));
+                float env = Attack(t, 0.012f) * Exp(t, 34f);
+                float leaf = leafLp.Run(x) - leafHp.Run(x);
+                float leafEnv = 0.18f * Attack(t - 0.015f, 0.02f) * Exp(t - 0.015f, 55f);
+                b[i] = pad * env + leaf * leafEnv + thump.Next() * Attack(t, 0.01f) * Exp(t, 45f) * 0.22f;
             }
-            return Normalize(b, 0.8f);
+            return Normalize(b, 0.55f);
         }
 
         /// <summary>Té nước: tiếng ào (nhiễu tắt dần) + giọt nước bắn (nốt cao vút lên rất ngắn).</summary>
