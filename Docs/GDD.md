@@ -1,6 +1,6 @@
 # PawFit — GDD ngắn
 
-Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G22). Mọi số nằm trong config, chỉnh được.
+Thiết kế gốc do bạn chốt + các con số / giả định tôi điền thêm (G1–G25). Mọi số nằm trong config, chỉnh được.
 
 ## 1. Lõi
 
@@ -11,7 +11,9 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Điều khiển: chạm đất thì thú chạy tới; kéo thú để dắt; xoa qua lại trên người thú = vuốt ve (G18); chạm thú thì thú phản ứng; kéo đồ ăn thả cho thú để cho ăn; kéo thú ra hồ để tắm.
   - Đồ chơi để chơi với bé (G19); đồ trang trí + phụ kiện có tác dụng, bé dùng được (G20).
   - Camera vườn: 2 ngón chụm / xoay / kéo dọc = zoom / xoay / đổi góc (G22).
-- **Thám hiểm = Săn quái rừng** (G15, G21): chạm để đánh, vuốt để đập đất / đỡ / lướt; khác hẳn trận 1-1 PvP.
+  - Ngày / đêm theo giờ máy (G23): đêm có đom đóm, sao trên hồ, đèn tự sáng, dế kêu; bé buồn ngủ sớm hơn.
+  - Vườn rau 3 luống cạnh chòi ăn (G24): gieo, tưới, hái, cho bé ăn quả (mỗi loại quả 1 tác dụng).
+- **Thám hiểm = Săn quái rừng** (G15, G21): chạm để đánh, vuốt để đập đất / đỡ / lướt; khác hẳn trận 1-1 PvP. Quái rơi hạt giống, có sổ tay quái rừng (G25).
 - **Thú:** 1 base mesh + DNA, sinh lúc chạy bằng blendshape + material (+ shader lông ở Gen 2). Style ngầu + cute, không cartoon phẳng.
 - **Tiến hóa:** Baby (ngày 0) → Child (3) → Teen (7) → Adult (14) → Ultimate (30, nếu đủ điều kiện).
   - Đầu vào: CareScore 7 ngày + TrainingVector (Sức mạnh / Tốc độ / Chăm sóc / Bóng tối) + seed và tính cách ẩn (10–20%).
@@ -25,7 +27,7 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
 - **Ranking:** ghép đối thủ theo Elo ±100 và Lực chiến ±10%. Bậc Bronze → Silver → Gold → Diamond → Master. Mùa giải 30 ngày.
 - **Kinh tế:** Coin; không nạp tiền. Quảng cáo tự nguyện, tối đa 5 lần/ngày (`IAdService` + `MockAdService`).
 
-## 2. Số liệu & giả định (G1–G22)
+## 2. Số liệu & giả định (G1–G25)
 
 - **G1 · Nhu cầu ẩn:** No bụng, Sạch, Năng lượng, Vui (0–100). Đang cài đặt ở `NeedsConfig`: no −4/h, sạch −3/h, năng lượng −4/h khi thức và +15/h khi ngủ, vui −3.5/h, lúc nở = 80.
 - **G1b · Biểu cảm (Phase 1.3, `ExpressionConfig`):**
@@ -421,6 +423,66 @@ Thiết kế gốc do bạn chốt + các con số / giả định tôi điền 
   - Đang dắt bé / cầm đồ ăn / cầm đồ chơi thì ngón thứ 2 không tính. Kéo 1 ngón trên đất vẫn là kéo camera như cũ.
   - Góc đã chỉnh được lưu ở cài đặt của máy. Hòm thư có dòng "Góc camera: đã chỉnh (chạm để về mặc định)".
   - Mẹo hướng dẫn hiện sau 70 giây chơi (sau 3 mẹo mở đầu). Nền cỏ ngoài vườn rộng 240 m để nhìn thấp không lộ mép.
+- **G23 · Ngày / đêm theo giờ máy (Phase 10.1, `DayCycle` + `DayCycleConfig`, hình ở `DayNightView`):**
+  - Giờ = giờ của game (giờ máy chủ + tua giờ ở bảng DEV) đổi ra giờ trên máy. Bảng mốc ánh sáng, giữa 2 mốc trộn mượt:
+
+    | Giờ | Trời | Có gì |
+    |---|---|---|
+    | 0:00–4:30 | Đêm trăng: ánh trăng xanh (0,42), nền xanh đậm | Đom đóm, sao trên mặt hồ, dế kêu, cú mèo |
+    | 6:00 | Bình minh cam hồng, nắng xiên từ bên trái | Chim hót nhiều nhất |
+    | 8:00 | Sáng | |
+    | 12:00 | Trưa = đúng ánh sáng vườn trước Phase 10.1 | |
+    | 15:30 | Chiều | |
+    | 17:45 | Chiều tà vàng cam, bóng đổ dài | |
+    | 19:00 | Chạng vạng tím hồng | Đom đóm bắt đầu ra, đèn bật |
+    | 20:30 → 24:00 | Đêm | |
+
+  - Nắng / trăng luôn chiếu từ sau lưng camera để mặt bé không bị tối. Đêm bớt rực màu (độ bão hòa 8 → −4).
+  - Buổi: sáng sớm 4:30–7:30, ngày 7:30–17:00, chiều tối 17:00–20:00, đêm 20:00–4:30.
+  - **Giờ đi ngủ 21:30–6:00:** năng lượng dưới 55 là bé tự về ổ (ban ngày dưới 20). Đã ngủ thì ngủ một mạch tới 6:00, không tự dậy khi đủ năng lượng. Bạn đánh thức (chạm / dắt / gọi đi đâu) thì bé thức thêm 3 phút rồi mới buồn ngủ lại.
+  - Đêm trong vườn:
+    - 16 con đom đóm lập lòe quanh hồ / gốc cây / ổ ngủ. Cứ 20–40 giây 1 con bay tới lượn quanh đầu bé ~8 giây; bé rảnh thì nửa số lần ngước nhìn.
+    - 14 ngôi sao + bóng trăng lấp lánh trên mặt hồ.
+    - Đèn nấm cạnh ổ + đèn lồng nhỏ ở cửa chòi ăn tự sáng (soi khay táo). Dây đèn lồng trang trí sáng từ lúc chạng vạng. Bướm đậu nghỉ trong vòm hoa.
+  - Âm thanh: đêm có dế kêu (to 0,16), gió nhỏ đi 45%, chim thưa dần lúc chiều tối và im hẳn ban đêm, đêm khuya 35–80 giây có tiếng cú mèo rất nhỏ.
+  - Vào màn đấu / săn quái thì luôn sáng như buổi trưa cho dễ nhìn.
+  - Hòm thư ▸ "Ngày / đêm theo giờ máy": tắt = vườn luôn sáng như trưa, bé không có giờ đi ngủ. Bảng DEV ép giờ 6h / 12h / 17:45 / 19h / 22h.
+  - Mẹo "Trời tối rồi!" hiện 1 lần vào ban đêm.
+- **G24 · Vườn rau (Phase 10.2, `FarmService` + `FarmConfig`, hình ở `FarmView`):**
+  - 3 luống đất trước chòi ăn (góc trái phía trước). Chạm luống trống = chọn hạt để gieo; đang lớn mà đất khô = tưới; chín (có ngôi sao lấp lánh) = hái. Bé đang thức thì chạy ra đứng sau luống cúi chăm cây; bé ngủ thì để bé ngủ, việc vẫn xong.
+  - Cây lớn theo giờ thật, cả lúc tắt app. Đất ẩm thì lớn nhanh gấp đôi; mỗi lần tưới đất ẩm 2 giờ; gieo xong là tưới luôn. Không có héo / chết cây: chín rồi thì chờ bạn hái. Giờ máy lùi thì cây đứng yên, không tụt.
+
+    | Cây | Chín sau (tưới đều) | Quả mỗi hạt | Gói hạt | Bé ăn 1 quả |
+    |---|---|---|---|---|
+    | Dâu tây | 1,5 giờ (45 phút) | 3 | 3 hạt · 15 Coin | +15 no, +12 vui |
+    | Cà rốt | 3 giờ (1,5 giờ) | 3 | 3 hạt · 20 Coin | +25 no, +12 năng lượng, +3 vui |
+    | Việt quất | 6 giờ (3 giờ) | 4 | 3 hạt · 30 Coin | +12 no, +6 vui, +2 điểm Tốc độ |
+    | Bí ngô | 10 giờ (5 giờ) | 2 | 2 hạt · 40 Coin | +40 no, +5 vui, +3 điểm Sức mạnh |
+
+  - Mở vườn rau lần đầu được tặng 3 hạt dâu tây + 2 hạt cà rốt.
+  - Quả hái vào giỏ cạnh khay táo (tối đa 20 quả mỗi loại; giỏ đầy thì quả chờ ở luống). Chạm giỏ = chọn quả, bé chạy ra giỏ ăn.
+  - Ăn quả = 1 lần cho ăn (nhiệm vụ ngày, điểm Chăm sóc). Bé ốm ăn quả tính là ăn uống cẩn thận (như bát cháo) nhưng không được điểm tập. No (≥ 92) hoặc đang ngủ thì bé không ăn, quả vẫn còn.
+  - Hạt mua ở quầy hàng ▸ Hạt giống, hoặc nhặt khi săn quái (G25).
+  - Thông báo "Vườn rau có quả chín rồi!" lúc luống chín sớm nhất (loại ít gấp nhất, gộp được với thông báo khác).
+  - Mẹo giới thiệu vườn rau sau 125 giây chơi (sau mẹo kho báu).
+  - Lưu trong file game (phiên bản 8). File cũ: có vườn rau mới + gói hạt tặng.
+- **G25 · Săn quái rơi hạt + sổ tay quái rừng + nhiệm vụ mới (Phase 10.3, `HuntLoot`, `AdventureService`):**
+  - Mỗi quái thường bị hạ có 30% rơi 1 hạt (mỗi lần săn tối đa 4 hạt từ quái thường). Trùm luôn rơi 2 hạt quý. Thua / bỏ cuộc vẫn giữ hạt đã nhặt. Quay số riêng, không làm đổi diễn biến trận.
+
+    | Vùng | Quái thường rơi | Trùm rơi |
+    |---|---|---|
+    | Đồi Cỏ Gió | Dâu tây, Cà rốt | 2 hạt Việt quất |
+    | Rừng Nấm | Cà rốt, Việt quất | 2 hạt Việt quất |
+    | Hồ Sương | Việt quất, Dâu tây | 2 hạt Bí ngô |
+    | Núi Lửa | Bí ngô, Cà rốt | 2 hạt Bí ngô |
+    | Hang Pha Lê | Bí ngô, Việt quất | 2 hạt Bí ngô |
+
+  - **Sổ tay quái rừng** (bản đồ Thám hiểm ▸ Sổ tay): đếm số con đã hạ từng loài. Mỗi mốc thưởng 1 lần:
+    - quái thường: 1 / 10 / 30 / 100 con = +5 / +20 / +40 / +100 Coin;
+    - trùm: 1 / 3 / 10 / 25 con = +15 / +30 / +60 / +120 Coin.
+    - Loài chưa gặp hiện "???" + vùng có nó.
+  - Nhiệm vụ ngày mới: "Hạ 8 quái rừng khi đi Thám hiểm" (nhóm đấu, 20 Coin; thua vẫn tính số con đã hạ), "Thu hoạch 1 luống ở vườn rau" (nhóm chăm, 15 Coin).
+  - Thẻ màn ghi quái hay rơi hạt gì. Thẻ kết quả ghi hạt đã nhặt + thưởng sổ tay. Lúc quái ngã, túi hạt bật lên rồi bay vào bé.
 
 ## 3. Bảng gene DNA (đã cài trong `PetDna`)
 

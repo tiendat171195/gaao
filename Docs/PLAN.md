@@ -53,6 +53,9 @@ Game nuôi thú ảo 3D (cảm hứng Tamagotchi): 1 người = 1 thú, chết v
 | 8.4 | Đồ mua có tác dụng: trang trí + phụ kiện làm nhu cầu hao chậm / ngủ ngon hơn; bé ngồi ghế, ăn túi bánh cối xay gió, ngắm đèn lồng, đuổi bướm ở vòm hoa (GDD G20) | ✅ Như trên |
 | 9.1 | Bước chân nhẹ + tự nhiên hơn; camera vườn chụm / xoay / kéo 2 ngón = zoom / xoay / đổi góc, lưu góc ở cài đặt (GDD G17, G22) | ✅ Chờ bạn thử trên điện thoại |
 | 9.2–9.3 | Thám hiểm thành **Săn quái rừng** (khác PvP): đánh theo đợt, chạm đánh + vuốt đập đất / đỡ / lướt, 5 loại quái + 5 trùm, thẻ kết quả có Đánh tiếp (GDD G21) | ✅ Như trên |
+| 10.1 | Ngày / đêm theo giờ máy: nắng đổi theo giờ; đêm có đom đóm, sao trên hồ, đèn tự sáng, dế kêu; bé đi ngủ sớm, ngủ một mạch tới sáng (GDD G23) | ✅ Chờ bạn thử trên điện thoại |
+| 10.2 | Vườn rau: 3 luống gieo / tưới / hái theo giờ thật, 4 loại quả mỗi loại 1 tác dụng, giỏ quả cho bé ăn, quầy hạt giống, thông báo quả chín (GDD G24) | ✅ Như trên |
+| 10.3 | Săn quái rơi hạt giống, sổ tay quái rừng (thưởng Coin theo mốc), nhiệm vụ ngày "hạ 8 quái" + "thu hoạch rau" (GDD G25) | ✅ Như trên |
 
 ## Kiến trúc thư mục
 

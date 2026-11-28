@@ -39,19 +39,21 @@ Game nuôi thú ảo 3D cho Android / iOS (Unity 6.3 LTS, URP, C#). Plan: `Docs/
 | Chạm **máy bong bóng** / chạm bong bóng | Thổi 8 bong bóng, thú nhảy đớp / bong bóng vỡ |
 | Chạm **ghế gỗ** · **đèn lồng** · **cối xay gió** · **vòm hoa** | Thú ra ghế ngồi · đèn lấp lánh, thú ngước nhìn · thú ra ăn túi bánh (mỗi ngày 1 túi) · bướm bay tới rủ thú đuổi |
 | Kéo quả táo từ **khay ở chòi ăn** (bên trái) thả lên thú | Cho ăn. No rồi thì thú lắc đầu |
+| Chạm **luống đất** ở vườn rau (trước chòi ăn) | Luống trống: chọn hạt để gieo · đang lớn + đất khô: tưới · có ngôi sao lấp lánh: hái quả vào giỏ |
+| Chạm **giỏ quả** (cạnh khay táo) | Chọn quả cho thú ăn: thú chạy ra giỏ ăn, mỗi loại quả 1 tác dụng |
 | Chạm vào khay đồ ăn | Thú chạy tới chòi ăn |
 | Chạm vào **quầy hàng** (phía trước bên phải, có lối đá dẫn tới) | Mở quầy: mua thuốc / bánh / nước, xem quảng cáo lấy thưởng |
 | Chạm vào **hình nộm** ở sân tập | Vào sân tập: Huấn luyện hoặc Đấu Bot |
 | Chạm vào **hòm thư** (cạnh cổng đấu trường, sau sân tập) | Cài đặt: bật / tắt âm thanh, bật / tắt thông báo nhắc chăm bé (trên điện thoại), tài khoản (biệt danh, mã chuyển máy) khi có máy chủ, xem lại hướng dẫn, copy mã DNA, phiên bản game |
 | Chạm vào **cổng đấu trường** (sau sân tập) | Thẻ rank (bậc, Elo, thắng / thua, mùa còn mấy ngày) + nút **Tìm trận** PvP |
 
-Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ; hơi mệt thì ra ghế gỗ ngồi (nếu có); chán thì tự đẩy bóng chơi (nếu có bóng); bướm ở vòm hoa bay tới thì đuổi theo.
+Thú tự làm khi rảnh: đi lang thang; đói thì tới chòi ăn đứng chờ; buồn ngủ thì về ổ ngủ (ban đêm buồn ngủ sớm hơn, ngủ một mạch tới sáng); hơi mệt thì ra ghế gỗ ngồi (nếu có); chán thì tự đẩy bóng chơi (nếu có bóng); bướm ở vòm hoa bay tới thì đuổi theo.
 
 **Mẹo hướng dẫn:**
 - Khung "Mẹo" nền vàng hiện ở dưới màn hình đúng lúc cần. Mỗi mẹo hiện 1 lần, tự làm trước thì mẹo đó bỏ qua. Các mẹo cách nhau tối thiểu 25 giây.
   - Mở đầu: chạm đất → vuốt ve → dắt thú.
   - Khi đói / bẩn / buồn ngủ / ốm.
-  - Sau một lúc chơi: quầy hàng → sân tập → đấu trường.
+  - Sau một lúc chơi: camera → kho báu → vườn rau → quầy hàng → sân tập → đấu trường. Trời tối lần đầu: mẹo ban đêm.
 - Vào game sau ≥ 1 giờ vắng có dòng "Bạn vắng 6 giờ. Kem đang đói, bẩn."
 - Hòm thư ▸ **Xem lại hướng dẫn** để hiện lại từ đầu.
 
@@ -160,6 +162,30 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
   - Thắng Bot được thêm điểm + Coin (Dễ +5, Thường +10, Khó +15).
   - Mỗi buổi tốn năng lượng + no bụng.
 
+## Ngày / đêm (Phase 10.1)
+
+- Vườn sáng / tối theo **giờ trên máy**: bình minh cam hồng, trưa sáng trắng ấm, chiều tà vàng cam, chạng vạng tím, đêm ánh trăng xanh. Trời đổi mượt.
+- Đêm: đom đóm lập lòe (có con bay tới chỗ bé), sao + trăng lấp lánh trên mặt hồ, đèn nấm cạnh ổ + đèn lồng ở cửa chòi ăn tự sáng, tiếng dế thay tiếng chim, thỉnh thoảng có cú mèo.
+- Từ 21:30 tới 6:00 bé buồn ngủ sớm hơn và ngủ một mạch tới sáng. Chạm bé là bé dậy chơi thêm 1 lúc.
+- Màn đấu / săn quái luôn sáng như buổi trưa.
+- Hòm thư ▸ **Ngày / đêm theo giờ máy** để tắt (vườn luôn sáng, bé không có giờ đi ngủ). Số liệu: GDD G23.
+
+## Vườn rau (Phase 10.2)
+
+- **3 luống đất** trước chòi ăn (góc trái phía trước). Chạm luống trống để gieo hạt, đất khô thì chạm để tưới, có ngôi sao lấp lánh là chín: chạm để hái.
+- Cây lớn theo giờ thật, kể cả lúc tắt app. Đất ẩm (sẫm màu) thì lớn nhanh gấp đôi trong 2 giờ. Gieo xong là tưới luôn. Cây không héo: chín rồi thì chờ bạn hái.
+
+  | Cây | Chín sau (tưới đều) | Bé ăn 1 quả |
+  |---|---|---|
+  | Dâu tây | 1,5 giờ (45 phút) | no + vui hẳn |
+  | Cà rốt | 3 giờ (1,5 giờ) | no + năng lượng |
+  | Việt quất | 6 giờ (3 giờ) | no + vui + tập Tốc độ |
+  | Bí ngô | 10 giờ (5 giờ) | rất no + tập Sức mạnh |
+
+- Quả hái được vào **giỏ quả** cạnh khay táo. Chạm giỏ, chọn quả: bé chạy ra ăn. Ăn quả tính là 1 lần cho ăn.
+- Hạt giống: quầy hàng ▸ **Hạt giống**, hoặc nhặt khi săn quái. Lần đầu được tặng 3 hạt dâu tây + 2 hạt cà rốt.
+- Bật thông báo thì có tin "Vườn rau có quả chín rồi!". Số liệu: GDD G24.
+
 ## Thám hiểm = Săn quái rừng (Phase 7.2, kiểu đánh mới từ Phase 9.2)
 
 - **Vào:** chạm **biển gỗ "THÁM HIỂM"** ở góc sau bên trái vườn (cạnh lối đá dẫn ra khe hở hàng rào).
@@ -182,11 +208,13 @@ Số ngưỡng nằm ở `ExpressionConfig` (C# thuần), chỉnh được khôn
 - **Sao:** thắng = ★, còn ≥ 40% máu = ★★, còn ≥ 70% máu = ★★★. Coin khi thắng lần đầu + mỗi sao mới, thắng lại được ít hơn. Hạ quái = điểm Sức mạnh, phản đòn / né = điểm Tốc độ.
 - Mỗi lần săn tốn năng lượng như đấu Bot. Bé mệt (năng lượng < 15), ốm hoặc đang ngủ thì không đi được.
 - Hết trận: **Đánh tiếp** (màn sau), **Đánh lại**, **Về vườn**. Số liệu: GDD G21.
+- **Rơi hạt giống (Phase 10.3):** quái bị hạ đôi khi rơi hạt cho vườn rau (vùng xa hạt quý hơn), trùm luôn rơi 2 hạt quý. Thua vẫn giữ hạt đã nhặt.
+- **Sổ tay quái rừng:** bản đồ Thám hiểm ▸ Sổ tay. Đếm số con đã hạ từng loài; đủ mốc (1 / 10 / 30 / 100 con, trùm 1 / 3 / 10 / 25) thì được Coin. Loài chưa gặp hiện "???". Số liệu: GDD G25.
 
 ## Việc mỗi ngày (Phase 7.3)
 
 - **Quà mở game:** mở game mỗi ngày nhận quà ở **hòm thư**. Chuỗi 7 ngày liên tiếp: 20 → 25 → 30 → 35 → 40 → 50 → **80 Coin**. Bỏ 1 ngày thì chuỗi về ngày 1.
-- **3 nhiệm vụ mỗi ngày** (hòm thư ▸ Nhiệm vụ hôm nay): 1 việc chăm bé, 1 việc đấu, 1 việc khám phá / chăm. Xong việc nào thì bấm nhận Coin việc đó; xong cả 3 thêm 40 Coin.
+- **3 nhiệm vụ mỗi ngày** (hòm thư ▸ Nhiệm vụ hôm nay): 1 việc chăm bé (có thể là "thu hoạch 1 luống rau"), 1 việc đấu (có thể là "hạ 8 quái rừng"), 1 việc khám phá / chăm. Xong việc nào thì bấm nhận Coin việc đó; xong cả 3 thêm 40 Coin.
 - **Kho báu:** mỗi ngày có 2 **ụ đất có dấu X lấp lánh** trong vườn. Chạm vào, bé chạy tới đào: được Coin, đôi khi bánh thưởng hoặc nước tăng lực.
 - **Cờ đỏ hòm thư** dựng lên (có dấu "!") là đang có quà chờ nhận.
 
@@ -315,6 +343,8 @@ Tác dụng tính cả lúc tắt app. Quầy hàng ghi tác dụng ngay cạnh 
   - Rank: xem bậc / Elo / mùa. Nút **Thắng PvP giả** / **Thua PvP giả** (đổi Elo như thắng / thua 1 người ngang cơ; thắng +30 Coin). Nút **Đấu trường** mở thẻ đấu trường ngay.
   - Phụ kiện / trang trí: xem đang đeo gì, có mấy món. Nút **Có hết đồ (test)** (có hết, không trừ Coin) và **Đổi phụ kiện** (lần lượt từng món).
   - Tua giờ +1 / +6 / +24.
+  - Giờ vườn (ngày / đêm): xem giờ, buổi, độ tối; nút **Giờ thật** / **6h** / **12h** / **17,75h** / **19h** / **22h** để ép giờ.
+  - Vườn rau: xem từng luống (% lớn, đất ướt), số hạt, số quả trong giỏ; nút **Chín hết** / **+5 hạt mỗi loại**.
   - **Thú mới** (DNA ngẫu nhiên).
   - Đổi model Gen 1 ↔ thú tạm, LOD0 ↔ LOD1, shader riêng ↔ URP Lit.
 - Phím tắt: `1` tua +1 giờ · `2` +6 giờ · `3` +24 giờ · `N` in 4 nhu cầu ra Console.
@@ -343,8 +373,8 @@ dotnet build Tools/UnityCompileCheck
 | `Assets/PawFit/Scripts/Core/Audio` | `SoundSynth` (C# thuần): tạo nhạc nền + mọi tiếng bằng code |
 | `Assets/PawFit/Scripts/Core/Unity` | Tiện ích Unity dùng chung cho View: tạo vật liệu, khối cơ bản, đổi tọa độ, phát âm thanh `Sfx` |
 | `Assets/PawFit/Scripts/Pet` | DNA, nhu cầu + tác dụng của đồ đã mua `CarePerks`, PetService, sức khỏe `Health/`, trứng + bia mộ `Lifecycle/`, tiến hóa + chỉ số `Evolution/` (C# thuần) · `View/`: `IPetAvatar`, thú Gen 1 `Gen1PetAvatar`, thú tạm `PlaceholderPetAvatar`, hiệu ứng `PetMoodFx`, phụ kiện `AccessoryView` |
-| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo, vuốt ve hay dắt `StrokeTracker`, trò chơi `PlayService`, việc mỗi ngày `DailyService`, góc camera `CameraOrbit` (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder` + thú dùng đồ trang trí `DecorLife`, đồ chơi `ToyViews`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
-| `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot, Thám hiểm `AdventureService`, Săn quái `HuntSimulation` + `HuntSession` + `HuntGestures` · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt, sân theo vùng `ArenaBuilder`, màn Săn quái `HuntScene` + quái rừng `MonsterView` |
+| `Assets/PawFit/Scripts/Garden` | Bố cục vườn, bộ não thú `PetBrain`, biểu cảm `PetExpressionService`, luật chăm sóc, phân loại chạm/kéo, vuốt ve hay dắt `StrokeTracker`, trò chơi `PlayService`, việc mỗi ngày `DailyService`, góc camera `CameraOrbit`, ngày / đêm `DayCycle`, vườn rau `FarmService` (C# thuần) · `View/`: dựng vườn (có quầy hàng), đồ trang trí `DecorBuilder` + thú dùng đồ trang trí `DecorLife`, đồ chơi `ToyViews`, ngày / đêm `DayNightView`, vườn rau `FarmView`, camera, input, NavMesh, bia mộ, trứng, thẻ / bảng UI `GardenUi` |
+| `Assets/PawFit/Scripts/Battle` | Đấu (C# thuần): nhận dạng vuốt, mô phỏng trận theo bước cố định có seed, Bot 3 mức, phiên Huấn luyện / Đấu Bot, Thám hiểm `AdventureService` (có sổ tay quái rừng), Săn quái `HuntSimulation` + `HuntSession` + `HuntGestures`, rơi hạt giống `HuntLoot` · `View/`: màn đấu ngang, hình nộm, HUD, bóng mờ nét vuốt, sân theo vùng `ArenaBuilder`, màn Săn quái `HuntScene` + quái rừng `MonsterView` |
 | `Assets/PawFit/Scripts/Economy` | Kinh tế (C# thuần): ví Coin + quảng cáo `EconomyService`, quầy hàng `ShopService`, phụ kiện + trang trí `CosmeticsService`, cổng quảng cáo `IAdService` + bản giả lập `MockAdService` |
 | `Assets/PawFit/Scripts/Online` | Phase 4 phần không cần tài khoản (C# thuần): rank Elo + bậc + mùa giải `RankService`, luật ghép trận + hàng chờ `Matchmaker`, người chơi ảo `BotPlayers`, cổng mạng `INetworkManager` + bản giả lập `LocalNetworkManager` |
 | `Assets/PawFit/Scripts/App` | GameBootstrap (nối service, tự chạy khi Play), SceneFlow (chuyển màn, quầy hàng, quảng cáo, phụ kiện, trang trí), tiếng Coin `UiSounds`, Debug overlay |

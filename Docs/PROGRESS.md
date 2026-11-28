@@ -409,6 +409,24 @@
   - `SceneFlow`: thẻ màn ghi quái sẽ gặp + cách đánh; `InFight` tính cả màn Săn quái.
   - Test: 284 test logic (thêm 16) + 8 test máy chủ, đều qua. Compile check 3 chế độ qua, soát API 583 thành viên khớp Unity.
 
+- **Phase 10.1 · Ngày / đêm theo giờ máy** (GDD G23):
+  - `Garden/DayCycle.cs` (C# thuần): bảng mốc ánh sáng theo giờ (bình minh, trưa = ánh sáng cũ, chiều tà, chạng vạng, đêm trăng), trộn mượt qua nửa đêm, buổi trong ngày, giờ đi ngủ 21:30–6:00, ép giờ (DEV), tắt được (hòm thư).
+  - `PetBrain.Bedtime`: đêm bé tự về ổ khi năng lượng < 55, ngủ một mạch tới sáng; bị đánh thức thì thức thêm 3 phút.
+  - `Garden/View/DayNightView.cs`: nắng / ánh sáng môi trường / sương / nền đổi mượt; đêm có 16 đom đóm (có con bay tới chỗ bé), sao + trăng trên mặt hồ, đèn nấm cạnh ổ + đèn lồng chòi ăn tự sáng; màn đấu luôn sáng như trưa. Đèn lồng trang trí + bướm theo ngày / đêm của vườn.
+  - Âm thanh: tiếng dế (lặp liền mạch 6 giây), cú mèo, gió nhỏ lại, chim thưa dần.
+  - Vật liệu tự sáng `MaterialFactory.Glow` dùng `Resources/PawFit/GlowBase` (URP Unlit). Menu Setup + menu Build tự tạo file này.
+  - Mẹo "Trời tối rồi!", hòm thư bật / tắt ngày đêm, bảng DEV ép giờ.
+- **Phase 10.2 · Vườn rau** (GDD G24):
+  - `Core/Farm/FarmData.cs` + `Garden/FarmService.cs` (C# thuần): 3 luống, cây lớn theo giờ thật (tắt app vẫn lớn), đất ẩm lớn nhanh gấp đôi 2 giờ, hái vào giỏ (tối đa 20 / loại), gói hạt mua bằng Coin, gói hạt tặng lần đầu. File game lên phiên bản 8.
+  - Quả: dâu tây (vui), cà rốt (năng lượng), việt quất (tập Tốc độ), bí ngô (no lâu + tập Sức mạnh). Ăn quả = 1 lần cho ăn (`CareActionService.FeedFruit`).
+  - `Garden/View/FarmView.cs`: luống có viền gỗ trước chòi ăn (ụ hạt → mầm → cây → quả + ngôi sao), đất ướt sẫm màu, giỏ quả cạnh khay táo, bé chạy ra chăm cây / ăn quả. Luống + giỏ là vật cản NavMesh.
+  - Quầy hàng ▸ Hạt giống, mẹo vườn rau, thông báo "quả chín rồi", bảng DEV (xem luống, Chín hết, +5 hạt). Dời 2 điểm đào kho báu cho khỏi đè lên vườn rau.
+- **Phase 10.3 · Săn quái rơi hạt + sổ tay quái rừng** (GDD G25):
+  - `Battle/HuntLoot.cs`: quái thường 30% rơi 1 hạt của vùng (tối đa 4), trùm luôn rơi 2 hạt quý. Hạt vào vườn rau qua `ISeedBag` (Core), thua vẫn giữ.
+  - `AdventureService`: sổ tay (số con hạ từng loài, lưu file), thưởng Coin theo mốc, mỗi mốc 1 lần. Bản đồ có thẻ Sổ tay; thẻ màn ghi hạt hay rơi; thẻ kết quả ghi hạt đã nhặt + thưởng sổ tay. Trận săn có túi hạt bật lên rồi bay vào bé.
+  - Nhiệm vụ ngày mới: "Hạ 8 quái rừng" (`MonstersHunted`), "Thu hoạch 1 luống" (`CropHarvested`).
+  - Test: 315 test logic (thêm 31 trong Phase 10) + 8 test máy chủ, đều qua. Compile check 3 chế độ + NetStandard (NUnit 3.5) qua, soát API 585 thành viên khớp Unity.
+
 ## Quyết định đã chốt
 
 - Engine: **Unity 6.3 LTS**, URP, C#. Logic là C# thuần (asmdef `noEngineReferences`).
@@ -429,6 +447,11 @@
 - Giả định GDD G1–G11: tạm dùng, bạn sửa khi cần.
 
 ## Tiếp theo
+
+- **Thử Phase 10 trên điện thoại** — pull code, build Dev (menu Build tự tạo vật liệu `GlowBase`; chạy trong Editor thì chạy lại PawFit ▸ Setup Project 1 lần):
+  - Ngày / đêm: bảng DEV ▸ Giờ vườn ▸ 6h / 12h / 17,75h / 19h / 22h. Xem trời đổi màu, đom đóm, sao trên hồ, đèn nấm cạnh ổ, nghe tiếng dế. Gửi tôi: đêm có quá tối không, đom đóm / sao có đẹp không (ảnh màn hình càng tốt).
+  - Vườn rau: luống đất trước chòi ăn. Gieo dâu tây, bảng DEV ▸ Chín hết (hoặc tua +1 giờ), hái, chạm giỏ cạnh khay táo cho bé ăn. Quầy ▸ Hạt giống.
+  - Săn quái: đánh 1-1, 1-2 xem túi hạt rơi ra, thẻ kết quả, bản đồ ▸ Sổ tay quái rừng.
 
 - **Thử Phase 9 trên điện thoại** — pull code, build Dev:
   - Bước chân: đi / chạy quanh vườn, nghe đã đủ nhẹ chưa.
@@ -474,6 +497,8 @@
 - Đo cân bằng Săn quái sau khi chỉnh `HuntConfig` / `MonsterBook`: `cd Tools/HuntBalance && dotnet run -c Release -- 30 0` (tham số 2: `-1` / `1` = bé nhỏ / lớn hơn giai đoạn vùng). Kết quả hiện tại ở GDD G21.
 - Máy chủ biên dịch chung `Core / Pet / Battle / Online`: thêm file logic mới vào 4 thư mục này là máy chủ có luôn; dùng `using` tới Garden / Economy trong Online sẽ làm hỏng build máy chủ.
 - Compile thử code Unity: `dotnet build Tools/UnityCompileCheck` (stub ở `UnityStubs.cs`; dùng API Unity mới thì thêm stub).
+- Vật liệu tự sáng (đom đóm, đèn đêm) cần `Assets/PawFit/Resources/PawFit/GlowBase.mat` (URP Unlit). Menu Build tự tạo nếu thiếu; trong Editor thiếu file thì dùng tạm shader tìm trực tiếp.
+- File game đang là phiên bản 8 (Phase 10.2 thêm vườn rau). Thêm dữ liệu mới vào `GameSave` thì tăng `GameSave.CurrentVersion` + để getter ở `PetService` tự tạo khi file cũ chưa có.
 - Môi trường cloud riêng `gaao` có setup script cài sẵn Blender + .NET + restore NuGet (chưa kiểm chứng ở session mới).
 - `ProjectVersion.txt` đặt `6000.3.0f1`. Mở bằng bản 6.3 khác thì Unity tự cập nhật file này.
 - Bản Blender của Ubuntu không có OpenImageDenoise, nên script đã tắt denoise.
