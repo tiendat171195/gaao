@@ -18,6 +18,7 @@ namespace PawFit.Garden.View
     /// thả thú, camera, input. Lấy service qua ServiceLocator (do App đăng ký).
     /// Phase 2.1: thú mất -> cảnh chia tay -> bia mộ mới -> trứng trong ổ -> chạm trứng nở -> đặt tên -> thú mới.
     /// Phase 5.2: đồ trang trí đã mua đứng sẵn trong vườn; mua món mới thì camera lia tới, món đó bật lên, NavMesh nướng lại.
+    /// Phase 10.1: ngày / đêm theo giờ máy (DayNightView): nắng đổi theo giờ, đêm có đom đóm, sao trên hồ, đèn tự sáng, dế kêu.
     /// </summary>
     public sealed class GardenScene : MonoBehaviour
     {
@@ -37,6 +38,7 @@ namespace PawFit.Garden.View
         private ToyPlayground _toys;
         private PlayService _play;
         private DecorLife _decor;
+        private DayNightView _dayNight;
         private SettingsService _settings;
         private ServiceLocator _s;
         private GardenLayout _layout;
@@ -72,6 +74,7 @@ namespace PawFit.Garden.View
             _paused = paused;
             if (_toys != null) _toys.Paused = paused;
             if (_decor != null) _decor.Paused = paused;
+            if (_dayNight != null) _dayNight.Paused = paused;   // màn đấu dùng chung đèn: luôn sáng như buổi trưa
             Sfx.Ambience(!paused);
             if (!paused) Sfx.Music(MusicId.Garden);
             else Sfx.Loop(LoopId.Pond, false);
@@ -98,15 +101,19 @@ namespace PawFit.Garden.View
             var cfg = s.Get<GardenConfig>();
             var bus = s.Get<EventBus>();
 
-            SetupLighting();
+            Light sun = SetupLighting();
             Camera cam = SetupCamera();
             Sfx.Music(MusicId.Garden);   // nhạc nền vườn + gió, lá, chim (Phase 8.1)
             Sfx.Ambience(true);
             GardenZone pond = _layout.Get(ZoneType.Pond);
             _pondPos = pond != null ? pond.Center.ToWorld() : new Vector3(999f, 0f, 999f);
-            SetupPostFx(cam);
+            ColorAdjustments color = SetupPostFx(cam);
             GardenBuildResult built = GardenBuilder.Build(_layout, transform);
             _built = built;
+            // ngày / đêm theo giờ máy (Phase 10.1): App đăng ký DayCycle (theo giờ của game, bảng DEV tua / ép giờ được)
+            DayCycle cycle = s.TryGet(out DayCycle registered) ? registered : new DayCycle(() => DateTime.Now);
+            _dayNight = gameObject.AddComponent<DayNightView>();
+            _dayNight.Init(cycle, sun, cam, color, _layout, built, () => Pet);
             CosmeticsData owned = _pets.Cosmetics;   // đồ trang trí đã mua: dựng trước khi nướng NavMesh để thú đi vòng qua
             var startDecor = new List<KeyValuePair<DecorKind, Transform>>();
             if (owned != null)
@@ -162,6 +169,7 @@ namespace PawFit.Garden.View
             _decor = new GameObject("DecorLife").AddComponent<DecorLife>();
             _decor.transform.SetParent(transform, false);
             _decor.Init(s.Get<PetBrain>(), _play, _daily, () => Pet);
+            _decor.NightLevel = () => _dayNight.Night;   // đèn lồng sáng, bướm đi ngủ theo ngày / đêm của vườn
             foreach (KeyValuePair<DecorKind, Transform> d in startDecor) _decor.Add(d.Key, d.Value);
             _router.DecorTapped = k => _decor.Tap(k);
             _router.Tips = s.TryGet(out TipService tips) ? tips : null;
@@ -182,7 +190,8 @@ namespace PawFit.Garden.View
                       "kéo thú = dắt (thả vào hồ = tắm, vào ổ = ngủ) · kéo táo từ khay ở chòi ăn thả lên thú = cho ăn · " +
                       "chạm quầy hàng (trước bên phải) = mua đồ / xem quảng cáo · chạm hòm thư (cạnh cổng đấu trường) = cài đặt · " +
                       "vuốt bóng = ném cho bé nhặt · kéo cần lông vũ = bé vồ · chạm máy bong bóng = thổi · " +
-                      "chạm ghế = bé ra ngồi · chạm đèn lồng = lấp lánh · chạm cối xay gió = bé ăn bánh · chạm vòm hoa = gọi bướm");
+                      "chạm ghế = bé ra ngồi · chạm đèn lồng = lấp lánh · chạm cối xay gió = bé ăn bánh · chạm vòm hoa = gọi bướm · " +
+                      "trời sáng / tối theo giờ máy (" + cycle.Phase + ", " + cycle.Hour.ToString("0.0") + " giờ)");
         }
 
         // ------------------------------------------------------------------ điểm đào kho báu (Phase 7.3)
@@ -416,7 +425,8 @@ namespace PawFit.Garden.View
             Pet.Avatar.PlayHop();
         }
 
-        private static void SetupLighting()
+        /// <summary>Đèn mặt trời + ánh sáng môi trường + sương (giá trị buổi trưa; DayNightView đổi theo giờ ngay sau đó).</summary>
+        private static Light SetupLighting()
         {
             Light sun = null;
             foreach (Light l in FindObjectsByType<Light>(FindObjectsSortMode.None))
@@ -442,6 +452,7 @@ namespace PawFit.Garden.View
             RenderSettings.fogColor = new Color(0.78f, 0.88f, 0.94f);
             RenderSettings.fogStartDistance = 28f;
             RenderSettings.fogEndDistance = 70f;
+            return sun;
         }
 
         private static Camera SetupCamera()
@@ -461,7 +472,7 @@ namespace PawFit.Garden.View
             return cam;
         }
 
-        private void SetupPostFx(Camera cam)
+        private ColorAdjustments SetupPostFx(Camera cam)
         {
             cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
             var vol = gameObject.AddComponent<Volume>();
@@ -478,6 +489,7 @@ namespace PawFit.Garden.View
             Vignette vignette = profile.Add<Vignette>(true);
             vignette.intensity.Override(0.18f);
             vol.sharedProfile = profile;
+            return color;
         }
 
         /// <summary>Nướng NavMesh lúc chạy từ collider: mặt đất đi được, nhóm Obstacles không đi được.</summary>

@@ -68,8 +68,9 @@ namespace UnityEngine
 
     public enum PrimitiveType { Sphere, Capsule, Cylinder, Cube, Plane, Quad }
 
-    public class Transform : Component
+    public class Transform : Component, System.Collections.IEnumerable
     {
+        public System.Collections.IEnumerator GetEnumerator() => null;
         public Transform parent { get; set; }
         public int childCount => 0;
         public Transform GetChild(int index) => null;
@@ -749,7 +750,7 @@ namespace UnityEngine.Rendering
 
     public static class GraphicsSettings { public static RenderPipelineAsset defaultRenderPipeline { get; set; } }
 
-    public class VolumeParameter<T> { public void Override(T x) { } }
+    public class VolumeParameter<T> { public void Override(T x) { } public virtual T value { get; set; } }
 
     public class ClampedFloatParameter : VolumeParameter<float> { }
 

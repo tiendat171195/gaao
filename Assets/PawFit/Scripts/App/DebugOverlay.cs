@@ -347,6 +347,16 @@ namespace PawFit.App
             if (GUILayout.Button("+6 giờ", _button)) Skip(6);
             if (GUILayout.Button("+24 giờ", _button)) Skip(24);
             GUILayout.EndHorizontal();
+            if (!S.TryGet(out DayCycle day)) return;   // ngày / đêm (Phase 10.1): ép giờ trong vườn để xem nhanh
+            float h = day.Hour;
+            GUILayout.Label($"Giờ vườn: {(int)h:00}:{(int)((h - (int)h) * 60f):00} · {day.Phase} · tối {day.Night:0.00}" +
+                            (day.IsBedtime ? " · giờ đi ngủ" : "") + (day.DebugHour.HasValue ? " (ép giờ)" : "") +
+                            (day.Enabled ? "" : " · đang tắt ở hòm thư"), _label);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Giờ thật", _button)) day.DebugHour = null;
+            foreach (float hour in new[] { 6f, 12f, 17.75f, 19f, 22f })
+                if (GUILayout.Button(hour.ToString("0.##") + "h", _button)) day.DebugHour = hour;
+            GUILayout.EndHorizontal();
         }
 
         private void DrawAvatar()

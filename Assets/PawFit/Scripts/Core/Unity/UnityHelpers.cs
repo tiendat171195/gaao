@@ -19,8 +19,43 @@ namespace PawFit.Core.Unity
     /// </summary>
     public static class MaterialFactory
     {
-        private static Material _base;
+        private static Material _base, _glowBase;
+        private static bool _glowLoaded;
         private static readonly Dictionary<long, Material> Cache = new Dictionary<long, Material>();
+        private static readonly Dictionary<long, Material> GlowCache = new Dictionary<long, Material>();
+
+        /// <summary>
+        /// Vật liệu tự sáng, không nhận ánh sáng (Phase 10.1: đom đóm, sao trên mặt hồ, đèn ngủ, đèn chòi).
+        /// Màu lớn hơn 1 (HDR) thì Bloom làm nó tỏa sáng trong đêm. Dùng material gốc "Resources/PawFit/GlowBase" (URP Unlit,
+        /// menu PawFit ▸ Setup Project và menu Build tự tạo) để bản build chắc chắn có shader Unlit. Chưa có file đó:
+        /// Editor tự tìm shader; bản build đành dùng Lit (vẫn thấy, chỉ không tỏa sáng).
+        /// </summary>
+        public static Material Glow(Color color)
+        {
+            long key = ((long)Mathf.Clamp(Mathf.RoundToInt(color.r * 40f), 0, 4095) << 24) |
+                       ((long)Mathf.Clamp(Mathf.RoundToInt(color.g * 40f), 0, 4095) << 12) |
+                       (long)Mathf.Clamp(Mathf.RoundToInt(color.b * 40f), 0, 4095);
+            if (GlowCache.TryGetValue(key, out Material m) && m != null) return m;
+            Material root = GlowBase;
+            m = new Material(root != null ? root : Base) { color = color };
+            GlowCache[key] = m;
+            return m;
+        }
+
+        private static Material GlowBase
+        {
+            get
+            {
+                if (_glowLoaded) return _glowBase;
+                _glowLoaded = true;
+                _glowBase = Resources.Load<Material>("PawFit/GlowBase");
+                if (_glowBase != null) return _glowBase;
+                Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+                if (sh != null) _glowBase = new Material(sh);
+                Debug.LogWarning("[PawFit] Chưa có Resources/PawFit/GlowBase — chạy menu PawFit ▸ Setup Project (để đèn / đom đóm tỏa sáng trong bản build).");
+                return _glowBase;
+            }
+        }
 
         public static Material Lit(Color color, float smoothness = 0.2f, float metallic = 0f)
         {

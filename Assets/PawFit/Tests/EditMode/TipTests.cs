@@ -47,6 +47,20 @@ namespace PawFit.Tests
         }
 
         [Test]
+        public void NightTip_OnlyAtNight_AfterIntro()
+        {
+            bool night = false;
+            _tips.IsNight = () => night;
+            _tips.Done(TipId.Move);
+            _tips.Done(TipId.Pet);
+            _tips.Done(TipId.Lead);
+            for (int i = 0; i < 60; i++) Assert.AreNotEqual(TipId.Night, _tips.Update(1f), "ban ngày không nói chuyện ban đêm");
+            night = true;
+            Assert.AreEqual(TipId.Night, Next(30f), "trời tối: giới thiệu ban đêm");
+            for (int i = 0; i < 200; i++) Assert.AreNotEqual(TipId.Night, _tips.Update(1f), "chỉ 1 lần");
+        }
+
+        [Test]
         public void DoneBeforeShown_IsSkipped_SeenPersists()
         {
             _tips.Done(TipId.Move);

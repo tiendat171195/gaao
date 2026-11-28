@@ -29,6 +29,7 @@ namespace PawFit.Garden
         private Vector2 _lastLedPos;
         private bool _hasLedPos;
         private float _ledMeters;
+        private float _bedtimeSnooze;
 
         public PetBrain(GardenLayout layout, GardenConfig cfg, IRandom rng, PetService pets, CareActionService care)
         {
@@ -76,6 +77,7 @@ namespace PawFit.Garden
             _playerHold = 0f;
             _moveTimeout = 0f;
             _zoneGoal = ZoneType.None;
+            _bedtimeSnooze = 0f;
             Run = false;
         }
 
@@ -100,6 +102,19 @@ namespace PawFit.Garden
         /// </summary>
         public Vector2? BenchStand { get; set; }
         public Vector2? BenchCenter { get; set; }
+
+        /// <summary>
+        /// Đang là giờ đi ngủ không (Phase 10.1, View nối vào DayCycle.IsBedtime). Giờ đi ngủ: bé buồn ngủ sớm hơn
+        /// (NightSleepyBelowEnergy) và đã ngủ thì ngủ một mạch tới sáng, không tự dậy khi đủ năng lượng.
+        /// Bạn đánh thức bé thì bé thức thêm NightWakeSnoozeSeconds giây rồi mới buồn ngủ lại.
+        /// </summary>
+        public Func<bool> Bedtime { get; set; }
+
+        private bool IsBedtime => Bedtime != null && Bedtime();
+
+        /// <summary>Năng lượng dưới mức này thì bé tự về ổ ngủ (đêm cao hơn ngày).</summary>
+        public float SleepyThreshold =>
+            IsBedtime && _bedtimeSnooze <= 0f ? Math.Max(_cfg.SleepyBelowEnergy, _cfg.NightSleepyBelowEnergy) : _cfg.SleepyBelowEnergy;
 
         // ------------------------------------------------------------------
         // Lệnh từ người chơi
@@ -165,7 +180,7 @@ namespace PawFit.Garden
             }
             if (_pets.Current.IsSleeping)
             {
-                _care.Wake();
+                WakeIfSleeping();
                 SetIdle(1.5f);
                 return;
             }
@@ -242,6 +257,7 @@ namespace PawFit.Garden
         {
             if (!_pets.HasPet) return;
             _playerHold = Math.Max(0f, _playerHold - dt);
+            _bedtimeSnooze = Math.Max(0f, _bedtimeSnooze - dt);
             PetData pet = _pets.Current;
             if (pet.IsSleeping && Activity != PetActivity.Sleeping) Activity = PetActivity.Sleeping;
 
@@ -249,7 +265,7 @@ namespace PawFit.Garden
             {
                 case PetActivity.Sleeping:
                     if (!pet.IsSleeping) SetIdle(1f);
-                    else if (pet.Needs.Energy >= _cfg.WakeAboveEnergy)
+                    else if (pet.Needs.Energy >= _cfg.WakeAboveEnergy && !IsBedtime)   // đêm: ngủ một mạch tới sáng
                     {
                         _care.Wake();
                         SetIdle(1f);
@@ -303,7 +319,7 @@ namespace PawFit.Garden
         private void Decide(Vector2 petPos)
         {
             PetNeeds n = _pets.Current.Needs;
-            if (n.Energy < _cfg.SleepyBelowEnergy)
+            if (n.Energy < SleepyThreshold)   // đêm buồn ngủ sớm hơn (Phase 10.1)
             {
                 GoUse(ZoneType.Bed, petPos);
                 return;
@@ -417,7 +433,9 @@ namespace PawFit.Garden
 
         private void WakeIfSleeping()
         {
-            if (_pets.Current.IsSleeping) _care.Wake();
+            if (!_pets.Current.IsSleeping) return;
+            _care.Wake();
+            if (IsBedtime) _bedtimeSnooze = _cfg.NightWakeSnoozeSeconds;   // bạn gọi bé dậy giữa đêm: thức chơi thêm 1 lúc
         }
 
         private bool Arrived(Vector2 petPos) => Vector2.Distance(petPos, Target) <= _cfg.ArriveDistance;

@@ -16,9 +16,11 @@ namespace PawFit.Garden.View
     /// <summary>
     /// Đồ trang trí "sống" (Phase 8.4) — bé dùng được đồ mua ở quầy, không chỉ để ngắm:
     ///  * Ghế gỗ: bé hơi mệt tự ra ghế nhảy lên ngồi nghỉ (bộ não quyết); chạm ghế / thả bé lên ghế = bé ra ngồi.
-    ///  * Dây đèn lồng: tối (18:00–6:00 giờ trên máy) đèn sáng ấm; chạm = đèn lấp lánh lần lượt + chuông, bé ngước nhìn, nhảy lên.
+    ///  * Dây đèn lồng: chạng vạng + đêm (theo ngày / đêm của vườn, Phase 10.1) đèn sáng ấm; chạm = đèn lấp lánh lần lượt + chuông,
+    ///    bé ngước nhìn, nhảy lên.
     ///  * Cối xay gió: mỗi ngày 1 túi bánh ở chân cối; chạm = bé chạy tới ăn (no + vui — DailyService quyết).
     ///  * Vòm hoa: 3 con bướm bay quanh vòm; thỉnh thoảng 1 con bay tới rủ bé đuổi (PlayService thưởng); chạm vòm = gọi bướm.
+    ///    Đêm bướm đậu nghỉ trong vòm (ẩn đi), sáng lại bay ra.
     /// Luật (tác dụng, thưởng, mỗi ngày 1 túi bánh) nằm ở C# thuần; ở đây chỉ có hình + đưa lệnh.
     /// </summary>
     public sealed class DecorLife : MonoBehaviour
@@ -59,11 +61,22 @@ namespace PawFit.Garden.View
         private readonly List<Butterfly> _flies = new List<Butterfly>();
         private Vector3 _archCenter;
         private int _chaser = -1;
+        private float _awake = 1f;
         private Vector3 _chaseGoal;
         private float _chaseIn, _chaseLeft, _pounceCd, _dartIn;
         private int _pounces;
 
         public bool Paused { get; set; }
+
+        /// <summary>Ngày / đêm của vườn (Phase 10.1, GardenScene nối vào DayNightView.Night): 0 = ngày, 1 = đêm. null = theo giờ máy.</summary>
+        public Func<float> NightLevel { get; set; }
+
+        private float CurrentNight()
+        {
+            if (NightLevel != null) return NightLevel();
+            int h = DateTime.Now.Hour;
+            return h >= 18 || h < 6 ? 1f : 0f;
+        }
 
         public void Init(PetBrain brain, PlayService play, DailyService daily, Func<PetController> pet)
         {
@@ -156,6 +169,12 @@ namespace PawFit.Garden.View
                     break;
                 case DecorKind.FlowerArch:
                     if (_chaser >= 0 || _flies.Count == 0 || pet == null || _play == null) return;
+                    if (CurrentNight() > 0.5f)
+                    {
+                        GardenUi.Toast("Bướm đậu ngủ trong vòm hoa rồi, sáng mai bướm lại bay ra chơi với bé nhé");
+                        Sfx.PlayVaried(SoundId.Swish, 0.2f);
+                        return;
+                    }
                     bool canPlay = _play.CanPlay(out string why);
                     if (pet.IsIll || !canPlay)
                     {
@@ -200,9 +219,8 @@ namespace PawFit.Garden.View
             _nightCheck -= dt;
             if (_nightCheck <= 0f)
             {
-                _nightCheck = 10f;
-                int h = DateTime.Now.Hour;
-                _nightGoal = h >= 18 || h < 6 ? 1f : 0f;
+                _nightCheck = 0.5f;
+                _nightGoal = Mathf.Clamp01(CurrentNight() * 1.8f);   // sáng hẳn từ lúc chạng vạng
             }
             _night = Mathf.MoveTowards(_night, _nightGoal, dt * 0.5f);
             float flashSum = 0f;
@@ -356,6 +374,15 @@ namespace PawFit.Garden.View
         {
             if (_flies.Count == 0) return;
             float t = Time.time;
+            // đêm: bướm đậu nghỉ trong vòm (thu nhỏ dần rồi ẩn), sáng lại bay ra (Phase 10.1)
+            _awake = Mathf.MoveTowards(_awake, CurrentNight() > 0.5f && _chaser < 0 ? 0f : 1f, dt * 0.5f);
+            foreach (Butterfly b in _flies)
+            {
+                bool show = _awake > 0.01f;
+                if (b.Body.gameObject.activeSelf != show) b.Body.gameObject.SetActive(show);
+                if (show) b.Body.localScale = Vector3.one * _awake;
+            }
+            if (_awake <= 0.01f) return;
             for (int i = 0; i < _flies.Count; i++)
             {
                 Butterfly f = _flies[i];
@@ -377,8 +404,8 @@ namespace PawFit.Garden.View
                 _chaseIn -= dt;
                 if (_chaseIn > 0f) return;
                 _chaseIn = UnityEngine.Random.Range(30f, 60f);
-                // bé rảnh + còn sức + ở không quá xa vòm hoa: 1 con bướm bay tới rủ bé đuổi
-                if (pet.IsFree && _play.CanPlay() && Vector3.Distance(Flat(pet.transform.position), Flat(_archCenter)) < 16f) StartChase(pet);
+                // bé rảnh + còn sức + ở không quá xa vòm hoa: 1 con bướm bay tới rủ bé đuổi (ban ngày)
+                if (_awake >= 1f && pet.IsFree && _play.CanPlay() && Vector3.Distance(Flat(pet.transform.position), Flat(_archCenter)) < 16f) StartChase(pet);
                 return;
             }
             UpdateChase(pet, dt);

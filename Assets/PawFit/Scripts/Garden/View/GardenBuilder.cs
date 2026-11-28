@@ -76,6 +76,10 @@ namespace PawFit.Garden.View
         public Transform Walkable;    // mặt đất (đi được)
         public Transform Obstacles;   // vật cản (NavMesh đánh dấu không đi được)
         public FoodSourceView FoodSource;
+
+        /// <summary>Đèn ngủ hình nấm cạnh ổ (con "Cap", "Dot0..4") + đèn lồng nhỏ ở cửa chòi ăn (con "Core"): tối tự sáng (Phase 10.1).</summary>
+        public Transform NightLamp;
+        public Transform HutLamp;
     }
 
     /// <summary>
@@ -107,7 +111,44 @@ namespace PawFit.Garden.View
             BuildAdventure(layout, r.Obstacles, decor);
             BuildTrees(r.Obstacles, decor);
             BuildFlowers(layout, decor);
+            BuildNightLights(layout, r);
             return r;
+        }
+
+        /// <summary>
+        /// Đèn ngủ hình nấm cạnh ổ + đèn lồng nhỏ treo ở cửa chòi ăn (Phase 10.1): ban ngày là đồ trang trí,
+        /// tối thì DayNightView cho tự sáng + bật đèn điểm (bé ngủ có ánh đèn ấm, khay táo vẫn thấy rõ).
+        /// Thân nấm giữ collider (trong nhóm vật cản) để bé đi vòng qua chứ không đi xuyên.
+        /// </summary>
+        private static void BuildNightLights(GardenLayout l, GardenBuildResult r)
+        {
+            GardenZone bed = l.Get(ZoneType.Bed);
+            if (bed != null)
+            {
+                Transform lamp = Prim.Group(r.Obstacles, "NightLamp", W(bed.Center + new NVec2(-1.6f, 0.65f)));
+                Prim.Make(PrimitiveType.Cylinder, lamp, new Vector3(0f, 0.16f, 0f), new Vector3(0.12f, 0.16f, 0.12f), Prim.Hex("#F3E9D2"),
+                          keepCollider: true, name: "Stem");
+                Prim.Make(PrimitiveType.Sphere, lamp, new Vector3(0f, 0.36f, 0f), new Vector3(0.42f, 0.22f, 0.42f), Prim.Hex("#E86A5C"),
+                          smoothness: 0.35f, name: "Cap");
+                for (int i = 0; i < 5; i++)   // chấm trắng trên mũ nấm
+                {
+                    float a = i * Mathf.PI * 2f / 5f + 0.4f;
+                    Prim.Make(PrimitiveType.Sphere, lamp, new Vector3(Mathf.Cos(a) * 0.12f, 0.44f, Mathf.Sin(a) * 0.12f), new Vector3(0.07f, 0.035f, 0.07f),
+                              Color.white, smoothness: 0.3f, name: "Dot" + i);
+                }
+                r.NightLamp = lamp;
+            }
+            Transform hut = r.Obstacles.Find("FoodHut");
+            if (hut != null)
+            {
+                Transform lantern = Prim.Group(hut, "HutLamp", new Vector3(1.3f, 1.5f, -0.78f));
+                Prim.Make(PrimitiveType.Cube, hut, new Vector3(1.22f, 1.78f, -0.78f), new Vector3(0.24f, 0.03f, 0.03f), WoodDark);   // cần treo
+                Prim.Make(PrimitiveType.Cylinder, lantern, new Vector3(0f, 0.2f, 0f), new Vector3(0.01f, 0.08f, 0.01f), WoodDark);   // dây
+                Prim.Make(PrimitiveType.Cube, lantern, new Vector3(0f, 0.11f, 0f), new Vector3(0.2f, 0.03f, 0.2f), WoodDark);
+                Prim.Make(PrimitiveType.Cube, lantern, new Vector3(0f, -0.11f, 0f), new Vector3(0.2f, 0.03f, 0.2f), WoodDark);
+                Prim.Make(PrimitiveType.Cube, lantern, Vector3.zero, new Vector3(0.15f, 0.19f, 0.15f), Prim.Hex("#F6E7B8"), smoothness: 0.6f, name: "Core");
+                r.HutLamp = lantern;
+            }
         }
 
         private static Vector3 W(NVec2 p, float y = 0f) => p.ToWorld(y);

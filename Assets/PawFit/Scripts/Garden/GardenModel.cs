@@ -183,5 +183,12 @@ namespace PawFit.Garden
 
         /// <summary>Thả bé (đang dắt) cách tâm ghế dưới bấy nhiêu mét = bé lên ghế ngồi.</summary>
         public float BenchDropRadius = 1.1f;
+
+        // ---- Ban đêm (Phase 10.1) ----
+        /// <summary>Giờ đi ngủ (DayCycle.IsBedtime): năng lượng dưới mức này là bé tự về ổ (ban ngày chỉ khi dưới SleepyBelowEnergy).</summary>
+        public float NightSleepyBelowEnergy = 55f;
+
+        /// <summary>Bạn đánh thức bé lúc nửa đêm (chạm đất / dắt / gọi đi chơi): bé thức thêm bấy nhiêu giây rồi mới buồn ngủ lại.</summary>
+        public float NightWakeSnoozeSeconds = 180f;
     }
 }

@@ -141,14 +141,21 @@ namespace PawFit.App
             PawFit.Core.Unity.Sfx.SoundOn = settings.SoundOn;
             PawFit.Core.Unity.Sfx.MusicOn = settings.MusicOn;
             PawFit.Core.Unity.Sfx.Prewarm();   // tạo sẵn nhạc + tiếng ở luồng nền
+
+            // Ngày / đêm theo giờ máy (Phase 10.1): giờ của game (bảng DEV tua giờ thì trời đổi theo) đổi ra giờ trên máy.
+            // Đêm bé buồn ngủ sớm hơn + ngủ một mạch tới sáng; tắt ở hòm thư thì vườn luôn sáng như buổi trưa.
+            var dayCycle = new DayCycle(() => time.UtcNow.ToLocalTime()) { Enabled = settings.DayNightOn };
+            Services.Register(dayCycle);
+            brain.Bedtime = () => dayCycle.IsBedtime;
             bus.Subscribe<SettingsChanged>(e =>
             {
                 PawFit.Core.Unity.Sfx.SoundOn = e.Settings.SoundOn;
                 PawFit.Core.Unity.Sfx.MusicOn = e.Settings.MusicOn;
+                dayCycle.Enabled = e.Settings.DayNightOn;
             });
 
             // Mẹo hướng dẫn theo tình huống (vườn không có nút nên chỉ cho người mới đúng lúc), mỗi mẹo 1 lần
-            _tips = new TipService(settings, _pets, health, evo, exprCfg, bus);
+            _tips = new TipService(settings, _pets, health, evo, exprCfg, bus) { IsNight = () => dayCycle.IsNight };
             Services.Register(_tips);
 
             // Thông báo nhắc chăm thú (Phase 4.5): ẩn app thì hẹn lịch (đói / buồn ngủ / bẩn / ốm / trứng nở),

@@ -15,10 +15,13 @@ namespace PawFit.Core.Audio
         // ---- trận ----
         WhooshQuick, WhooshHeavy, WhooshSpecial, UltCharge, HitLight, HitHeavy, HitCrit, Block, Counter, Guard, Wrong,
         Combo2, Combo3, Combo4, Combo5, RageFull, KO, Win, Lose, Fight,
+
+        // ---- vườn ban đêm (Phase 10.1) ----
+        Owl,
     }
 
-    /// <summary>Tiếng lặp: gió + lá (nền vườn), nước hồ, tắm, thở khi ngủ, gừ gừ khi được vuốt ve.</summary>
-    public enum LoopId { Wind = 0, Pond = 1, Bath = 2, Sleep = 3, Purr = 4 }
+    /// <summary>Tiếng lặp: gió + lá (nền vườn), nước hồ, tắm, thở khi ngủ, gừ gừ khi được vuốt ve, dế kêu ban đêm (Phase 10.1).</summary>
+    public enum LoopId { Wind = 0, Pond = 1, Bath = 2, Sleep = 3, Purr = 4, Crickets = 5 }
 
     public enum MusicId { None = 0, Garden = 1, Battle = 2 }
 
@@ -83,6 +86,7 @@ namespace PawFit.Core.Audio
                 case SoundId.KO: return KnockOut();
                 case SoundId.Win: return Win();
                 case SoundId.Lose: return Lose();
+                case SoundId.Owl: return Owl();
                 default: return Gong();
             }
         }
@@ -293,6 +297,32 @@ namespace PawFit.Core.Audio
             Sweep(b, 0f, 0.12f, 1950f, 1850f, 0.6f, 0.1f, false);
             Sweep(b, 0.17f, 0.18f, 1550f, 1450f, 0.6f, 0.1f, false);
             return Normalize(b, 0.55f);
+        }
+
+        /// <summary>Cú mèo xa xa ban đêm (Phase 10.1): "hù… hù-hù" trầm, vào ra chậm, lẫn chút hơi thở khàn.</summary>
+        private static float[] Owl()
+        {
+            float[] b = Buf(1.5f);
+            var n = new Noise(269u);
+            float[] starts = { 0f, 0.62f, 0.9f };
+            float[] lens = { 0.42f, 0.22f, 0.36f };
+            for (int k = 0; k < starts.Length; k++)
+            {
+                int s0 = N(starts[k]), count = N(lens[k]);
+                double ph = 0;
+                var lp = new OnePole(900f);
+                for (int i = 0; i < count; i++)
+                {
+                    float t = T(i), u = t / lens[k];
+                    double f = 390.0 * (1.0 - 0.06 * u) * (k == 1 ? 1.04 : 1.0);
+                    ph += TwoPi * f / Rate;
+                    float env = (float)Math.Sin(Math.PI * u);
+                    env *= env;
+                    float voice = (float)(Math.Sin(ph) + 0.22 * Math.Sin(2 * ph));
+                    Put(b, s0 + i, (voice + lp.Run(n.Next()) * 0.35f) * env, false);
+                }
+            }
+            return Normalize(b, 0.6f);
         }
 
         /// <summary>Bong bóng vỡ "póc".</summary>
@@ -560,6 +590,7 @@ namespace PawFit.Core.Audio
                 case LoopId.Pond: return Pond();
                 case LoopId.Bath: return Bath();
                 case LoopId.Sleep: return SleepBreath();
+                case LoopId.Crickets: return Crickets();
                 default: return Purr();
             }
         }
@@ -660,6 +691,56 @@ namespace PawFit.Core.Audio
                 b[i] = lpIn.Run(x) * inhale * 1.3f + (lpOut.Run(x) * 1.1f + zz * 0.12f) * exhale;
             }
             return Normalize(b, 0.5f);
+        }
+
+        /// <summary>
+        /// Dế kêu ban đêm (6 giây, Phase 10.1): 3 chú dế xa gần khác nhau, mỗi tiếng "rích" = 3–4 nhịp rung rất nhanh ở 4–5 kHz,
+        /// lặp đều (0,5 / 0,6 / 0,75 giây — chia hết 6 giây), thỉnh thoảng nghỉ 1 nhịp cho tự nhiên; thêm nền dế xa rỉ rả rất nhỏ.
+        /// Nhịp nào tràn qua cuối thì quấn về đầu, nền là sóng tuần hoàn khít 6 giây => nối vòng liền mạch.
+        /// </summary>
+        private static float[] Crickets()
+        {
+            const float len = 6f;
+            float[] b = Buf(len);
+            var n = new Noise(263u);
+            float[] freq = { 4300f, 4750f, 5150f };
+            float[] gain = { 0.55f, 0.35f, 0.22f };
+            float[] period = { 0.5f, 0.6f, 0.75f };
+            for (int c = 0; c < freq.Length; c++)
+            {
+                int count = (int)Math.Round(len / period[c]);
+                float offset = n.Unit() * period[c];
+                for (int k = 0; k < count; k++)
+                {
+                    if (n.Unit() < 0.12f) continue;   // nghỉ 1 nhịp
+                    float start = offset + k * period[c] + (n.Unit() - 0.5f) * 0.04f;
+                    int pulses = n.Unit() < 0.3f ? 4 : 3;
+                    float f = freq[c] * (1f + (n.Unit() - 0.5f) * 0.01f);
+                    for (int p = 0; p < pulses; p++) Pulse(b, start + p * 0.032f, 0.02f, f, gain[c]);
+                }
+            }
+            var bedA = new Sine(3600f);   // 3.600 Hz × 6 giây = 21.600 chu kỳ: khít vòng
+            var bedB = new Sine(3900f);
+            for (int i = 0; i < b.Length; i++)
+            {
+                float t = T(i);
+                float am = 0.5f + 0.5f * (float)Math.Sin(TwoPi * 40.0 * t);   // rỉ rả 40 nhịp / giây
+                float swell = 0.6f + 0.4f * (float)Math.Sin(TwoPi * t / len);
+                b[i] += (bedA.Next() + bedB.Next()) * 0.5f * am * am * swell * 0.05f;
+            }
+            return Normalize(b, 0.5f);
+        }
+
+        /// <summary>1 nhịp rung ngắn (bao sin²), quấn vòng khi tràn mảng.</summary>
+        private static void Pulse(float[] b, float start, float seconds, float freq, float gain)
+        {
+            int s = N(start), count = N(seconds);
+            for (int i = 0; i < count; i++)
+            {
+                float u = i / (float)count;
+                float env = (float)Math.Sin(Math.PI * u);
+                Put(b, s + i, (float)Math.Sin(TwoPi * freq * T(i)) * env * env * gain, true);
+            }
         }
 
         /// <summary>Gừ gừ khi được vuốt ve (1,2 giây): chuỗi nhịp 25 lần / giây (khít 30 nhịp), phồng lên xẹp xuống.</summary>

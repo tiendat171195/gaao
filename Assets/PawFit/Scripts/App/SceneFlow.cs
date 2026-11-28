@@ -727,6 +727,15 @@ namespace PawFit.App
                 GardenUi.Toast(settings.MusicOn ? "Đã bật nhạc nền" : "Đã tắt nhạc nền");
                 OpenSettings();
             });
+            labels.Add("Ngày / đêm theo giờ máy: " + (settings.DayNightOn ? "Bật (chạm để tắt)" : "Tắt — vườn luôn sáng (chạm để bật)"));
+            enabled.Add(true);
+            actions.Add(() =>
+            {
+                settings.SetDayNight(!settings.DayNightOn);
+                GardenUi.Toast(settings.DayNightOn ? "Vườn sáng / tối theo giờ trên máy, đêm bé đi ngủ sớm hơn"
+                                                   : "Vườn luôn sáng như buổi trưa, bé không có giờ đi ngủ");
+                OpenSettings();
+            });
             bool camDefault = Garden.CameraIsDefault;   // góc camera (Phase 9.1): chụm / xoay / kéo 2 ngón để chỉnh
             labels.Add(camDefault ? "Góc camera: mặc định (chụm / xoay / kéo 2 ngón để chỉnh)" : "Góc camera: đã chỉnh (chạm để về mặc định)");
             enabled.Add(!camDefault);

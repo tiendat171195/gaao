@@ -126,8 +126,13 @@ namespace PawFit.EditorTools
             string problem = null;
             if (!BuildPipeline.IsBuildTargetSupported(group, target))
                 problem = "Unity này chưa cài " + module + ".\nUnity Hub ▸ Installs ▸ bản 6.3 ▸ ⚙ ▸ Add modules ▸ tick module đó rồi mở lại project.";
-            else if (!File.Exists(ScenePath) || !File.Exists(LitBasePath) || GraphicsSettings.defaultRenderPipeline == null)
-                problem = "Chưa chạy menu PawFit ▸ Setup Project (cần scene Main, material LitBase, URP Asset). Chạy xong thì build lại.";
+            else
+            {
+                // tạo material gốc còn thiếu (GlowBase cho đèn / đom đóm tự sáng, Phase 10.1) — không cần chạy lại Setup
+                if (GraphicsSettings.defaultRenderPipeline != null) PawFitSetup.SetupMaterials();
+                if (!File.Exists(ScenePath) || !File.Exists(LitBasePath) || GraphicsSettings.defaultRenderPipeline == null)
+                    problem = "Chưa chạy menu PawFit ▸ Setup Project (cần scene Main, material LitBase, URP Asset). Chạy xong thì build lại.";
+            }
             if (problem != null)
             {
                 EditorUtility.DisplayDialog("PawFit · chưa build được", problem, "OK");

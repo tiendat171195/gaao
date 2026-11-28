@@ -13,7 +13,7 @@ namespace PawFit.Core.Unity
     ///  * tiếng ngắn (12 kênh xoay vòng, mỗi tiếng chỉnh được to nhỏ / cao độ / trái phải);
     ///  * nhạc nền (2 kênh chuyển mượt 1 giây);
     ///  * tiếng lặp (gió, nước hồ, tắm, thở khi ngủ, gừ gừ) — to nhỏ dần, không bật / tắt cụt;
-    ///  * nền vườn: gió + lá xào xạc + chim hót ngẫu nhiên.
+    ///  * nền vườn: gió + lá xào xạc + chim hót ngẫu nhiên; đêm (Phase 10.1) gió nhỏ lại, dế kêu thay chim, thỉnh thoảng cú mèo.
     /// Mở game là tạo sẵn toàn bộ âm ở luồng nền (không giật); tiếng nào cần trước khi xong thì tạo ngay lúc đó.
     /// Nhạc nền và tiếng bật / tắt riêng (hòm thư).
     /// </summary>
@@ -52,6 +52,12 @@ namespace PawFit.Core.Unity
         /// <summary>Nền vườn: gió + lá + chim (tắt khi vào màn đấu).</summary>
         public static void Ambience(bool on) => Runner.Ambience = on;
 
+        /// <summary>
+        /// Ngày / đêm của nền vườn (Phase 10.1, vườn gọi mỗi frame): `night` 0..1 (1 = đêm hẳn: dế kêu, gió nhỏ, cú mèo),
+        /// `birds` 0..1 = chim hót nhiều hay ít (bình minh rộn ràng, đêm im).
+        /// </summary>
+        public static void Night(float night, float birds) => Runner.SetNight(night, birds);
+
         private static SfxRunner Runner
         {
             get
@@ -80,7 +86,8 @@ namespace PawFit.Core.Unity
         private AudioSource _musicA, _musicB;
         private MusicId _music = MusicId.None, _wanted = MusicId.None;
         private float _musicVolume = 0.32f, _fade = 1f;
-        private float _birdTimer = 5f;
+        private float _birdTimer = 5f, _owlTimer = 40f;
+        private float _night, _birds = 0.5f;
         private bool _soundOn = true, _musicOn = true;
 
         public bool Ambience { get; set; }
@@ -150,6 +157,12 @@ namespace PawFit.Core.Unity
             s.pitch = Mathf.Clamp(pitch, 0.5f, 2f);
             s.panStereo = Mathf.Clamp(pan, -1f, 1f);
             s.Play();
+        }
+
+        public void SetNight(float night, float birds)
+        {
+            _night = Mathf.Clamp01(night);
+            _birds = Mathf.Clamp01(birds);
         }
 
         public void SetMusic(MusicId id, float volume)
@@ -226,10 +239,14 @@ namespace PawFit.Core.Unity
 
         private void UpdateLoops(float dt)
         {
-            float ambienceWind = Ambience ? 0.22f : 0f;
+            float ambienceWind = Ambience ? 0.22f * (1f - 0.45f * _night) : 0f;   // đêm gió lặng hơn
             _loopTarget[LoopId.Wind] = ambienceWind;
             if (ambienceWind > 0f && !_loops.ContainsKey(LoopId.Wind) && _clips.ContainsKey(LoopKey + (int)LoopId.Wind))
                 SetLoop(LoopId.Wind, true, ambienceWind);
+            // dế kêu ban đêm (Phase 10.1): chỉ tạo nguồn phát khi tiếng đã tạo xong ở luồng nền
+            float crickets = Ambience ? 0.16f * _night : 0f;
+            if (_loops.ContainsKey(LoopId.Crickets)) _loopTarget[LoopId.Crickets] = crickets;
+            else if (crickets > 0.005f && _clips.ContainsKey(LoopKey + (int)LoopId.Crickets)) SetLoop(LoopId.Crickets, true, crickets);
             foreach (KeyValuePair<LoopId, AudioSource> kv in _loops)
             {
                 float target = _soundOn && _loopTarget.TryGetValue(kv.Key, out float v) ? v : 0f;
@@ -240,13 +257,26 @@ namespace PawFit.Core.Unity
             }
         }
 
-        /// <summary>Chim hót ngẫu nhiên mỗi 4–12 giây, lệch trái / phải cho có cảm giác không gian.</summary>
+        /// <summary>
+        /// Chim hót ngẫu nhiên mỗi 4–12 giây (bình minh dày hơn, chiều tối thưa dần, đêm im hẳn), lệch trái / phải cho có cảm giác
+        /// không gian. Đêm khuya thỉnh thoảng có tiếng cú mèo xa xa (Phase 10.1).
+        /// </summary>
         private void UpdateAmbience(float dt)
         {
             if (!Ambience || !_soundOn) return;
+            if (_night > 0.7f)
+            {
+                _owlTimer -= dt;
+                if (_owlTimer <= 0f)
+                {
+                    _owlTimer = UnityEngine.Random.Range(35f, 80f);
+                    Play(SoundId.Owl, UnityEngine.Random.Range(0.08f, 0.14f), UnityEngine.Random.Range(0.95f, 1.05f), UnityEngine.Random.Range(-0.6f, 0.6f));
+                }
+            }
             _birdTimer -= dt;
             if (_birdTimer > 0f) return;
-            _birdTimer = UnityEngine.Random.Range(4f, 12f);
+            _birdTimer = UnityEngine.Random.Range(4f, 12f) / Mathf.Lerp(0.6f, 1.6f, _birds);
+            if (UnityEngine.Random.value > _birds * 1.4f) return;   // ít chim: bỏ lượt này
             SoundId bird = UnityEngine.Random.value < 0.4f ? SoundId.BirdA : UnityEngine.Random.value < 0.6f ? SoundId.BirdB : SoundId.BirdC;
             Play(bird, UnityEngine.Random.Range(0.1f, 0.22f), UnityEngine.Random.Range(0.9f, 1.15f), UnityEngine.Random.Range(-0.7f, 0.7f));
         }

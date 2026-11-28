@@ -22,6 +22,9 @@ namespace PawFit.Core
         public float? CameraYaw;
         public float? CameraPitch;
         public float? CameraDistance;
+
+        /// <summary>Ngày / đêm theo giờ máy (Phase 10.1). Tắt = vườn luôn sáng như buổi trưa, bé không có giờ đi ngủ.</summary>
+        public bool DayNightOn = true;
     }
 
     /// <summary>Cài đặt vừa đổi (App bật / tắt âm thanh theo).</summary>
@@ -74,6 +77,16 @@ namespace PawFit.Core
         }
 
         public void ToggleMusic() => SetMusic(!_data.MusicOn);
+
+        public bool DayNightOn => _data.DayNightOn;
+
+        public void SetDayNight(bool on)
+        {
+            if (_data.DayNightOn == on) return;
+            _data.DayNightOn = on;
+            _save.Save(SaveKey, _data);
+            _bus.Publish(new SettingsChanged(_data));
+        }
 
         /// <summary>Có góc camera đã lưu không (cả 3 số).</summary>
         public bool HasCameraView => _data.CameraYaw.HasValue && _data.CameraPitch.HasValue && _data.CameraDistance.HasValue;

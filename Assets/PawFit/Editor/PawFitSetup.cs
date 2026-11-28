@@ -11,7 +11,8 @@ namespace PawFit.EditorTools
     /// <summary>
     /// Menu PawFit ▸ Setup Project (chạy lại bao nhiêu lần cũng được):
     ///  1. Tạo + gán URP Asset (kèm dữ liệu hậu kỳ để Bloom / Vignette chạy).
-    ///  2. Tạo material gốc Resources/PawFit/LitBase (để bản build có shader URP Lit cho đồ vật dựng bằng code).
+    ///  2. Tạo material gốc Resources/PawFit/LitBase (để bản build có shader URP Lit cho đồ vật dựng bằng code)
+    ///     + Resources/PawFit/GlowBase (URP Unlit: đom đóm, đèn tự sáng ban đêm, Phase 10.1).
     ///  3. Đặt Active Input Handling = Input Manager (Old): điều khiển chạm / chuột dùng Input Manager, project KHÔNG cài
     ///     package Input System. Unity 6.3 báo lỗi "Active Input Handling is invalid" nếu chọn New / Both mà thiếu package đó
     ///     (đã soát với mã nguồn Unity 6000.3); còn cảnh báo vàng "Input Manager is a legacy feature" thì bỏ qua được.
@@ -24,6 +25,7 @@ namespace PawFit.EditorTools
         private const string SettingsDir = Root + "/Settings";
         private const string ScenePath = Root + "/Scenes/Main.unity";
         private const string LitBasePath = Root + "/Resources/PawFit/LitBase.mat";
+        private const string GlowBasePath = Root + "/Resources/PawFit/GlowBase.mat";
 
         [MenuItem("PawFit/Setup Project")]
         public static void Setup()
@@ -95,17 +97,26 @@ namespace PawFit.EditorTools
             Debug.Log("[PawFit] Đã gán PostProcessData cho renderer.");
         }
 
-        private static void SetupMaterials()
+        /// <summary>Tạo các material gốc còn thiếu (chạy lại không sao; menu Build cũng gọi để bản build có đủ shader).</summary>
+        public static void SetupMaterials()
         {
-            if (AssetDatabase.LoadAssetAtPath<Material>(LitBasePath) != null) return;
-            Shader lit = Shader.Find("Universal Render Pipeline/Lit");
-            if (lit == null)
+            EnsureFolder(Root, "Resources");
+            EnsureFolder(Root + "/Resources", "PawFit");
+            EnsureMaterial(LitBasePath, "Universal Render Pipeline/Lit");
+            EnsureMaterial(GlowBasePath, "Universal Render Pipeline/Unlit");
+        }
+
+        private static void EnsureMaterial(string path, string shaderName)
+        {
+            if (AssetDatabase.LoadAssetAtPath<Material>(path) != null) return;
+            Shader shader = Shader.Find(shaderName);
+            if (shader == null)
             {
-                Debug.LogWarning("[PawFit] Không tìm thấy shader URP Lit — kiểm tra URP đã cài và đang được dùng chưa.");
+                Debug.LogWarning("[PawFit] Không tìm thấy shader " + shaderName + " — kiểm tra URP đã cài và đang được dùng chưa.");
                 return;
             }
-            AssetDatabase.CreateAsset(new Material(lit), LitBasePath);
-            Debug.Log("[PawFit] Đã tạo " + LitBasePath);
+            AssetDatabase.CreateAsset(new Material(shader), path);
+            Debug.Log("[PawFit] Đã tạo " + path);
         }
 
         private static void SetupOrientation()
