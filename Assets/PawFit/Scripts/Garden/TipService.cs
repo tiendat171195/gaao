@@ -6,7 +6,7 @@ using PawFit.Pet;
 namespace PawFit.Garden
 {
     /// <summary>Các mẹo hướng dẫn (vườn không có nút nên người mới cần được chỉ đúng lúc).</summary>
-    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9, Adventure = 10, Dig = 11, Daily = 12, Camera = 13, Night = 14 }
+    public enum TipId { Move = 0, Pet = 1, Lead = 2, Feed = 3, Bathe = 4, Sleep = 5, Sick = 6, Shop = 7, Training = 8, Arena = 9, Adventure = 10, Dig = 11, Daily = 12, Camera = 13, Night = 14, Farm = 15 }
 
     public sealed class TipConfig
     {
@@ -27,6 +27,9 @@ namespace PawFit.Garden
 
         /// <summary>Chơi bấy nhiêu giây thì giới thiệu quầy hàng / sân tập / đấu trường.</summary>
         public float DigAfterSeconds = 100f;
+
+        /// <summary>Chơi bấy nhiêu giây thì giới thiệu vườn rau (Phase 10.2).</summary>
+        public float FarmAfterSeconds = 125f;
         public float ShopAfterSeconds = 150f;
         public float DailyAfterSeconds = 220f;
         public float TrainingAfterSeconds = 300f;
@@ -140,6 +143,7 @@ namespace PawFit.Garden
             // khám phá
             if (!Seen(TipId.Camera) && Seen(TipId.Lead) && _played >= _cfg.CameraAfterSeconds) return TipId.Camera;
             if (!Seen(TipId.Dig) && !pet.IsSleeping && _played >= _cfg.DigAfterSeconds) return TipId.Dig;
+            if (!Seen(TipId.Farm) && Seen(TipId.Dig) && _played >= _cfg.FarmAfterSeconds) return TipId.Farm;
             if (!Seen(TipId.Shop) && _played >= _cfg.ShopAfterSeconds) return TipId.Shop;
             if (!Seen(TipId.Daily) && _played >= _cfg.DailyAfterSeconds) return TipId.Daily;
             if (!Seen(TipId.Training) && _health.CanTrain && !pet.IsSleeping &&
@@ -160,6 +164,7 @@ namespace PawFit.Garden
             switch (id)
             {
                 case TipId.Move: return "Chạm xuống đất để bé chạy tới chỗ đó. Kéo trên mặt đất để xem chỗ khác trong vườn.";
+                case TipId.Farm: return "Vườn rau ở trước chòi ăn: chạm luống đất để gieo hạt, tưới cho cây lớn nhanh, chín thì chạm để hái. Quả hái được để trong giỏ cạnh chòi ăn, chạm giỏ để cho bé ăn.";
                 case TipId.Night: return "Trời tối rồi! Đom đóm bay quanh vườn, ban đêm bé buồn ngủ sớm hơn và ngủ một mạch tới sáng. Chạm bé là bé dậy chơi tiếp.";
                 case TipId.Camera: return "Chụm / mở 2 ngón để phóng to thu nhỏ, xoay 2 ngón để xoay vườn, kéo 2 ngón lên xuống để đổi góc nhìn.";
                 case TipId.Pet: return "Xoa qua lại trên người bé để vuốt ve: bé lim dim, gừ gừ, vui lắm. Chạm nhẹ thì bé nhảy lên mừng.";

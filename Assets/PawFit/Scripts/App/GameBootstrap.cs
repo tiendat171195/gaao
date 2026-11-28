@@ -109,6 +109,8 @@ namespace PawFit.App
             var adventure = new PawFit.Battle.AdventureService(_pets, evo, health, economy, bus);   // Thám hiểm (Phase 7.2)
             Services.Register(adventure);
             Services.Register(new PlayService(_pets, health, evo, time, bus));   // đồ chơi + trò chơi trong vườn (Phase 8.3)
+            var farm = new FarmService(_pets, care, time, bus, economy, null, log);   // vườn rau: gieo, tưới, hái, bé ăn quả (Phase 10.2)
+            Services.Register(farm);
             Services.Register(new DailyService(_pets, time, bus, economy, layout,   // quà ngày + nhiệm vụ + kho báu (Phase 7.3)
                                                starsLeft: () => adventure.TotalStars < adventure.MaxStars, log: log,
                                                hasToys: () => _pets.Cosmetics != null && _pets.Cosmetics.Toys.Count > 0));
@@ -161,7 +163,10 @@ namespace PawFit.App
             // Thông báo nhắc chăm thú (Phase 4.5): ẩn app thì hẹn lịch (đói / buồn ngủ / bẩn / ốm / trứng nở),
             // vào lại app thì xóa. Chơi đủ lâu thì hỏi có bật không, rồi mới xin quyền của máy.
             _notifyOs = new MobileNotificationScheduler();
-            _notifications = new NotificationService(settings, _pets, time, cfg, exprCfg, _notifyOs, LocalOffset, null, log);
+            _notifications = new NotificationService(settings, _pets, time, cfg, exprCfg, _notifyOs, LocalOffset, null, log)
+            {
+                CropRipeAt = () => farm.NextRipeUtc,   // "vườn rau có quả chín rồi" (Phase 10.2)
+            };
             Services.Register(_notifications);
             _notifications.OnForeground();
             Debug.Log("[PawFit] Ví: " + economy.Coins + " Coin · quảng cáo còn " + economy.AdsLeftToday + "/" + economy.MaxAdsPerDay + " lượt hôm nay");

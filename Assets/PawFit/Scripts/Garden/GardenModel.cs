@@ -4,8 +4,9 @@ using System.Numerics;
 namespace PawFit.Garden
 {
     /// <summary>Các khu nằm TRÊN MAP vườn (không phải nút UI).</summary>
-    /// <summary>Khu trong vườn. Bench (Phase 8.4) = ghế gỗ mua ở quầy: không nằm trong GardenLayout, bộ não giữ chỗ ghế riêng.</summary>
-    public enum ZoneType { None = 0, FoodHut = 1, Pond = 2, TrainingGround = 3, Bed = 4, Memorial = 5, Shop = 6, Adventure = 7, Bench = 8 }
+    /// <summary>Khu trong vườn. Bench (Phase 8.4) = ghế gỗ mua ở quầy: không nằm trong GardenLayout, bộ não giữ chỗ ghế riêng.
+    /// Farm (Phase 10.2) = vườn rau 3 luống cạnh chòi ăn.</summary>
+    public enum ZoneType { None = 0, FoodHut = 1, Pond = 2, TrainingGround = 3, Bed = 4, Memorial = 5, Shop = 6, Adventure = 7, Bench = 8, Farm = 9 }
 
     /// <summary>
     /// 1 khu trong vườn. Tọa độ mặt đất dùng Vector2: X = trái/phải, Y = sâu vào trong màn hình
@@ -43,6 +44,13 @@ namespace PawFit.Garden
         /// </summary>
         public readonly List<Vector2> DigSpots = new List<Vector2>();
 
+        /// <summary>Vườn rau (Phase 10.2): tâm từng luống đất, chỗ bé đứng chăm luống (phía sau luống, mặt nhìn về camera),
+        /// giỏ quả cạnh khay táo ở chòi ăn + chỗ bé đứng ăn quả.</summary>
+        public readonly List<Vector2> FarmPlots = new List<Vector2>();
+        public readonly List<Vector2> FarmStands = new List<Vector2>();
+        public Vector2 FarmBasket;
+        public Vector2 FarmBasketStand;
+
         /// <summary>Vườn mặc định: chòi ăn trái, hồ phải, sân tập phía sau, ổ ngủ giữa, tưởng niệm ở góc, quầy hàng phía trước bên phải.</summary>
         public static GardenLayout CreateDefault()
         {
@@ -61,10 +69,20 @@ namespace PawFit.Garden
             l.Zones.Add(new GardenZone(ZoneType.Shop, new Vector2(4.5f, -6.5f), 1.5f, new Vector2(3.85f, -8.3f)));
             // biển chỉ đường Thám hiểm (Phase 7.2) ở góc sau bên trái: lối mòn dẫn ra khe hở hàng rào trái (z 9..11)
             l.Zones.Add(new GardenZone(ZoneType.Adventure, new Vector2(-7.3f, 10.2f), 1f, new Vector2(-6.4f, 9.3f)));
+            // vườn rau (Phase 10.2): 3 luống trước chòi ăn bên trái ("góc bếp" của vườn), giỏ quả cạnh khay táo
+            l.Zones.Add(new GardenZone(ZoneType.Farm, new Vector2(-5.85f, -3.4f), 2f, new Vector2(-5.85f, -1.9f)));
+            for (int i = 0; i < 3; i++)
+            {
+                float x = -7f + i * 1.15f;
+                l.FarmPlots.Add(new Vector2(x, -3.4f));
+                l.FarmStands.Add(new Vector2(x, -2.05f));
+            }
+            l.FarmBasket = new Vector2(-5.9f, 1.65f);
+            l.FarmBasketStand = new Vector2(-5f, 1.35f);
             l.DigSpots.AddRange(new[]
             {
-                new Vector2(-3.5f, -4.5f), new Vector2(2.5f, -9.5f), new Vector2(-6.5f, -9.5f), new Vector2(7.5f, -4.5f),
-                new Vector2(-3f, 4f), new Vector2(3.2f, 3.5f), new Vector2(-7.5f, -2f), new Vector2(6.5f, 8f),
+                new Vector2(-2.6f, -5.2f), new Vector2(2.5f, -9.5f), new Vector2(-6.5f, -9.5f), new Vector2(7.5f, -4.5f),
+                new Vector2(-3f, 4f), new Vector2(3.2f, 3.5f), new Vector2(-7.2f, -7.2f), new Vector2(6.5f, 8f),
                 new Vector2(-4f, 8f), new Vector2(-1.5f, -7.5f), new Vector2(8f, -8f), new Vector2(-1.5f, 5.5f),
             });
             return l;

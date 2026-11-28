@@ -54,6 +54,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm trúng 1 đồ trang trí (Phase 8.4).</summary>
         public Action<DecorKind> DecorTapped { get; set; }
 
+        /// <summary>Chạm vườn rau (Phase 10.2): số luống 0.., -1 = giỏ quả cạnh chòi ăn.</summary>
+        public Action<int> FarmTapped { get; set; }
+
         /// <summary>Mẹo hướng dẫn: báo người chơi đã chạm đất / dắt thú (mẹo đó không hiện nữa). Có thể null.</summary>
         public TipService Tips { get; set; }
 
@@ -69,6 +72,7 @@ namespace PawFit.Garden.View
         private TreasureSpotView _downTreasure;
         private ToyHandle _downToy;
         private DecorHandle _downDecor;
+        private FarmHandle _downFarm;
         private PointerGestureClassifier _gestures;
         private readonly StrokeTracker _stroke = new StrokeTracker();
         private bool _leading, _strokingPet;
@@ -205,6 +209,7 @@ namespace PawFit.Garden.View
             _downTreasure = null;
             _downToy = null;
             _downDecor = null;
+            _downFarm = null;
             if (Physics.Raycast(_cam.ScreenPointToRay(screen), out RaycastHit hit, 200f))
             {
                 if (_pet != null && hit.collider.GetComponentInParent<PetController>() != null) return PointerTarget.Pet;
@@ -229,6 +234,8 @@ namespace PawFit.Garden.View
                 if (_downToy != null && Toys != null) return PointerTarget.Toy;
                 _downDecor = hit.collider.GetComponentInParent<DecorHandle>();
                 if (_downDecor != null && DecorTapped != null) return PointerTarget.Decor;
+                _downFarm = hit.collider.GetComponentInParent<FarmHandle>();
+                if (_downFarm != null && FarmTapped != null) return PointerTarget.Farm;
             }
             return PointerTarget.Ground;
         }
@@ -300,6 +307,14 @@ namespace PawFit.Garden.View
                     break;
                 case PointerTarget.Decor:   // chạm = dùng đồ trang trí; kéo = kéo camera như trên đất
                     if (e.Kind == GestureKind.Tap && _downDecor != null) DecorTapped?.Invoke(_downDecor.Kind);
+                    else HandleGround(e, screen, onGround, g);
+                    break;
+                case PointerTarget.Farm:   // chạm luống / giỏ quả; kéo = kéo camera
+                    if (e.Kind == GestureKind.Tap && _downFarm != null)
+                    {
+                        TapBounce.Play(_downFarm);
+                        FarmTapped?.Invoke(_downFarm.Plot);
+                    }
                     else HandleGround(e, screen, onGround, g);
                     break;
                 default: HandleGround(e, screen, onGround, g); break;

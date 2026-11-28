@@ -76,6 +76,7 @@ namespace PawFit.App
             Garden.MailboxTapped = OpenSettings;
             Garden.ArenaTapped = OpenArena;
             Garden.AdventureTapped = OpenAdventure;
+            Garden.SeedShopTapped = OpenSeeds;   // vườn rau hết hạt / "Mua thêm hạt" (Phase 10.2)
             if (services.TryGet(out DailyService daily))   // việc mỗi ngày (Phase 7.3): báo xong nhiệm vụ / có quà
             {
                 SnapshotQuests(daily);
@@ -381,6 +382,12 @@ namespace PawFit.App
                 labels.Add(ItemName(item) + " · " + shop.PriceOf(item) + " Coin" + (r == ShopRefusal.None ? "" : " (" + Why(r, item) + ")"));
                 enabled.Add(r == ShopRefusal.None);
                 actions.Add(() => Buy(item));
+            }
+            if (_services.TryGet(out FarmService _))   // vườn rau (Phase 10.2)
+            {
+                labels.Add("Hạt giống cho vườn rau...");
+                enabled.Add(true);
+                actions.Add(OpenSeeds);
             }
             labels.Add("Đồ chơi cho bé...");
             enabled.Add(true);
@@ -972,6 +979,44 @@ namespace PawFit.App
             GardenUi.Toast(r == CosmeticRefusal.None
                                ? ToyNames[(int)t] + " đã vào vườn · -" + price + " Coin · còn " + _services.Get<EconomyService>().Coins + " Coin"
                                : "Chưa mua được: " + Why(r));
+        }
+
+        /// <summary>Thẻ Hạt giống (Phase 10.2): gói hạt từng loại (giá, chín sau bao lâu, tác dụng khi bé ăn), đang có mấy hạt.</summary>
+        private static void OpenSeeds()
+        {
+            if (Garden == null || InFight || !_services.TryGet(out FarmService farm)) return;
+            var eco = _services.Get<EconomyService>();
+            var labels = new List<string>();
+            var enabled = new List<bool>();
+            var actions = new List<Action>();
+            foreach (CropKind k in FarmService.Kinds)
+            {
+                CropDef d = farm.Def(k);
+                bool afford = eco.Coins >= d.PackPrice;
+                labels.Add(d.PackSeeds + " hạt " + d.Name + " · " + d.PackPrice + " Coin · chín sau " + FarmView.GrowText(d, farm.Config) + ", " + d.Yield +
+                           " quả / hạt · " + d.Effect + " · đang có " + farm.Seeds(k) + (afford ? "" : " (thiếu Coin)"));
+                enabled.Add(afford);
+                actions.Add(() => BuySeeds(k));
+            }
+            labels.Add("Quay lại");
+            enabled.Add(true);
+            actions.Add(OpenShop);
+            string body = "Bạn có " + eco.Coins + " Coin · gieo ở vườn rau trước chòi ăn, tưới đều thì cây lớn nhanh gấp đôi\n" +
+                          "Quả hái được để trong giỏ cạnh chòi ăn · săn quái rừng cũng nhặt được hạt";
+            GardenUi.ShowChoice("Hạt giống", body, labels.ToArray(), i => actions[i]?.Invoke(), enabled.ToArray());
+        }
+
+        private static void BuySeeds(CropKind k)
+        {
+            var farm = _services.Get<FarmService>();
+            CropDef d = farm.Def(k);
+            if (farm.BuySeeds(k) != FarmResult.Ok)
+            {
+                GardenUi.Toast("Chưa mua được: thiếu Coin");
+                return;
+            }
+            GardenUi.Toast("+" + d.PackSeeds + " hạt " + d.Name + " (có " + farm.Seeds(k) + ") · -" + d.PackPrice + " Coin · chạm luống trống ở vườn rau để gieo", 3f);
+            OpenSeeds();
         }
 
         /// <summary>Thẻ Trang trí: mua 1 lần, món đó đứng luôn ở chỗ của nó trong vườn (camera lia tới cho xem).</summary>

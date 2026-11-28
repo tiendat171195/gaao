@@ -493,6 +493,9 @@ namespace PawFit.Garden.View
 
         public bool IsResting => _brain.Activity == PetActivity.Resting;
 
+        /// <summary>Đang ngủ (sai khiến bé đi đâu là đánh thức bé: việc vặt như tưới cây thì đừng gọi bé dậy).</summary>
+        public bool IsSleeping => _brain.Activity == PetActivity.Sleeping;
+
         /// <summary>Bé đang rảnh (đứng / đi lang thang, không ngủ, không ốm): bướm ở vòm hoa rủ bé chơi được.</summary>
         public bool IsFree => !_dead && !IsIll && (_brain.Activity == PetActivity.Idle || _brain.Activity == PetActivity.Wander);
 

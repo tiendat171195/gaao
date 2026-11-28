@@ -37,9 +37,9 @@ namespace PawFit.Pet
         /// <summary>
         /// 2 = Phase 2.1 (thêm sức khỏe, trứng, bia mộ). 3 = Phase 5.1 (thêm ví Coin). 4 = Phase 5.2 (thêm phụ kiện + trang trí).
         /// 5 = Phase 4.3 (thêm rank Elo + mùa giải). 6 = Phase 7.2 (thêm Thám hiểm).
-        /// 7 = Phase 7.3 (nhiệm vụ ngày, quà đăng nhập, điểm đào). File bản cũ vẫn đọc được.
+        /// 7 = Phase 7.3 (nhiệm vụ ngày, quà đăng nhập, điểm đào). 8 = Phase 10.2 (vườn rau). File bản cũ vẫn đọc được.
         /// </summary>
-        public const int CurrentVersion = 7;
+        public const int CurrentVersion = 8;
         public int Version = CurrentVersion;
 
         /// <summary>Thú đang sống. null khi thú đã mất và trứng chưa nở.</summary>
@@ -67,6 +67,9 @@ namespace PawFit.Pet
 
         /// <summary>Nhiệm vụ ngày + chuỗi ngày đăng nhập + điểm đào hôm nay. File cũ chưa có thì tạo khi cần.</summary>
         public DailyData Daily;
+
+        /// <summary>Vườn rau: luống đất, hạt giống, giỏ quả (Phase 10.2). File cũ chưa có thì tạo khi cần.</summary>
+        public FarmData Farm;
     }
 
     // ---- Sự kiện (View lắng nghe qua EventBus) ----
@@ -209,6 +212,22 @@ namespace PawFit.Pet
                 if (d.Quests == null) d.Quests = new List<QuestState>();   // file sửa tay / lỗi: không để null
                 if (d.Dug == null) d.Dug = new List<int>();
                 return d;
+            }
+        }
+
+        /// <summary>Vườn rau (FarmService đọc / ghi qua đây). null nếu chưa nạp file lưu.</summary>
+        public FarmData Farm
+        {
+            get
+            {
+                if (_game == null) return null;
+                FarmData f = _game.Farm ?? (_game.Farm = new FarmData());
+                if (f.Plots == null) f.Plots = new List<PlotState>();   // file sửa tay / lỗi: không để null
+                if (f.Seeds == null) f.Seeds = new List<int>();
+                if (f.Basket == null) f.Basket = new List<int>();
+                for (int i = 0; i < f.Plots.Count; i++)
+                    if (f.Plots[i] == null) f.Plots[i] = new PlotState();
+                return f;
             }
         }
 

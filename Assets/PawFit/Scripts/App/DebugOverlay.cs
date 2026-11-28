@@ -357,6 +357,20 @@ namespace PawFit.App
             foreach (float hour in new[] { 6f, 12f, 17.75f, 19f, 22f })
                 if (GUILayout.Button(hour.ToString("0.##") + "h", _button)) day.DebugHour = hour;
             GUILayout.EndHorizontal();
+            if (!S.TryGet(out FarmService farm)) return;   // vườn rau (Phase 10.2)
+            var sb = new System.Text.StringBuilder("Vườn rau:");
+            for (int i = 0; i < farm.PlotCount; i++)
+            {
+                PlotState p = farm.Plot(i);
+                sb.Append(" [" + (i + 1) + "] " + (p == null || !p.Planted ? "trống"
+                          : farm.Def(p.Crop).Name + " " + (farm.Progress01(i) * 100f).ToString("0") + "%" + (farm.IsWet(i) ? " ướt" : "")));
+            }
+            sb.Append(" · hạt " + farm.SeedTotal + " · giỏ " + farm.BasketTotal);
+            GUILayout.Label(sb.ToString(), _label);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Chín hết", _button)) farm.RipenAllForDebug();
+            if (GUILayout.Button("+5 hạt mỗi loại", _button)) farm.AddSeedsForDebug(5);
+            GUILayout.EndHorizontal();
         }
 
         private void DrawAvatar()

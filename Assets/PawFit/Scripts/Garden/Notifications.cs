@@ -5,8 +5,11 @@ using PawFit.Pet;
 
 namespace PawFit.Garden
 {
-    /// <summary>Thú cần mình vì chuyện gì. Số càng lớn càng gấp (gộp nhiều chuyện thì lấy chuyện gấp nhất làm tiêu đề).</summary>
-    public enum PetAlertKind { EggReady = 0, Dirty = 1, Sleepy = 2, Hungry = 3, Tired = 4, Relapsed = 5, Sick = 6, Critical = 7, LastChance = 8 }
+    /// <summary>
+    /// Thú cần mình vì chuyện gì. Số càng lớn càng gấp (gộp nhiều chuyện thì lấy chuyện gấp nhất làm tiêu đề).
+    /// CropRipe (Phase 10.2) = vườn rau có quả chín: ít gấp nhất.
+    /// </summary>
+    public enum PetAlertKind { CropRipe = -1, EggReady = 0, Dirty = 1, Sleepy = 2, Hungry = 3, Tired = 4, Relapsed = 5, Sick = 6, Critical = 7, LastChance = 8 }
 
     /// <summary>1 thông báo sẽ hẹn với hệ điều hành.</summary>
     public sealed class PlannedNotification
@@ -54,9 +57,10 @@ namespace PawFit.Garden
     public static class NotificationPlanner
     {
         /// <param name="perks">Tác dụng của đồ đã mua (Phase 8.4): phải giống lúc tính bù khi mở lại game, không thì báo sai giờ.</param>
+        /// <param name="cropRipeUtc">Lúc luống rau chín sớm nhất (Phase 10.2), null = không có luống nào đang lớn.</param>
         public static List<PlannedNotification> Plan(PetData pet, EggData egg, DateTime nowUtc, TimeSpan localOffset,
                                                      GameConfig cfg, ExpressionConfig expr, NotificationConfig nc = null,
-                                                     CarePerks perks = default)
+                                                     CarePerks perks = default, DateTime? cropRipeUtc = null)
         {
             if (cfg == null) throw new ArgumentNullException(nameof(cfg));
             expr = expr ?? new ExpressionConfig();
@@ -68,6 +72,8 @@ namespace PawFit.Garden
                 Simulate(pet, nowUtc, cfg, expr, nc, perks, events);
             else if (egg != null && egg.ReadyAtUtc > nowUtc)
                 events.Add(new KeyValuePair<DateTime, PetAlertKind>(egg.ReadyAtUtc, PetAlertKind.EggReady));
+            if (cropRipeUtc.HasValue && cropRipeUtc.Value > nowUtc && cropRipeUtc.Value <= nowUtc.AddHours(nc.HorizonHours))
+                events.Add(new KeyValuePair<DateTime, PetAlertKind>(cropRipeUtc.Value, PetAlertKind.CropRipe));
 
             DateTime earliest = nowUtc.AddMinutes(Math.Max(0.0, nc.MinDelayMinutes));
             var shifted = new List<KeyValuePair<DateTime, PetAlertKind>>();
@@ -201,6 +207,7 @@ namespace PawFit.Garden
                 case PetAlertKind.Relapsed: return pet + " ốm lại rồi";
                 case PetAlertKind.Critical: return pet + " ốm nặng!";
                 case PetAlertKind.LastChance: return "Còn " + Span((nc ?? new NotificationConfig()).LastChanceHours) + " để cứu " + pet;
+                case PetAlertKind.CropRipe: return "Vườn rau có quả chín rồi!";
                 default: return "Trứng đã sẵn sàng nở!";
             }
         }
@@ -217,6 +224,7 @@ namespace PawFit.Garden
                 case PetAlertKind.Relapsed: return "Bé chưa khỏi hẳn mà lâu chưa được chăm. Vào với bé nhé.";
                 case PetAlertKind.Critical: return "Không chữa kịp bé sẽ mất. Vào chữa cho bé ngay nhé!";
                 case PetAlertKind.LastChance: return "Bé ốm rất nặng. Vào chữa ngay kẻo mất bé mãi mãi.";
+                case PetAlertKind.CropRipe: return "Vào hái quả cho bé ăn, gieo hạt mới nhé.";
                 default: return "Vào vườn đón bé mới nhé.";
             }
         }
@@ -294,6 +302,9 @@ namespace PawFit.Garden
         public NotificationConfig Config => _nc;
         public bool Supported => _os.Supported;
 
+        /// <summary>Lúc luống rau chín sớm nhất (Phase 10.2, App nối vào FarmService.NextRipeUtc). null = không báo quả chín.</summary>
+        public Func<DateTime?> CropRipeAt { get; set; }
+
         /// <summary>null = chưa hỏi, true = bật, false = tắt.</summary>
         public bool? Setting => _settings.Current.NotificationsOn;
 
@@ -325,7 +336,7 @@ namespace PawFit.Garden
 
         /// <summary>Lịch sẽ hẹn nếu ẩn app ngay bây giờ (bảng DEV xem trước).</summary>
         public List<PlannedNotification> Preview() =>
-            NotificationPlanner.Plan(_pets.Current, _pets.Egg, _time.UtcNow, _localOffset(), _cfg, _expr, _nc, _pets.Perks);
+            NotificationPlanner.Plan(_pets.Current, _pets.Egg, _time.UtcNow, _localOffset(), _cfg, _expr, _nc, _pets.Perks, CropRipeAt?.Invoke());
 
         /// <summary>Ẩn / tắt app: hẹn lịch mới (tắt thông báo thì thôi).</summary>
         public void OnBackground()

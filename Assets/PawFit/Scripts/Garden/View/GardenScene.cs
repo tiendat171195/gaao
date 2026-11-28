@@ -39,6 +39,7 @@ namespace PawFit.Garden.View
         private PlayService _play;
         private DecorLife _decor;
         private DayNightView _dayNight;
+        private FarmView _farm;
         private SettingsService _settings;
         private ServiceLocator _s;
         private GardenLayout _layout;
@@ -68,6 +69,9 @@ namespace PawFit.Garden.View
         /// <summary>Chạm biển chỉ đường Thám hiểm (App mở bản đồ Thám hiểm, Phase 7.2).</summary>
         public Action AdventureTapped { get; set; }
 
+        /// <summary>Vườn rau cần mở quầy hạt giống (hết hạt / "Mua thêm hạt", Phase 10.2).</summary>
+        public Action SeedShopTapped { get; set; }
+
         /// <summary>Tạm dừng vườn khi đang ở màn đấu: không nhận chạm, camera đứng, thú đứng yên, tắt nền gió / nước.</summary>
         public void SetPaused(bool paused)
         {
@@ -75,6 +79,7 @@ namespace PawFit.Garden.View
             if (_toys != null) _toys.Paused = paused;
             if (_decor != null) _decor.Paused = paused;
             if (_dayNight != null) _dayNight.Paused = paused;   // màn đấu dùng chung đèn: luôn sáng như buổi trưa
+            if (_farm != null) _farm.Paused = paused;
             Sfx.Ambience(!paused);
             if (!paused) Sfx.Music(MusicId.Garden);
             else Sfx.Loop(LoopId.Pond, false);
@@ -118,6 +123,11 @@ namespace PawFit.Garden.View
             var startDecor = new List<KeyValuePair<DecorKind, Transform>>();
             if (owned != null)
                 foreach (DecorKind d in owned.Decor) startDecor.Add(new KeyValuePair<DecorKind, Transform>(d, DecorBuilder.Build(d, built.Obstacles)));
+            if (s.TryGet(out FarmService farm))   // vườn rau (Phase 10.2): luống + giỏ có collider nên dựng trước khi nướng NavMesh
+            {
+                _farm = FarmView.Build(transform, built.Obstacles, _layout, farm, () => Pet);
+                _farm.OpenSeedShop = () => SeedShopTapped?.Invoke();
+            }
             BakeNavMesh(built, _layout);
             _memorial = MemorialView.Create(transform, _layout, _pets.Memorials);
             _focus = new GameObject("CameraFocus").transform;
@@ -172,6 +182,7 @@ namespace PawFit.Garden.View
             _decor.NightLevel = () => _dayNight.Night;   // đèn lồng sáng, bướm đi ngủ theo ngày / đêm của vườn
             foreach (KeyValuePair<DecorKind, Transform> d in startDecor) _decor.Add(d.Key, d.Value);
             _router.DecorTapped = k => _decor.Tap(k);
+            if (_farm != null) _router.FarmTapped = i => _farm.Tap(i);
             _router.Tips = s.TryGet(out TipService tips) ? tips : null;
 
             _subs.Add(bus.Subscribe<PetDied>(e => StartCoroutine(Farewell(e))));
@@ -191,6 +202,7 @@ namespace PawFit.Garden.View
                       "chạm quầy hàng (trước bên phải) = mua đồ / xem quảng cáo · chạm hòm thư (cạnh cổng đấu trường) = cài đặt · " +
                       "vuốt bóng = ném cho bé nhặt · kéo cần lông vũ = bé vồ · chạm máy bong bóng = thổi · " +
                       "chạm ghế = bé ra ngồi · chạm đèn lồng = lấp lánh · chạm cối xay gió = bé ăn bánh · chạm vòm hoa = gọi bướm · " +
+                      "chạm luống rau = gieo / tưới / hái · chạm giỏ quả (cạnh chòi ăn) = cho bé ăn quả · " +
                       "trời sáng / tối theo giờ máy (" + cycle.Phase + ", " + cycle.Hour.ToString("0.0") + " giờ)");
         }
 

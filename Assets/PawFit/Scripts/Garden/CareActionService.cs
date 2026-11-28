@@ -64,6 +64,29 @@ namespace PawFit.Garden
             }
         }
 
+        /// <summary>No từ mức này trở lên thì bé từ chối ăn (lắc đầu).</summary>
+        public float FullSatiety => _cfg.FullSatiety;
+
+        /// <summary>
+        /// Bé ăn 1 quả hái ở vườn rau (Phase 10.2): cộng no / vui / năng lượng theo loại quả, có loại còn cho điểm tập
+        /// (bé ốm thì không tập, nhưng quả tươi tính là ăn uống cẩn thận như bát cháo). Tính là 1 lần cho ăn (CareDone Feed).
+        /// Đang ngủ hoặc đã no thì từ chối.
+        /// </summary>
+        public CareResult FeedFruit(float satiety, float mood, float energy, TrainingAxis? train, float trainPoints, string name)
+        {
+            if (!_pets.HasPet) return Done(CareKind.Feed, CareResult.Refused, "không có thú");
+            if (_pets.Current.IsSleeping) return Done(CareKind.Feed, CareResult.Refused, "đang ngủ");
+            if (Needs.Satiety >= _cfg.FullSatiety) return Done(CareKind.Feed, CareResult.Refused, "no rồi");
+            bool ill = _health.IsIll;
+            if (satiety > 0f) _pets.Care(NeedType.Satiety, satiety);
+            if (mood > 0f) _pets.Care(NeedType.Mood, mood);
+            if (energy > 0f) _pets.Care(NeedType.Energy, energy);
+            if (ill) _health.MarkCarefulCare(CarefulCareKind.Porridge);
+            _evo.AddTraining(TrainingAxis.Care, _pets.Config.Evolution.CareFeed);
+            if (train.HasValue && trainPoints > 0f && !ill) _evo.AddTraining(train.Value, trainPoints);
+            return Done(CareKind.Feed, CareResult.Ok, name);
+        }
+
         /// <summary>Thả đồ ăn trúng thú. Đang ngủ hoặc đã no thì từ chối. Thú ốm: đồ ăn là bát cháo (1 việc chăm kỹ).</summary>
         public CareResult Feed()
         {

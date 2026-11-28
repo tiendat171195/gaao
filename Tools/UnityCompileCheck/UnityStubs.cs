@@ -190,6 +190,7 @@ namespace UnityEngine
         public static float Clamp(float v, float min, float max) => v;
         public static float Clamp01(float v) => v;
         public static float Lerp(float a, float b, float t) => a;
+        public static float InverseLerp(float a, float b, float value) => 0f;
         public static float LerpAngle(float a, float b, float t) => a;
         public static int RoundToInt(float f) => 0;
     }
