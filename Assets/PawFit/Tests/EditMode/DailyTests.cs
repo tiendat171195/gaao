@@ -94,8 +94,9 @@ namespace PawFit.Tests
         {
             IReadOnlyList<QuestState> q = _daily.Quests;
             Assert.AreEqual(3, q.Count);
-            Assert.That(q[0].Kind, Is.AnyOf(QuestKind.Feed, QuestKind.Bathe, QuestKind.Cuddle, QuestKind.Workout), "1 việc chăm");
-            Assert.That(q[1].Kind, Is.AnyOf(QuestKind.WinAdventure, QuestKind.AdventureStar, QuestKind.WinBattle, QuestKind.PlayPvp), "1 việc đấu");
+            // NUnit của Unity (bản 3.5) chưa có Is.AnyOf: dùng CollectionAssert.Contains
+            CollectionAssert.Contains(new[] { QuestKind.Feed, QuestKind.Bathe, QuestKind.Cuddle, QuestKind.Workout }, q[0].Kind, "1 việc chăm");
+            CollectionAssert.Contains(new[] { QuestKind.WinAdventure, QuestKind.AdventureStar, QuestKind.WinBattle, QuestKind.PlayPvp }, q[1].Kind, "1 việc đấu");
             Assert.AreNotEqual(q[0].Kind, q[2].Kind);
             var kinds = new[] { q[0].Kind, q[1].Kind, q[2].Kind };
             _daily.Dispose();
